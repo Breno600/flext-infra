@@ -5,10 +5,32 @@ Infra:
     # Projections no template renders any more; generation removes the
     # generated copy from every consumer (renamed: install-git-hooks.sh ->
     # validate-git-hook.sh; flext-law-loop.sh validated the whole workspace
-    # from its root and retired with the root fan-out).
+    # from its root and retired with the root fan-out; the mise bootstrap
+    # pair and its lock publisher/converger retired with mise self-management
+    # — the pinned release is the [tools] entry mise.lock provisions).
     retired_projections:
     - .github/scripts/install-git-hooks.sh
     - .github/scripts/flext-law-loop.sh
+    # The retired mise bootstrap pair and its lock publisher/converger predate
+    # the generated-marker contract (the old templates emitted no banner), so
+    # each declares the literal bytes that prove machine provenance.
+    - path: bin/mise
+      evidence: "__mise_bootstrap"
+    - path: bin/mise.cmd
+      evidence: "__mise_bootstrap"
+    - path: bin/mise-lock-transaction.py
+      evidence: "Publish a Mise lock with its native sidecars"
+    - path: bin/mise-lock-converge.py
+      evidence: "Hold broken tool releases inside a ``make upg`` Mise lock stage."
+    - mise.version
+    # The prettier projections retired with the npm-free toolchain
+    # (ADR-025: rumdl fmt formats markdown from .markdownlint.json). Neither
+    # carried a generated marker, so each declares the rendered bytes that
+    # prove machine provenance.
+    - path: .prettierrc
+      evidence: '"proseWrap"'
+    - path: .prettierignore
+      evidence: "# @flext-ssot: flext-infra/config/tooling.yaml"
 
     # Fresh import probes are independent subprocesses within one validation.
     fresh_import_workers: 3
@@ -17,6 +39,16 @@ Infra:
     # is its only declaration; guidance references the key, never its value.
     loc_cap:
       max_lines: 1000
+
+    # SINGLE SSOT for every filesystem mode the codegen pipeline emits. Call
+    # sites read these rows through config.Infra.codegen.modes; octal mode
+    # literals outside the constants and model bounds are defects (the
+    # ban-octal-mode-literal rule flags them).
+    modes:
+      file_default: 420 # 0o644
+      file_private: 384 # 0o600
+      directory_private: 448 # 0o700
+      directory_generated: 493 # 0o755
 
     toolchain:
       # The language floor is a minor line. The runtime tool is pinned to the
@@ -32,15 +64,13 @@ Infra:
       # mise refuses the replacement and the lock stage keeps the current lock
       # (fix-forward) until the release regains coverage.
       # The minor line only: the frozen patch is mise.lock's ownership
-      # (cooldown 2026-10-01 keeps the asset-less 20260929 python-build-
-      # standalone out of every resolution, so 3.13.15 stays the resolved
-      # patch without a config value the FlextInfraConfig model forbids).
+      # (the cooldown keeps the asset-less 20260929 python-build-standalone
+      # out of every resolution — operator decision 2026-10-06 raised the
+      # window to 10d because the release aged past the 7d boundary and its
+      # missing assets broke the floating 3.13 lock-time listing again; so
+      # 3.13.15 stays the resolved patch without a config value the
+      # FlextInfraConfig model forbids).
       python_version: "3.13"
-      # Linked Git worktrees keep their physical Python environments beside
-      # the checkout, grouped under this sibling directory. The worktree's
-      # physical basename selects one isolated child; primary checkouts keep
-      # their local .venv.
-      worktree_environment_directory: .venv
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
       # never selects a release younger than this, e.g. a Python patch with
@@ -48,7 +78,10 @@ Infra:
       # Forks and local projects never enter it: dependabot excludes the
       # requirements a project takes by direct git reference. uv carries no
       # cooldown key (`exclude-newer` stays banned, operator 2026-09-16).
-      dependency_cooldown_days: 7
+      # 2026-10-06: 7d → 10d — the asset-less 20260929 python-build release
+      # aged past the 7d window and re-entered every python resolution,
+      # breaking the floating 3.13 lock-time listing fleet-wide.
+      dependency_cooldown_days: 10
       uv_link_mode: copy
       uv_environments: [ "sys_platform == 'linux'", "sys_platform == 'darwin'" ]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
@@ -64,43 +97,153 @@ Infra:
       - mypy<2.4.0
       # Moving selectors consumed by generated .mise.toml and CI. Only
       # `make upg` resolves them to the newest release and writes mise.lock;
-      # setup installs exactly what the committed lock pins.
-      # Override these YAML keys only. Never edit .mise.toml. Never pin a SHA.
-      uv_version: latest
-      kubectl_version: latest
-      helm_version: latest
-      kind_version: latest
-      direnv_version: latest
-      taplo_version: latest
-      # The npm CLI publishes a native musl binary; the GitHub CLI release does
-      # not. One selector therefore covers the declared Linux libc variants.
-      ast_grep_selector: npm:@ast-grep/cli
-      ast_grep_version: latest
-      # ast-grep's native binary is selected by its npm lifecycle script.
-      # The embedded aube installer preserves the locked dependency graph;
-      # the approved package lifecycle is declared in the mise projection.
-      npm_package_manager: aube
+      # setup installs exactly what the committed lock pins, and only these
+      # declared tools (never the operator's global Mise registry).
+      # Override these tool entries only. Never edit .mise.toml. Never pin a
+      # SHA. Entry order is the .mise.toml [tools] projection order; form
+      # fixes the rendered shape (scalar | table). The fleet toolchain has no
+      # npm backend (ADR-025): every tool comes from a checksum-locked native
+      # owner, and the toolchain model rejects an `npm:` selector at load.
+      # version_probe is the setup reality proof's data: `binary` is resolved
+      # through `mise which` and must live inside the tool's `mise where`
+      # root; `arguments` run it; `pattern` (a regex whose `{version}` is the
+      # escaped mise.lock version) must match its output. lock_checksum false
+      # declares a tool whose upstream release metadata publishes no checksum
+      # (mise.lock then carries the URL only); every other tool's current
+      # platform lock section must carry one.
+      tools:
+      - name: uv
+        version: latest
+        version_probe:
+          binary: uv
+          arguments: [ --version ]
+          pattern: "^uv {version} "
+      - name: kubectl
+        version: latest
+        version_probe:
+          binary: kubectl
+          arguments: [ version, --client ]
+          pattern: "^Client Version: v{version}$"
+      - name: helm
+        version: latest
+        version_probe:
+          binary: helm
+          arguments: [ version, --short ]
+          pattern: "^v{version}\\+"
+      - name: kind
+        version: latest
+        version_probe:
+          binary: kind
+          arguments: [ version ]
+          pattern: "^kind v{version} "
+      - name: direnv
+        version: latest
+        version_probe:
+          binary: direnv
+          arguments: [ version ]
+          pattern: "^{version}$"
+      # The aqua registry entry for tamasfe/taplo declares no checksum, so
+      # mise.lock records the release URL only.
+      - name: taplo
+        version: latest
+        lock_checksum: false
+        version_probe:
+          binary: taplo
+          arguments: [ --version ]
+          pattern: "^taplo {version}$"
+      # ast-grep publishes glibc-only native binaries (GitHub release assets
+      # app-{x86_64,aarch64}-unknown-linux-gnu); no channel ships a musl
+      # build, so aqua locks the gnu asset for linux-x64-musl as well.
+      - name: ast-grep
+        selector: aqua:ast-grep/ast-grep
+        version: latest
+        version_probe:
+          binary: ast-grep
+          arguments: [ --version ]
+          pattern: "^ast-grep {version}$"
+      - name: gitleaks
+        version: latest
+        version_probe:
+          binary: gitleaks
+          arguments: [ version ]
+          pattern: "^{version}$"
+      - name: scc
+        selector: aqua:boyter/scc
+        version: latest
+        version_probe:
+          binary: scc
+          arguments: [ --version ]
+          pattern: "^scc version {version}$"
+      - name: kubeconform
+        version: latest
+        version_probe:
+          binary: kubeconform
+          arguments: [ -v ]
+          pattern: "^v{version}$"
+      # pyright's PyPI wrapper runs node from PATH.
+      - name: node
+        version: latest
+        version_probe:
+          binary: node
+          arguments: [ --version ]
+          pattern: "^v{version}$"
+      - name: go
+        version: latest
+        version_probe:
+          binary: go
+          arguments: [ version ]
+          pattern: "^go version go{version} "
+      # Make, curl and Git remain system-owned. Recursive Make keeps the
+      # physical executable that invoked the generated lifecycle.
+      - name: qlty
+        selector: github:qltysh/qlty
+        version: latest
+        form: table
+        version_probe:
+          binary: qlty
+          arguments: [ --version ]
+          pattern: "^qlty {version} "
+      # Back on `latest` (2026-10-04 re-measurement): the 2026-10-02 hold's
+      # premise is gone — every release v5.2.0 through v5.4.0 now ships the
+      # full 19-asset platform set (verified via the GitHub releases API),
+      # so the cooldown `latest` resolves to installs cleanly and `make upg`
+      # re-records the resolution in mise.lock. Re-pin only on a measured,
+      # dated failure again.
+      - name: jscpd
+        selector: github:kucherenko/jscpd
+        version: latest
+        form: table
+        version_probe:
+          binary: jscpd
+          arguments: [ --version ]
+          pattern: "^jscpd {version}$"
+      # microsoft/waza also publishes azd-extension tags, and GitHub marks
+      # one of them latest; the tool's own releases are the `v` tags.
+      - name: waza
+        selector: github:microsoft/waza
+        version: latest
+        version_prefix: v
+        form: table
+        version_probe:
+          binary: waza
+          arguments: [ --version ]
+          pattern: "^waza version {version}$"
+      # Pins layered over the tools table by the override files.
+      tool_version_pins: {}
       # False keeps Python resolution and installation on precompiled builds:
       # compiling from source selected releases ahead of their published
       # builds and stalled the fleet bootstrap (operator 2026-10-01).
       python_compile: false
-      gitleaks_version: latest
-      kubeconform_version: latest
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
       # true: the committed lock written by `make upg` pins every tool and setup
-      # installs frozen from it. The lock is read only by the pinned mise
-      # release `upg` recorded in mise.version, so an older ambient mise
-      # never parses a newer lockfile format.
+      # installs frozen from it. Native mise reads its own lock; the release is
+      # pinned by the self-managed [tools] entry below, so no older ambient
+      # release can silently parse a newer lockfile format.
       mise_lockfile: true
       mise_locked: true
-      # Stable, ignored runtime mutex for the generated Mise lock publisher.
-      # It survives a concurrent make gen replacing the publisher script.
-      mise_transaction_lock_file: .mise-lock-transaction.lock
       # Projection: .mise.toml [settings] lockfile_platforms. The platforms the
       # CI matrix runs on (ubuntu, macos, windows runners, x64 and arm64);
       # `make upg` resolves these plus the current host, which mise always adds.
-      # The safe bootstrap also passes this policy as MISE_LOCKFILE_PLATFORMS:
-      # mise safe mode ignores project [settings].
       mise_lockfile_platforms:
       - linux-x64
       - linux-x64-musl
@@ -108,52 +251,15 @@ Infra:
       - macos-x64
       - macos-arm64
       - windows-x64
-      # The Mise release `make upg` writes to every project's mise.version and
-      # bakes into bin/mise and bin/mise.cmd. make upg resolves the hold under
-      # the dependency cooldown, so a hold younger than the cooldown resolves
-      # nothing and stops upg. 2026.9.16 is the fleet floor the consumers
-      # already carry (ai-hub measured green 2026-10-03) and the oldest pin
-      # that reads the v3 mise.lock the upg lock pass writes; 2026.9.13
-      # refuses that lock ("mise.lock does not satisfy .mise.toml"), which
-      # broke setup, gen and CI on every fresh checkout of this tip. The
-      # 2026.9.17 artifact fails the receipt check ("Mise receipt returned
-      # invalid version") — keep it out.
+      # mise self-management (F0, operator plan 2026-10-06): mise provisions
+      # itself through the [tools] entry these two values render into every
+      # .mise.toml. `mise install` provisions the pinned release from mise.lock
+      # (single source: this mise_version; no separate pin file exists), and
+      # every later `mise` resolved through the mise-managed shims runs exactly
+      # that release. The host bootstrap mise only needs to read the committed
+      # lockfile format.
       mise_selector: github:jdx/mise
-      mise_version: "2026.9.16"
-      # The generated Makefile preamble selects the one GitHub credential
-      # (caller variables, then gh auth token) for every verb.
-      # Projection: .mise.toml [tools] keys. Override the selector here.
-      qlty_selector: github:qltysh/qlty
-      qlty_version: latest
-      node_version: latest
-      jscpd_selector: github:kucherenko/jscpd
-      # Held at 5.4.0 (operator resilience lane 2026-10-02): under the 7-day
-      # cooldown, `latest` resolves to 5.3.2, whose release lacks platform
-      # assets, so Mise aborts every lock pass ("refusing to replace") and no
-      # lock the pinned Mise accepts can exist. Hold the asset-covered 5.4.0
-      # until a newer release regains full platform coverage.
-      jscpd_version: "5.3.3"
-      # Prettier is the markdown formatter (markdown-format gate): provisioned
-      # through npm so the fleet binary version is owned by this SSOT alone.
-      prettier_selector: npm:prettier
-      # Pinned to 3.5.x: prettier 3.7+ changed markdown formatting (list-continuation
-      # printer, proseWrap) which the markdown-format gate has not been revalidated
-      # against. Only float through `make upg` once the docs gate is verified.
-      prettier_version: 3.5.3
-      waza_selector: github:microsoft/waza
-      waza_version: latest
-      # microsoft/waza also publishes azd-extension tags, and GitHub marks
-      # one of them latest; the tool's own releases are the `v` tags.
-      waza_version_prefix: v
-      scc_selector: aqua:boyter/scc
-      scc_version: latest
-      go_version: latest
-      # Generated .mise.toml must declare make as a managed
-      # mise tool so direnv exec resolves a real installed binary instead of a
-      # stale host shim (e.g. a conda-carried make). Every project invokes make
-      # through the lifecycle; make is the one tool the Makefile cannot resolve
-      # from itself, so mise must provision it.
-      make_version: latest
+      mise_version: "2026.10.3"
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools; no project .mise.toml
@@ -200,11 +306,8 @@ Infra:
     # really exercise their subprojects in CI opt in through
     # config/codegen-overrides.yaml.
     checkout_submodules: "false"
-    # The root workspace checkout exercises its flext-infra subproject in CI:
-    # the bootstrap library (post-#1361) is read from the submodule src, so
-    # the root's generated workflows must materialize it before make setup.
-    checkout_submodules_overrides:
-      flext: "true"
+    # CI consumes installed locked providers, never member checkouts.
+    checkout_submodules_overrides: {}
 
     # Runner packages a distribution's own tests need (Ubuntu apt names),
     # installed by the generated CI before the gates run. A test that drives
@@ -253,7 +356,7 @@ Infra:
         version: v5
       create-github-app-token:
         repository: actions/create-github-app-token
-        version: v2
+        version: v3
 
     uv_exclude_dependencies:
     # Standalone CI installs the project editable while sibling flext packages
@@ -299,6 +402,11 @@ Infra:
     # Nothing here catalogs organizations, and nothing resolves a provider by
     # matching a Git origin against configured rows.
     branch_policy:
+      lane_remote: origin
+      lane_pr_limit: 1000
+      lane_governance_file: ~/agents/config/governance.json
+      lane_temporary_roots:
+      - /tmp
       # Pushes to these branches trigger the generated CI workflow. The renderer
       # adds the repository's own integration branch to this list; it never
       # hardcodes a fleet branch name.
@@ -382,16 +490,20 @@ Infra:
       # breaks the verb, with its cause.
       # lint_fix is the lint gate's apply mode and the ONLY lint repair: make
       # fmt runs format only (single-pass verb law), so no lint_apply exists.
-      # make fix never deletes information: lint_fix applies
-      # Ruff's safe fixes only. Unsafe fixes deleted diagnostics (T201 removed
-      # print(..., file=sys.stderr) from a consumer script, turning a failure
-      # silent), so MakeRuffSpec rejects --unsafe-fixes here, and the rules
-      # whose fixes delete code are declared unfixable in tooling.yaml.
+      #
+      # *** OPERATOR LAW (2026-10-05, direct order — OBLIGATORY, NEVER DISABLE
+      # AGAIN): lint_fix ALWAYS runs `--preview --fix --unsafe-fix`. Unsafe
+      # fixes are MANDATORY in every make fix, in every project and
+      # subproject, forever. MakeRuffSpec fails validation without the flag;
+      # removing it is a regression against an explicit operator order and is
+      # reverted on sight. Rules whose fixes would destroy information stay
+      # declared unfixable in tooling.yaml (rule selection, never disabling
+      # the unsafe channel). ***
       ruff:
         format_check: [ --preview, --check ]
         format_apply: [ --preview ]
         lint_check: [ --preview, --no-fix ]
-        lint_fix: [ --preview, --fix ]
+        lint_fix: [ --preview, --fix, --unsafe-fixes ]
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
@@ -411,19 +523,30 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
+      # Storage law (operator 2026-09-12): every pytest verb declares its
+      # TMPDIR/basetemp under $HOME/tmp/.flext-runtime<absolute checkout>/scratch
+      # — never /tmp and never inside a versioned tree. A workspace member's
+      # parent directory is the superproject checkout, so a scratch "beside the
+      # checkout" landed inside another repository and Git refused every test
+      # fixture repository created there.
+      pytest_scratch:
+        user_home_environment_variable: HOME
+        home_relative_directory: tmp
+        state_directory_name: .flext-runtime
+        namespace: scratch
       # Actions-cache policy for the shared testmon database: two-phase
       # generations, a per-repository byte budget with an ascending quota
       # ladder, and the refs allowed to publish (never pull requests).
       testmon_cache_policy:
         mode: stable
-        save_enabled: false
+        save_enabled: true
         max_bootstrap_generations: 3
         max_stable_generations: 3
         per_repo_budget_bytes: 52428800
         warning_threshold_percent: 80
         maintenance_threshold_percent: 90
         block_threshold_percent: 95
-        allowed_save_refs: [ main, 0.12.0-dev ]
+        allowed_save_refs: [ main, 0.12.0-dev, develop ]
         key_prefix: flext-testmon
       # The Mypy gate shares one analysis per project name across checkouts
       # (u.Infra.mypy_cache_directory). Relocks retain the directory; Mypy
@@ -453,47 +576,48 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-        local_check_gates: [ mypy, pyright, pyrefly ]
-        # Rules, not a skip-list: no gate set is declared here. CI=Y runs
-        # MakeSpec.check_gates_ci, the active default gates the check registry
-        # classifies EXTERNAL; CI=N runs MakeSpec.check_gates_local, its strict
-        # complement (type checkers and flext-infra validators), so every
-        # active gate retains an owner. An unset CI runs all active gates.
+        # direnv proves the developer's own activation (`direnv exec` needs the
+        # `direnv allow` that setup grants only outside CI), so it is local-only:
+        # under CI=Y the checkout's .envrc is never allowed and the smoke can
+        # only report "blocked".
+        local_check_gates: [ mypy, pyright, codemod, smells, pyrefly, direnv ]
+        # mypy and pyright are INFORMATIVE (merge-admin mandate
+        # 2026-10-05): the gates execute in every context they run at all
+        # and their findings never block — base_gate reads the
+        # informative list directly, without a CI environment condition.
+        informative_check_gates: [ mypy, pyright ]
+        # local_check_gates is the only declared partition: CI=N runs
+        # MakeSpec.check_gates_local (its intersection with the active default
+        # gates) and CI=Y runs MakeSpec.check_gates_ci, the strict complement.
+        # An unset CI runs all active gates. Mypy, pyright, the codemod
+        # (ast-grep) rule set, smells (qlty similar-code) and LINT DO NOT
+        # EXECUTE under CI=Y at all — operator order 2026-10-05: never
+        # blocking, never
+        # advisory, not run; locally and on every unset-CI run they execute
+        # as INFORMATIVE gates (findings surface, nothing blocks), so
+        # findings still surface before integration. Mypy stays bounded by
+        # MYPY_MEMORY_LIMIT_MB and the project-owned tools.mypy
+        # .timeout_seconds budget.
         # `format` is not a check gate -- it mutates files, so it belongs to
         # make fmt / make fix only.
         # tooling.tools.pytest.ci-excluded-markers defines the slow-test
         # exclusion for CI and pre-commit, not local/pre-push runs.
-        # CI=N owns the complementary local check gates; absent uses testmon
-        # for incremental developer runs.
-        #
-        # The set is the SLOW whole-program type checkers: those are the gates
-        # worth deferring
-        # off the fast CI leg, and they are what CI=N exists to own. `lint` is
-        # not here -- ruff is cheap, so making CI skip it buys nothing and
-        # leaves the fast leg without a linter.
-        # mypy runs in the CI context so its red content cannot merge unseen;
-        # the project-owned timeout budget (tools.mypy.timeout_seconds) makes
-        # it runnable on the runner.
-        # pyrefly stays local-only (fast; pyright already covers CI).
-        # Git-hook stages are disabled by default;
-        # the workflow below still declares stage membership so re-enabling is a
-        # one-key change, case by case. CI owns read-only setup, generation drift,
-        # and checks; it never renders an apply/fmt/fix invocation.
-      pre_commit: false
+        # An absent CI uses testmon for incremental developer runs.
+        # CI and pre-commit consume the same ordered read-only approval.
+        # Hook installation belongs to the host runtime, not project setup.
+      pre_commit: true
       pre_push: false
       workflow:
-      # Pre-commit runs fmt+fix, then the fast check partition. Pre-push
-      # runs check with CI unset to cover the complete active gate universe,
-      # and adds gen+test with the declared local token.
-      - { verb: setup, contexts: [ local, ci ] }
+      - { verb: setup, contexts: [ local, ci, pre_commit ] }
+      - { verb: audit, contexts: [ local, ci, pre_commit ] }
       - { verb: gen, contexts: [ local, pre_push ] }
-      - { verb: fmt, contexts: [ local, pre_commit ] }
-      - { verb: fix, contexts: [ local, pre_commit ] }
+      - { verb: fmt, contexts: [ local ] }
+      - { verb: fix, contexts: [ local ] }
       - { verb: check, contexts: [ local, ci, pre_push, pre_commit ] }
       # CI also runs the incremental suite with the persistent testmon cache.
       # The full suite remains a separate local verb that first runs this
       # incremental phase and then exercises the complete inventory.
-      - { verb: test, contexts: [ local, ci, pre_push ] }
+      - { verb: test, contexts: [ local, ci, pre_push, pre_commit ] }
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
       clean:
@@ -528,10 +652,13 @@ Infra:
         - 0.12.0-dev
       docs:
         # `make docs` is a docs-only lifecycle (generate -> fix -> fmt ->
-        # check); it never runs the workspace-wide codegen conform as a
-        # prerequisite. `validate` is the structural check (blocking when the
-        # .md set is incomplete).
-        actions: [ generate, fix, fmt, validate, audit ]
+        # build -> check); it never runs the workspace-wide codegen conform as a
+        # prerequisite. `build` renders the MkDocs site into the reports dir —
+        # the docs workflow's Build site step runs this same lifecycle and its
+        # Upload site artifact consumes `.reports/docs/site`, so a lifecycle
+        # without build makes that step untarable on every consumer. `validate`
+        # is the structural check (blocking when the .md set is incomplete).
+        actions: [ generate, fix, fmt, build, validate, audit ]
         mutable_actions: [ fix, fmt ]
         reports_dir: .reports/docs
         overview_preview_limits:
@@ -561,8 +688,13 @@ Infra:
         description: Show the complete selector-free public interface.
       - name: setup
         description: Provision the declared environment and hooks.
+      - name: pre-commit
+        description: Approve this project through locked setup, audit, check, and incremental tests with the enforced CI contract.
       - name: upg
-        description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.
+        description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges; gates stay with make check.
+      - name: validate-lifecycle
+        description: Serially run setup, gen, upg, setup, gen, gen in the root and every governed member, publishing typed receipts and stopping at the first failure.
+        profiles: [ workspace ]
       # Workspace-only (topology owns applicability): a standalone Makefile
       # never declares it. Never merges; a rerun continues the same lanes.
       - name: propagate
@@ -583,20 +715,26 @@ Infra:
         description: Run incremental then all tests, including external and CI-excluded markers, through the same persistent testmon cache.
       - name: test-file
         description: Run one declared test file through the budgeted and slow phases with the same persistent testmon cache (FILE=<repository-relative path>).
+      - name: file-gate
+        description: Run configured canonical read-only gates on one literal FILE=<repository-relative path>; invalid selection and missing gate owners fail loud.
+      - name: profile-test
+        description: Profile the canonical pytest entry and its collection children on the same persistent testmon database, without the outer bounded-gate wrapper.
+      - name: profile-test-report
+        description: Render the parent pytest profile and the aggregated child profiles from that run.
       - name: fmt
         description: Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.
       - name: fix
         description: Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.
       - name: fix-namespace
-        description: Apply the canonical namespace enforcer to the selected workspace.
+        description: Apply the canonical namespace enforcer to the selected workspace; the same relocation cascade runs as a callback phase of make mod.
       - name: fix-accessors
-        description: Migrate forbidden accessor names and every resolved consumer.
+        description: Migrate accessor names owned by the rename catalog's origin package and every resolved consumer; homonyms are skipped with a warning; the same origin-aware rewrite runs as a callback phase of make mod.
       - name: audit
         description: Inspect ownership, dependency, and generated-state health.
       - name: status
         description: Report the resolved runtime and repository state.
       - name: verify-clean
-        description: Verify that managed artifacts and generated documentation match their sources and leave no unstaged change to a tracked file.
+        description: Verify managed artifacts and generated documentation against their sources, then reject staged, unstaged, untracked changes and stash entries through the public Git service.
       - name: docs
         description: Generate, fix, format, and check documentation.
       - name: clean
@@ -615,6 +753,8 @@ Infra:
         description: Publish only receipt-attested release artifacts.
       - name: gen
         description: Regenerate every managed projection atomically.
+      - name: gen-footprint
+        description: Inspect the pending generation journal and declared physical effect footprint without leases, recovery, or publication.
         produces_activation: true
       - name: initialize
         description: Materialize the declared package initializer graph.
@@ -639,6 +779,11 @@ Infra:
       custom_handler_profile_overrides: {}
       standalone_check_gates:
         smells: smells
+      # Operator ruling flext-uz0dt (2026-09-18, reaffirmed 2026-10-04 in
+      # flext-qtmy2): markdown-code runs only when requested explicitly; make
+      # fix still repairs it. The opt_in_check_gates spec field was retired
+      # by the model wave — the opt-in semantic now lives in plain absence
+      # from the active gate list.
       custom_handler_policy:
         filename: custom.mk
         # Custom behavior is one private whole-verb replacement or one lifecycle
@@ -662,8 +807,11 @@ Infra:
     - { name: .agents, source_scan_ignore: true, vscode_exclude: false, watch_exclude: false }
     - { name: .beads, source_scan_ignore: true }
     - { name: .benchmarks }
+    # Historical evidence trees (operator law: archives are evidence only,
+    # never live authority) are not production input to any analyzer.
     # Archive-not-delete target for the layout engine; the generated
     # .gitignore projection must never track archived loose files.
+    - { name: .archive, source_scan_ignore: true }
     - { name: .bkp }
     - { name: .cache, source_scan_ignore: true }
     # Agent worktrees are duplicate repositories, never production input.
@@ -709,6 +857,10 @@ Infra:
     - { name: build, source_scan_ignore: true }
     - { name: dist, source_scan_ignore: true }
     - { name: node_modules, source_scan_ignore: true }
+    # protoc-generated wire-protocol modules ("DO NOT EDIT"): tracked and
+    # imported as a regular package, never first-party code. generated_source
+    # is the one key every analyzer exclusion, scan, and init derives from.
+    - { name: protos, generated_source: true }
     - { name: site, watch_exclude: false }
     - { name: target }
     - { name: .pyrefly_cache, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true }
@@ -803,11 +955,11 @@ Infra:
           editor.defaultFormatter: charliermarsh.ruff
           editor.formatOnSave: true
           editor.codeActionsOnSave.source.organizeImports: explicit
-        # Prettier owns markdown formatting (markdown-format gate); the editor
-        # parity reads the same generated .prettierrc. Save stays manual: the
-        # canonical mutation surface is `make fmt`.
+        # rumdl owns markdown formatting (markdown-format gate: `rumdl fmt`);
+        # the editor extension reads the same generated .markdownlint.json.
+        # Save stays manual: the canonical mutation surface is `make fmt`.
         "[markdown]":
-          editor.defaultFormatter: esbenp.prettier-vscode
+          editor.defaultFormatter: rvben.rumdl
           editor.formatOnSave: false
       stripped_keys:
       # Pylance emits settingsNotOverridable diagnostics (severity=warning) when
@@ -834,7 +986,6 @@ Infra:
       - pyproject.toml
       - uv.lock
       - mise.lock
-      - mise.version
       - Makefile
       - base.mk
       - custom.mk
@@ -1091,12 +1242,6 @@ Infra:
     - path: .markdownlintignore
       owner: codegen
       policy: full
-    - path: .prettierrc
-      owner: codegen
-      policy: full
-    - path: .prettierignore
-      owner: codegen
-      policy: full
     - path: .pre-commit-config.yaml
       owner: pre-commit
       policy: full
@@ -1130,12 +1275,6 @@ Infra:
       policy: full
     - path: Makefile
       owner: make
-      policy: full
-    - path: bin/mise-lock-transaction.py
-      owner: codegen
-      policy: full
-    - path: bin/mise-lock-converge.py
-      owner: codegen
       policy: full
     # CUSTOM vs MANAGED (humans read comments; this block is the owner):
     #   conflict_sections = MANAGED tables (template wins on make gen)
@@ -1255,28 +1394,17 @@ Infra:
         # Lock-fed raising wrote dated stub versions into the projections;
         # dated stubs churn weekly, so the SSOT owns the clamp and the
         # rolling window governs when the date advances.
-        - types-cachetools>=7.0.0.20260713
-        - types-cffi>=2.1.0.20260827
-        - types-click>=7.1.8
         - types-defusedxml>=0.7.0.20260504
         - types-docker>=7.2.0.20260827
-        - types-flask>=1.1.6
+        - types-grpcio
         - types-jsonschema>=4.26.0.20260518
         - types-ldap3>=2.9.13.20260827
-        - types-paramiko>=5.0.0.20260724
         - msgpack-types
         - types-protobuf>=7.35.1.20260827
         - types-psutil>=7.2.2.20260827
         - types-psycopg2>=2.9.21.20260724
-        - types-pyasn1>=0.6.0.20260724
-        - types-pyopenssl>=24.1.0.20240722
-        - types-python-dateutil>=2.9.0.20260807
         - types-pyyaml>=6.0.12.20260815
-        - types-redis>=4.6.0.20241004
         - types-requests>=2.33.0.20260712
-        - types-setuptools>=84.0.0.20260812
-        - types-tabulate>=0.10.0.20260508
-        - types-toml>=0.10.8.20260518
         - types-openpyxl>=3.1.5.20260827
         - ruff>=0.16.5
         - rumdl>=0.2.62
@@ -1292,7 +1420,7 @@ Infra:
           - beartype>=0.22.9
           - dependency-injector>=4.49.1
           - packaging>=26.3
-          - pydantic>=2.13.5
+          - pydantic>=2.14.0,<3
           - pydantic-settings>=2.15.0
           - pyyaml>=6.0.3
           - structlog>=26.1.0
@@ -1302,7 +1430,7 @@ Infra:
           runtime:
           - flext-cli
           - flext-core
-          - pydantic>=2.13.5
+          - pydantic>=2.14.0,<3
           - pydantic-settings>=2.15.0
           codegen: [ flext-infra ]
         # Project-scoped requirements extend the shared profile without
@@ -1316,7 +1444,7 @@ Infra:
           runtime: [ flext-api, bcrypt>=5.0.0, PyJWT>=2.15.1 ]
         - upstream: flext_core
           project: flext-cli
-          runtime: [ click>=8.5.0, typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2 ]
+          runtime: [ click>=8.5.0, typer>=0.27.3, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2 ]
         - upstream: flext_cli
           project: flext-infra
           runtime: [ flext-cli, defusedxml>=0.7.1, GitPython>=3.2.0, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@datacosmos", pytest>=9.1.1, mkdocs>=1.6.1 ]
@@ -1325,7 +1453,7 @@ Infra:
           runtime: [ flext-cli, flext-infra, pytest>=9.1.1, pytest-timeout>=2.4.0, docker>=7.2.0, python-on-whales>=0.81.0 ]
         - upstream: flext_cli
           project: flext-grpc
-          runtime: [ flext-cli, grpcio>=1.84.0 ]
+          runtime: [ flext-cli, grpcio>=1.84.0, protobuf>=7.36.2 ]
         - upstream: flext_cli
           project: flext-observability
           runtime: [ flext-cli, flask>=3.1.3, starlette>=1.7.0, psutil>=7.2.2 ]
@@ -1334,10 +1462,10 @@ Infra:
           runtime: [ flext-cli ]
         - upstream: flext_cli
           project: flext-quality
-          runtime: [ flext-cli, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1 ]
+          runtime: [ flext-cli, flext-web, flext-api, fastmcp>=4.0.11, requests>=2.34.2, aiohttp>=3.14.4, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1 ]
         - upstream: flext_cli
           project: flext-web
-          runtime: [ flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.142.2, starlette>=1.7.0, werkzeug>=3.1.9 ]
+          runtime: [ flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.143.0, starlette>=1.7.0, werkzeug>=3.1.9 ]
         - upstream: flext_cli
           project: flext-db-oracle
           runtime: [ flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54 ]
@@ -1349,7 +1477,7 @@ Infra:
           runtime: [ flext-ldif, ldap3>=2.10.2rc4 ]
         - upstream: flext_cli
           project: flext-meltano
-          runtime: [ flext-cli, meltano>=4.4.0, singer-sdk>=0.54.7, sqlalchemy>=2.0.54, psycopg2-binary>=2.9.13, redis>=8.1.0 ]
+          runtime: [ flext-cli, meltano>=4.4.1, singer-sdk>=0.54.7, sqlalchemy>=2.0.54, psycopg2-binary>=2.9.13, redis>=8.1.0 ]
         - upstream: flext_cli
           project: flext-oracle-oic
           runtime: [ flext-cli, flext-auth, flext-api ]
@@ -1507,7 +1635,6 @@ Infra:
         patterns:
         - "!.mise.toml"
         - "!mise.lock"
-        - "!mise.version"
         - "!.mise.lock"
         - "!.python-version"
       # Native graphs referenced by mise.lock are required by locked installs.
@@ -1515,7 +1642,6 @@ Infra:
       - name: "mise native dependency graphs"
         profiles: [ workspace, standalone ]
         patterns:
-        - "/.mise-lock-transaction.lock"
         - "!/.mise/"
         - "/.mise/*"
         - "!/.mise/locks/"
@@ -1536,13 +1662,9 @@ Infra:
         # jscpd detector SSOT consumed by the committed `make duplication`
         # target; the deny-first root cannot swallow it.
         - ".jscpd.json"
-        # The generated toolchain config and launcher must reach a clean
-        # CI checkout, so the deny-first root cannot swallow them;
-        # `make gen` owns their content.
-        - "!bin/mise"
-        - "!bin/mise.cmd"
-        - "!bin/mise-lock-transaction.py"
-        - "!bin/mise-lock-converge.py"
+      # The generated toolchain config and launcher must reach a clean
+      # CI checkout, so the deny-first root cannot swallow them;
+      # `make gen` owns their content.
       - name: "Documentation"
         profiles: [ workspace ]
         patterns:
@@ -1551,8 +1673,6 @@ Infra:
         - "!codex.md"
         - "!.markdownlint.json"
         - "!.markdownlintignore"
-        - "!.prettierrc"
-        - "!.prettierignore"
         - "!.shellcheckrc"
       - name: "Git configuration"
         profiles: [ workspace ]
@@ -1680,10 +1800,13 @@ Infra:
         - ".gc/"
         - "/worktrees/"
       # A project-scoped Cursor MCP document carries a socket path resolved on
-      # the machine that generated it: runtime state, never source.
-      - name: "Machine-local MCP projection (runtime state, never source)"
+      # the machine that generated it, and the hooks runtime keeps mutable
+      # scheduling state under .cursor/hooks/state: both are runtime state,
+      # never source; hook and skill definitions stay versioned above.
+      - name: "Machine-local MCP projection and hooks runtime state (never source)"
         patterns:
         - "/.cursor/mcp.json"
+        - "/.cursor/hooks/state/"
       # None of these are root source. config/build-constraints.txt is
       # rendered by the release policy phase from
       # config.Infra.release.build_constraints; repositories never carry it.
@@ -1932,19 +2055,12 @@ Infra:
         - ".venv"
         - ".venv/"
         - ".bin/"
-        # Repo-root bin/: only the mise bootstrap pair is tracked; every
-        # other entry (venv shims, local symlinks) is machine-local and
-        # gets rewritten by `make setup`, so tracking it makes the docs
-        # byte-identical verification fail on a clean runner.
-        # A deny-all allowlist (`/*/`) excludes the bin/ directory itself,
-        # and git never descends into an excluded directory, so the two
-        # negations below cannot re-include the pair without this line.
+        # Repo-root bin/: no generated entry is tracked any more (mise
+        # self-manages through its own [tools] entry); every bin/ entry is
+        # machine-local. A deny-all allowlist (`/*/`) excludes the bin/
+        # directory itself, and git never descends into an excluded directory.
         - "!/bin/"
         - "/bin/*"
-        - "!/bin/mise"
-        - "!/bin/mise.cmd"
-        - "!/bin/mise-lock-transaction.py"
-        - "!/bin/mise-lock-converge.py"
         - ".tools/"
         - "__pycache__/"
         - "base.mk"
@@ -2051,14 +2167,6 @@ Infra:
         destination: .markdownlintignore
         profiles: [ workspace, standalone ]
         delegate: render
-      - source: base/prettierrc.j2
-        destination: .prettierrc
-        profiles: [ workspace, standalone ]
-        delegate: render
-      - source: base/prettierignore.j2
-        destination: .prettierignore
-        profiles: [ workspace, standalone ]
-        delegate: render
       # Ledger routing config: rendered only for repositories that own a
       # ledger. The workspace root owns a shared ledger when a gitlink's
       # Every repository renders its own `.beads` configuration; the shared
@@ -2110,14 +2218,6 @@ Infra:
         delegate: render
       - source: base/tests/fixtures/ci/docker/arch.Dockerfile.j2
         destination: tests/fixtures/ci/docker/arch.Dockerfile
-        profiles: [ workspace, standalone ]
-        delegate: render
-      - source: base/bin/mise-lock-transaction.py.j2
-        destination: bin/mise-lock-transaction.py
-        profiles: [ workspace, standalone ]
-        delegate: render
-      - source: base/bin/mise-lock-converge.py.j2
-        destination: bin/mise-lock-converge.py
         profiles: [ workspace, standalone ]
         delegate: render
       - source: base/Makefile.j2
