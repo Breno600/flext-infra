@@ -66,7 +66,6 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsGit,
         FlextInfraModelsRope,
         FlextInfraModelsRopeMove,
-        FlextInfraModelsRopeRules,
         FlextInfraModelsScan,
         FlextInfraModelsSonarcloud,
         FlextInfraModelsTestmon,

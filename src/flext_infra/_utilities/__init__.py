@@ -833,6 +833,8 @@ install_lazy_exports(
         "FlextInfraUtilitiesRopeRuntimeTypes": ".rope_runtime_types",
         "FlextInfraUtilitiesRopeSource": ".rope_source",
         "FlextInfraUtilitiesRopeSourceBases": ".rope_source_bases",
+        "FlextInfraUtilitiesRopeSourceBasesAliases": "._rope_source_bases_aliases",
+        "FlextInfraUtilitiesRopeSourceBasesInventory": "._rope_source_bases_inventory",
         "FlextInfraUtilitiesRopeSourceBindingCollector": (
             "._rope_source_bases_inventory_collector"
         ),

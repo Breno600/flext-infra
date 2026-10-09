@@ -46,7 +46,10 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
+        "FlextInfraAccessorRenamePhase": "._loop_phase_accessor_rename",
         "FlextInfraApplyRenames": ".apply_renames",
+        "FlextInfraImportNormalizationPhase": "._loop_phase_import_normalization",
+        "FlextInfraNamespaceRelocationPhase": "._loop_phase_namespace_relocation",
         "FlextInfraCodemodAstScan": ".ast_scan",
         "FlextInfraCodemodBatchApply": ".batch_apply",
         "FlextInfraCodemodSemanticApply": ".semantic_apply",

@@ -69,3 +69,6 @@ class FlextInfraAccessorRenamePhase(FlextInfraAccessorMigrationRewriteMixin):
                 )
             changed = True
         return r[bool].ok(value=changed)
+
+
+__all__: list[str] = ["FlextInfraAccessorRenamePhase"]

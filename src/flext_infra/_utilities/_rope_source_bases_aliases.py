@@ -114,3 +114,6 @@ class FlextInfraUtilitiesRopeSourceBasesAliases:
                     value = ".".join(part for part in (base, remainder) if part)
                 aliases[key_node.value] = value
         return aliases
+
+
+__all__: list[str] = ["FlextInfraUtilitiesRopeSourceBasesAliases"]
