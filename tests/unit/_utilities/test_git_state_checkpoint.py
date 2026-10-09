@@ -10,8 +10,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import m
-from tests import u
+from flext_infra import m, u
+from tests import u as test_u
 
 
 class TestsFlextInfraGitStateCheckpoint:
@@ -24,8 +24,8 @@ class TestsFlextInfraGitStateCheckpoint:
     ) -> m.Infra.GitWorktreeCheckpointPublication:
         source = checkpoint.snapshot.repo_root
         remote = parent / "checkpoint-remote.git"
-        u.Tests.git_run(source, "init", "--bare", str(remote))
-        u.Tests.git_run(source, "remote", "add", "checkpoint-remote", str(remote))
+        test_u.Tests.git_run(source, "init", "--bare", str(remote))
+        test_u.Tests.git_run(source, "remote", "add", "checkpoint-remote", str(remote))
         return tm.ok(
             u.Infra.git_publish_worktree_checkpoint(checkpoint, "checkpoint-remote"),
         )
@@ -38,17 +38,17 @@ class TestsFlextInfraGitStateCheckpoint:
 
     @staticmethod
     def _capture(parent: Path) -> m.Infra.GitWorktreeStateCheckpoint:
-        source = u.Tests.git_repository(parent)
+        source = test_u.Tests.git_repository(parent)
         tracked = source / "README.md"
         tracked.write_text("baseline\n", encoding="utf-8")
-        u.Tests.git_run(source, "add", "README.md")
-        u.Tests.git_run(source, "commit", "-m", "tracked checkpoint baseline")
+        test_u.Tests.git_run(source, "add", "README.md")
+        test_u.Tests.git_run(source, "commit", "-m", "tracked checkpoint baseline")
         tracked.write_bytes(b"staged\n")
-        u.Tests.git_run(source, "add", "README.md")
+        test_u.Tests.git_run(source, "add", "README.md")
         tracked.write_bytes(b"working\x00\xff")
         tracked.chmod(0o600)
         (source / "added.txt").write_text("staged addition\n", encoding="utf-8")
-        u.Tests.git_run(source, "add", "added.txt")
+        test_u.Tests.git_run(source, "add", "added.txt")
         (source / "untracked").symlink_to("README.md")
         snapshot = tm.ok(
             u.Infra.git_snapshot_worktree_state(
@@ -71,7 +71,7 @@ class TestsFlextInfraGitStateCheckpoint:
         checkpoint: m.Infra.GitWorktreeStateCheckpoint,
     ) -> Path:
         lane = parent / "lane"
-        u.Tests.git_run(
+        test_u.Tests.git_run(
             checkpoint.snapshot.repo_root,
             "worktree",
             "add",
@@ -100,9 +100,9 @@ class TestsFlextInfraGitStateCheckpoint:
             "intentionally evolved candidate\n",
             encoding="utf-8",
         )
-        u.Tests.git_run(lane, "add", "README.md", "added.txt", "untracked")
-        u.Tests.git_run(lane, "commit", "-m", "save evolved candidate")
-        saved = u.Tests.git_capture(lane, "rev-parse", "HEAD").strip()
+        test_u.Tests.git_run(lane, "add", "README.md", "added.txt", "untracked")
+        test_u.Tests.git_run(lane, "commit", "-m", "save evolved candidate")
+        saved = test_u.Tests.git_capture(lane, "rev-parse", "HEAD").strip()
 
         publication = self._publish(tmp_path, checkpoint)
         tm.ok(
@@ -121,10 +121,10 @@ class TestsFlextInfraGitStateCheckpoint:
                 publication=publication,
             ),
         )
-        tm.that(u.Tests.git_capture(source, "status", "--porcelain=v1"), eq="")
+        tm.that(test_u.Tests.git_capture(source, "status", "--porcelain=v1"), eq="")
         tm.that((source / "README.md").stat().st_mode & 0o777, eq=0o600)
-        u.Tests.git_run(source, "reflog", "expire", "--expire=now", "--all")
-        u.Tests.git_run(source, "gc", "--prune=now")
+        test_u.Tests.git_run(source, "reflog", "expire", "--expire=now", "--all")
+        test_u.Tests.git_run(source, "gc", "--prune=now")
         tm.that(
             self._blob_text(source, f"{checkpoint.index_commit}:README.md"),
             eq="staged\n",
@@ -168,7 +168,7 @@ class TestsFlextInfraGitStateCheckpoint:
         )
         tm.that(conflict.failure, eq=True)
         tm.that(
-            u.Tests.git_capture(
+            test_u.Tests.git_capture(
                 source,
                 "rev-parse",
                 checkpoint.checkpoint_ref,
@@ -184,11 +184,11 @@ class TestsFlextInfraGitStateCheckpoint:
         source = checkpoint.snapshot.repo_root
         lane = self._lane(tmp_path, checkpoint)
         tm.ok(u.Infra.git_apply_worktree_checkpoint(checkpoint, lane))
-        u.Tests.git_run(lane, "add", "README.md", "added.txt", "untracked")
-        u.Tests.git_run(lane, "commit", "-m", "saved")
-        saved = u.Tests.git_capture(lane, "rev-parse", "HEAD").strip()
+        test_u.Tests.git_run(lane, "add", "README.md", "added.txt", "untracked")
+        test_u.Tests.git_run(lane, "commit", "-m", "saved")
+        saved = test_u.Tests.git_capture(lane, "rev-parse", "HEAD").strip()
         (source / "README.md").write_text("new concurrent change\n", encoding="utf-8")
-        before = u.Tests.git_capture(source, "status", "--porcelain=v1")
+        before = test_u.Tests.git_capture(source, "status", "--porcelain=v1")
 
         publication = self._publish(tmp_path, checkpoint)
         result = u.Infra.git_cleanup_worktree_state(
@@ -199,7 +199,7 @@ class TestsFlextInfraGitStateCheckpoint:
         )
 
         tm.that(result.failure, eq=True)
-        tm.that(u.Tests.git_capture(source, "status", "--porcelain=v1"), eq=before)
+        tm.that(test_u.Tests.git_capture(source, "status", "--porcelain=v1"), eq=before)
         tm.that((source / "README.md").read_text(), eq="new concurrent change\n")
         tm.that((source / "added.txt").exists(), eq=True)
 
@@ -207,14 +207,14 @@ class TestsFlextInfraGitStateCheckpoint:
         checkpoint = self._capture(tmp_path)
         source = checkpoint.snapshot.repo_root
         remote = tmp_path / "remote.git"
-        u.Tests.git_run(source, "init", "--bare", str(remote))
-        u.Tests.git_run(source, "remote", "add", "capture-remote", str(remote))
+        test_u.Tests.git_run(source, "init", "--bare", str(remote))
+        test_u.Tests.git_run(source, "remote", "add", "capture-remote", str(remote))
 
         tm.ok(u.Infra.git_publish_worktree_checkpoint(checkpoint, "capture-remote"))
         tm.ok(u.Infra.git_publish_worktree_checkpoint(checkpoint, "capture-remote"))
 
         tm.that(
-            u.Tests.git_capture(
+            test_u.Tests.git_capture(
                 source,
                 "ls-remote",
                 "--refs",
@@ -232,9 +232,9 @@ class TestsFlextInfraGitStateCheckpoint:
     def test_empty_scope_is_explicit_and_intent_to_add_is_rejected(
         tmp_path: Path,
     ) -> None:
-        source = u.Tests.git_repository(tmp_path)
+        source = test_u.Tests.git_repository(tmp_path)
         (source / "pending.txt").write_text("pending\n", encoding="utf-8")
-        u.Tests.git_run(source, "add", "--intent-to-add", "pending.txt")
+        test_u.Tests.git_run(source, "add", "--intent-to-add", "pending.txt")
         empty = tm.ok(
             u.Infra.git_snapshot_worktree_state(
                 m.Infra.GitWorktreeStateRequest(repo_root=source, paths=()),
@@ -259,12 +259,12 @@ class TestsFlextInfraGitStateCheckpoint:
 
         """
         source = checkpoint.snapshot.repo_root
-        tree = u.Tests.git_capture(
+        tree = test_u.Tests.git_capture(
             source,
             "rev-parse",
             f"{checkpoint.worktree_commit}^{{tree}}",
         ).strip()
-        divergent = u.Tests.git_capture(
+        divergent = test_u.Tests.git_capture(
             source,
             "commit-tree",
             tree,
@@ -273,7 +273,7 @@ class TestsFlextInfraGitStateCheckpoint:
             "-m",
             "unrelated capture",
         ).strip()
-        u.Tests.git_run(
+        test_u.Tests.git_run(
             source,
             "push",
             "--force",
@@ -286,7 +286,7 @@ class TestsFlextInfraGitStateCheckpoint:
     def _remote_advertisement(
         checkpoint: m.Infra.GitWorktreeStateCheckpoint,
     ) -> str:
-        return u.Tests.git_capture(
+        return test_u.Tests.git_capture(
             checkpoint.snapshot.repo_root,
             "ls-remote",
             "--refs",

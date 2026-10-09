@@ -10,12 +10,12 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra.validate import FlextInfraInventoryService
+from flext_infra.validate.inventory import FlextInfraInventoryService
 from tests import m, u
 
 
 class TestsFlextInfraInventory:
-    """Core, script-scanning, and report tests for FlextInfraInventoryService."""
+    """Core, script-scanning, and report-generation tests for FlextInfraInventoryService."""
 
     @staticmethod
     def test_generate_empty_workspace(tmp_path: Path) -> None:

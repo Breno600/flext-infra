@@ -268,11 +268,8 @@ MYPY_PATHS := $(strip $(foreach d,src tests examples,$(if $(wildcard $(PROJECT_R
 # Source: the repository's declared Mise toolchain, provisioned by make setup.
 # Every tool resolves from the mise-managed PATH (direnv activation shims, or
 # the CI provisioned PATH); _builtin_require_mise guards the running mise
-# against the committed mise.lock pin. uv is resolved through mise itself when
-# a recipe runs: a workspace environment carries a PyPI `uv` executable (a
-# transitive dependency) ahead of the shims, and only the mise.lock release is
-# the producer the toolchain proof accepts.
-override UV := "$$(mise which uv)"
+# against the committed mise.lock pin.
+override UV := uv
 CALLER_PATH := $(PATH)
 CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 # End SECTION: project tool owner
@@ -311,8 +308,19 @@ ifneq ($(RUNTIME_GIT_DIR),$(RUNTIME_GIT_COMMON_DIR))
 RUNTIME_LINKED_WORKTREE := Y
 endif
 endif
+# A linked worktree uses the environment its primary worktree uses: Git lists
+# the primary first wherever the lane lives, and the primary's runtime is its
+# superproject when attached, else the primary itself.
 ifeq ($(RUNTIME_LINKED_WORKTREE),Y)
-override RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../.venv)
+RUNTIME_PRIMARY_WORKTREE := $(word 2,$(shell git -C "$(RUNTIME_ROOT)" worktree list --porcelain))
+ifneq ($(.SHELLSTATUS),0)
+$(error Cannot resolve the primary worktree of $(RUNTIME_ROOT))
+endif
+RUNTIME_PRIMARY_RUNTIME := $(shell cd "$(RUNTIME_PRIMARY_WORKTREE)" && root=$$(git rev-parse --show-superproject-working-tree) && cd "$${root:-.}" && pwd -P)
+ifneq ($(.SHELLSTATUS),0)
+$(error Cannot resolve the runtime of the primary worktree $(RUNTIME_PRIMARY_WORKTREE))
+endif
+override RUNTIME_VENV := $(RUNTIME_PRIMARY_RUNTIME)/.venv
 else
 override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
 endif
@@ -482,7 +490,8 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 		printf 'WARNING[setup] uv.lock does not match the manifests of %s:\n%s\n  Right way: only `make upg` writes uv.lock; setup installs the committed lock as-is (--frozen) and never relocks.\n  How: run `make upg` in %s, then commit uv.lock.\n' "$(UV_PROJECT)" "$$uv_lock_report" "$(PROJECT_ROOT)" >&2; \
 		uv_lock_mode=--frozen; \
 	fi; \
-	$$credential_env $(UV) sync --project "$(UV_PROJECT)" --python "$$(mise which python)" $(UV_SYNC_FLAGS) $$uv_lock_mode --link-mode "$(UV_LINK_MODE)"; \
+	locked_python="$$(mise -C "$(RUNTIME_ROOT)" which python)"; \
+	$$credential_env $(UV) sync --project "$(UV_PROJECT)" --python "$$locked_python" $(UV_SYNC_FLAGS) $$uv_lock_mode --link-mode "$(UV_LINK_MODE)"; \
 	$(PROJECT_FLEXT_INFRA) workspace sync-environment --repository-root "$(PROJECT_ROOT)"; \
 	if [ "$(strip $(CI))" != "Y" ]; then \
 		for member in $(WORKSPACE_SUBPROJECTS); do \

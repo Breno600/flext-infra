@@ -11,10 +11,7 @@ from pathlib import Path
 from git import BadName, GitCommandError
 
 from flext_infra import c, m, p, r
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGitWorktreePatchMixin,
-    FlextInfraUtilitiesWorkspaceManifest,
-)
+from flext_infra._utilities import FlextInfraUtilitiesGitWorktreePatchMixin
 
 
 class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreePatchMixin):
@@ -112,27 +109,49 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreePatc
         cls,
         request: m.Infra.GitLaneVerificationRequest,
     ) -> p.Result[m.Infra.GitRemoteBranchRequest]:
-        """Resolve the remote branch exclusively from the typed manifest.
+        """Resolve the remote branch declared by the superproject's ``.gitmodules``.
+
+        The lane's primary checkout is a member of exactly one superproject, and
+        that superproject's ``.gitmodules`` ``branch`` key is the only integration
+        declaration. A checkout without a superproject, an undeclared member, or
+        a member that follows the superproject (``.``) has no declared line and
+        fails closed; no branch is inferred from names or cached refs.
 
         Returns:
             Declared integration query or a missing-authority diagnostic.
 
         """
-        declared = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
-            request.repo_root,
-        )
-        if declared.failure:
-            return r[m.Infra.GitRemoteBranchRequest].from_failure(declared)
-        if not declared.value or declared.value[0].integration is None:
-            return r[m.Infra.GitRemoteBranchRequest].fail(
-                "lane admission requires typed config/workspace.yaml integration "
-                "declaration; no branch is inferred from names or cached refs",
+        result = r[m.Infra.GitRemoteBranchRequest]
+        primary = cls._git_primary_worktree_root_path(request.repo_root)
+        if primary.failure:
+            return result.from_failure(primary)
+        superproject = cls._git_repository_root_path(primary.value)
+        if superproject.failure:
+            return result.from_failure(superproject)
+        if superproject.value == primary.value:
+            return result.fail(
+                "lane admission requires the composing superproject's .gitmodules "
+                f"branch declaration; {primary.value} has no superproject",
             )
-        return r[m.Infra.GitRemoteBranchRequest].ok(
+        declaration = cls.git_submodule_declaration(
+            m.Infra.GitSubmoduleContractRequest(
+                repo_root=superproject.value,
+                member_path=primary.value.relative_to(superproject.value).as_posix(),
+            ),
+        )
+        if declaration.failure:
+            return result.from_failure(declaration)
+        branch = declaration.value.branch
+        if branch == c.Infra.FOLLOW_SUPERPROJECT_BRANCH:
+            return result.fail(
+                "lane admission requires a named .gitmodules branch; "
+                f"{declaration.value.path} follows its superproject",
+            )
+        return result.ok(
             m.Infra.GitRemoteBranchRequest(
                 repo_root=request.repo_root,
                 remote=request.remote,
-                branch=declared.value[0].integration.branch,
+                branch=branch,
             ),
         )
 

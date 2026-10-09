@@ -19,7 +19,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import config
-from tests import u
+from tests import TestsFlextInfraUtilities as tu, u
 
 
 class TestsFlextInfraPyprojectConformPreservesLintScope:
@@ -45,7 +45,7 @@ class TestsFlextInfraPyprojectConformPreservesLintScope:
         content = (self._repository_root() / "pyproject.toml").read_text(
             encoding="utf-8",
         )
-        ignores = u.Tests.toml_table_at(
+        ignores = tu.Tests.toml_table_at(
             content,
             "tool",
             "ruff",

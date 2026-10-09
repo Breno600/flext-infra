@@ -109,19 +109,13 @@ class TestsFlextInfraDepsModernizerComments:
     @staticmethod
     def test_inject_comments_phase_apply_with_optional_dependencies_dev() -> None:
         """Handle dotted development dependency declarations."""
-        rendered = (
-            "[project.optional-dependencies]\n"
-            "optional-dependencies.dev = ['pytest', 'coverage']\n"
-        )
+        rendered = "[project.optional-dependencies]\noptional-dependencies.dev = ['pytest', 'coverage']\n"
         result, changes = FlextInfraInjectCommentsPhase().apply(rendered)
         tm.that(("optional-dependencies.dev" in result) or (changes), eq=True)
 
     def test_inject_comments_phase_repositions_marker_before_section(self) -> None:
         """Position a managed marker immediately before its section."""
-        rendered = (
-            "[tool.coverage.report]\nprecision = 2\n# [MANAGED] pyrefly\n"
-            '[tool.pyrefly]\npython-version = "3.13"'
-        )
+        rendered = '[tool.coverage.report]\nprecision = 2\n# [MANAGED] pyrefly\n[tool.pyrefly]\npython-version = "3.13"'
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
         lines = result.splitlines()
         pyrefly_idx = lines.index("[tool.pyrefly]")
@@ -130,24 +124,14 @@ class TestsFlextInfraDepsModernizerComments:
     @staticmethod
     def test_inject_comments_phase_removes_auto_banner_and_auto_marker() -> None:
         """Replace superseded automatic banner and marker variants."""
-        rendered = (
-            "# [MANAGED] FLEXT pyproject standardization\n"
-            "# Sections with [MANAGED] are enforced by flext_infra.deps.modernizer.\n"
-            "# Sections with [AUTO] are derived from workspace layout"
-            " and dependencies.\n"
-            "# [AUTO] merged from dev/docs/security/test/typings\n"
-            "[project.optional-dependencies]\ndev = ['pytest']"
-        )
+        rendered = "# [MANAGED] FLEXT pyproject standardization\n# Sections with [MANAGED] are enforced by flext_infra.deps.modernizer.\n# Sections with [AUTO] are derived from workspace layout and dependencies.\n# [AUTO] merged from dev/docs/security/test/typings\n[project.optional-dependencies]\ndev = ['pytest']"
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
         tm.that(result, starts=c.Infra.BANNER)
         tm.that("[AUTO]" in result, eq=False)
 
     def test_inject_comments_phase_marks_pytest_and_coverage_subtables(self) -> None:
         """Annotate governed pytest and coverage subtables from the SSOT."""
-        rendered = (
-            '[tool.pytest.ini_options]\nminversion = "8.0"\n'
-            "[tool.coverage.report]\nprecision = 2"
-        )
+        rendered = '[tool.pytest.ini_options]\nminversion = "8.0"\n[tool.coverage.report]\nprecision = 2'
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
         tm.that(result, has=self._owned_marker("tool.pytest.ini_options"))
         tm.that(result, has=self._owned_marker("tool.coverage.report"))

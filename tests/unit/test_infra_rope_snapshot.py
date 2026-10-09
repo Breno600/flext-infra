@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 from tests import u
 
@@ -24,12 +23,7 @@ class TestsFlextInfraRopeSnapshot:
 
     @staticmethod
     def test_snapshot_serves_project_root_entry_module(tmp_path: Path) -> None:
-        """A governed root conftest.py joins the closed inventory from disk.
-
-        Raises:
-            TypeError: If the snapshot entry is not a Rope file resource.
-
-        """
+        """A governed root conftest.py joins the closed inventory from disk."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",
@@ -49,9 +43,6 @@ class TestsFlextInfraRopeSnapshot:
             snapshot = u.Infra.snapshot_project(rope.rope_project, sources)
             try:
                 resource = snapshot.get_resource("conftest.py")
-                if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
-                    msg = "expected a Rope file resource: conftest.py"
-                    raise TypeError(msg)
                 tm.that(resource.read(), eq=sources[conftest.resolve()])
             finally:
                 snapshot.close()

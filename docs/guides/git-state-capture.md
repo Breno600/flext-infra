@@ -76,7 +76,9 @@ refresh the index, create a lane, or retire one. `verify-clean` retains its sepa
 cleanliness contract.
 
 The preflight rejects any stash entries or retained `refs/stash`, requires the
-integration declaration from the checkout's typed workspace manifest, compares the
+integration branch that the composing superproject's `.gitmodules` declares for the
+checkout's primary worktree (a checkout without a superproject, an undeclared member,
+or a member that follows its superproject with `.` fails closed), compares the
 cached integration OID to its live remote advertisement, and proves ancestry before
 checking the remote advertisement again. `--expected-tip <oid>` binds a later
 verification to a prior observation; a changed tip is a refusal, never a retry.

@@ -17,7 +17,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import u
+from flext_infra import u
+from tests import u as test_u
 
 
 class TestsFlextInfraRepositoryBaselineBranch:
@@ -27,7 +28,7 @@ class TestsFlextInfraRepositoryBaselineBranch:
     def _seed_remote_branch(repository_root: Path, branch: str) -> None:
         """Publish one remote-tracking branch exactly as a real clone would."""
         tm.ok(
-            u.Cli.run_checked(
+            test_u.Cli.run_checked(
                 ["git", "update-ref", f"refs/remotes/origin/{branch}", "HEAD"],
                 cwd=repository_root,
             ),
@@ -40,14 +41,14 @@ class TestsFlextInfraRepositoryBaselineBranch:
         """The derived baseline is the integration branch the repository has."""
         # A repository that publishes ONLY `dev` must resolve to `dev`, proving
         # the derivation reads live Git instead of a provider constant.
-        seeded = u.Cli.capture(
+        seeded = test_u.Cli.capture(
             ["git", "for-each-ref", "--format=%(refname)", "refs/remotes/origin"],
             cwd=infra_git_repo,
         )
         tm.ok(seeded)
         for reference in seeded.value.split():
             tm.ok(
-                u.Cli.run_checked(
+                test_u.Cli.run_checked(
                     ["git", "update-ref", "-d", reference],
                     cwd=infra_git_repo,
                 ),
@@ -66,7 +67,7 @@ class TestsFlextInfraRepositoryBaselineBranch:
         """A checkout without a published integration branch never guesses."""
         empty = tmp_path / "no-integration-branch"
         empty.mkdir(parents=True, exist_ok=True)
-        tm.ok(u.Cli.run_checked(["git", "init"], cwd=empty))
+        tm.ok(test_u.Cli.run_checked(["git", "init"], cwd=empty))
 
         resolved = u.Infra.repository_baseline_branch(empty)
 
@@ -80,14 +81,14 @@ class TestsFlextInfraRepositoryBaselineBranch:
         that, the release name has to live inside this package — which is how
         `0.12.0-dev` came to be hardcoded next to `develop` and `dev`.
         """
-        seeded = u.Cli.capture(
+        seeded = test_u.Cli.capture(
             ["git", "for-each-ref", "--format=%(refname)", "refs/remotes/origin"],
             cwd=infra_git_repo,
         )
         tm.ok(seeded)
         for reference in seeded.value.split():
             tm.ok(
-                u.Cli.run_checked(
+                test_u.Cli.run_checked(
                     ["git", "update-ref", "-d", reference],
                     cwd=infra_git_repo,
                 ),

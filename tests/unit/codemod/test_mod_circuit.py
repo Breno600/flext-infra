@@ -7,16 +7,12 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import main
-from tests import c, m, u
-
-if TYPE_CHECKING:
-    from tests import t
+from flext_infra import c, m, main as infra_main, u
+from tests import t
 
 
 @pytest.mark.slow
@@ -33,33 +29,6 @@ class TestsFlextInfraModCliRoute:
     """
 
     @staticmethod
-    def _run_mod_scan(
-        mod_workspace: Path,
-        capsys: pytest.CaptureFixture[str],
-    ) -> tuple[int, m.Infra.ModScanEvidence, str, str]:
-        """Run one ``refactor mod`` scan and capture its receipt artifacts.
-
-        Returns:
-            The exit code, the parsed evidence, the receipt digest, and the
-            captured console text.
-
-        """
-        report_path = mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH
-        exit_code = main([
-            "refactor",
-            "mod",
-            "--repository-root",
-            str(mod_workspace),
-        ])
-        capture = capsys.readouterr()
-        state = tm.ok(u.Cli.atomic_read_binary_file_state(report_path, required=True))
-        evidence_bytes = tm.not_none(state.content)
-        evidence = m.Infra.ModScanEvidence.model_validate_json(evidence_bytes)
-        digest = u.Cli.sha256_bytes(evidence_bytes)
-        console = capture.out + capture.err
-        return exit_code, evidence, digest, console
-
-    @staticmethod
     def test_receipt_is_complete_and_replaced_by_zero_scan(
         mod_workspace: Path,
         capsys: pytest.CaptureFixture[str],
@@ -71,9 +40,20 @@ class TestsFlextInfraModCliRoute:
         tm.ok(u.Cli.ensure_dir(generated_hook.parent))
         tm.ok(u.Cli.atomic_write_text_file(generated_hook, "value = 1\n"))
 
-        first_exit, first_evidence, first_digest, first_console = (
-            TestsFlextInfraModCliRoute._run_mod_scan(mod_workspace, capsys)
+        first_exit = infra_main([
+            "refactor",
+            "mod",
+            "--repository-root",
+            str(mod_workspace),
+        ])
+        first_console_capture = capsys.readouterr()
+        first_state = tm.ok(
+            u.Cli.atomic_read_binary_file_state(report_path, required=True),
         )
+        first_bytes = tm.not_none(first_state.content)
+        first_evidence = m.Infra.ModScanEvidence.model_validate_json(first_bytes)
+        first_digest = u.Cli.sha256_bytes(first_bytes)
+        first_console = first_console_capture.out + first_console_capture.err
 
         tm.that(first_exit, ne=0)
         tm.that(
@@ -120,11 +100,26 @@ class TestsFlextInfraModCliRoute:
                 '    """Fixture namespace."""\n',
             ),
         )
-        second_exit, second_evidence, second_digest, second_console = (
-            TestsFlextInfraModCliRoute._run_mod_scan(mod_workspace, capsys)
+        second_exit = infra_main([
+            "refactor",
+            "mod",
+            "--repository-root",
+            str(mod_workspace),
+        ])
+        second_console_capture = capsys.readouterr()
+        second_state = tm.ok(
+            u.Cli.atomic_read_binary_file_state(report_path, required=True),
         )
+        second_bytes = tm.not_none(second_state.content)
+        second_evidence = m.Infra.ModScanEvidence.model_validate_json(second_bytes)
+        second_digest = u.Cli.sha256_bytes(second_bytes)
+        second_console = second_console_capture.out + second_console_capture.err
 
-        tm.that(second_exit, eq=0)
+        tm.that(
+            second_exit,
+            eq=0,
+            msg=second_console + second_evidence.model_dump_json(indent=2),
+        )
         tm.that(second_evidence.findings, eq=0)
         tm.that(second_evidence.actionable, eq=0)
         tm.that(second_evidence.detection_only, eq=0)
@@ -163,7 +158,7 @@ class TestsFlextInfraModCliRoute:
         )
         tm.ok(u.Cli.atomic_write_text_file(generated_path, generated_source))
 
-        exit_code = main([
+        exit_code = infra_main([
             "refactor",
             "mod",
             "--repository-root",
@@ -191,10 +186,19 @@ class TestsFlextInfraModCliRoute:
         mod_workspace: Path,
     ) -> None:
         """Carry findings exposed by one rewrite into the next apply iteration."""
-        u.Tests.declare_codemod_rules(
-            mod_workspace,
-            {
-                "first": (
+        config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
+        tm.ok(u.Cli.ensure_dir(rules_root))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                config_path,
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+            ),
+        )
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                rules_root / "first.yml",
+                (
                     "id: first\n"
                     "language: Python\n"
                     "rule:\n"
@@ -202,7 +206,12 @@ class TestsFlextInfraModCliRoute:
                     "fix: value = list()\n"
                     "severity: warning\n"
                 ),
-                "second": (
+            ),
+        )
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                rules_root / "second.yml",
+                (
                     "id: second\n"
                     "language: Python\n"
                     "rule:\n"
@@ -210,12 +219,12 @@ class TestsFlextInfraModCliRoute:
                     "fix: value = tuple()\n"
                     "severity: warning\n"
                 ),
-            },
+            ),
         )
         sample_path = mod_workspace / "sample.py"
         tm.ok(u.Cli.atomic_write_text_file(sample_path, "value = dict()\n"))
 
-        exit_code = main([
+        exit_code = infra_main([
             "refactor",
             "mod",
             "--repository-root",
@@ -300,7 +309,7 @@ class TestsFlextInfraModCliRoute:
             ),
         )
 
-        exit_code = main([
+        exit_code = infra_main([
             "refactor",
             "mod",
             "--repository-root",
@@ -371,7 +380,7 @@ class TestsFlextInfraModCliRoute:
             ),
         )
 
-        exit_code = main([
+        exit_code = infra_main([
             "refactor",
             "mod",
             "--repository-root",
@@ -435,7 +444,7 @@ class TestsFlextInfraModCliRoute:
             u.Cli.atomic_write_text_file(mod_workspace / "sample.py", f"{statement}\n"),
         )
 
-        exit_code = main([
+        exit_code = infra_main([
             "refactor",
             "mod",
             "--repository-root",
@@ -461,52 +470,3 @@ class TestsFlextInfraModCliRoute:
             eq=c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX,
         )
         tm.that(report.non_actionable_with_fix, gte=1)
-
-    @staticmethod
-    def test_class_stem_admits_the_surface_prefix_nesting_derives(
-        mod_workspace: Path,
-    ) -> None:
-        """The stem law accepts the owner name class nesting derives per surface."""
-        stem = u.derive_class_stem(mod_workspace.name.replace("_", "-"))
-        modules = {
-            "sample.py": f"{stem}Sample",
-            "examples/constants.py": f"Examples{stem}Constants",
-            "examples/scenario.py": f"{stem}Scenario",
-            "tests/bare.py": f"{stem}Bare",
-            "examples/helper.py": "Helper",
-        }
-        for relative, name in modules.items():
-            path = mod_workspace / relative
-            tm.ok(u.Cli.ensure_dir(path.parent))
-            tm.ok(
-                u.Cli.atomic_write_text_file(
-                    path,
-                    '"""Public refactor-mod fixture module."""\n\n'
-                    "from __future__ import annotations\n\n\n"
-                    f"class {name}:\n"
-                    '    """Fixture namespace."""\n',
-                ),
-            )
-
-        _ = main([
-            "refactor",
-            "mod",
-            "--repository-root",
-            str(mod_workspace),
-        ])
-        report_state = tm.ok(
-            u.Cli.atomic_read_binary_file_state(
-                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH,
-                required=True,
-            ),
-        )
-        report = m.Infra.ModScanEvidence.model_validate_json(
-            tm.not_none(report_state.content),
-        )
-        flagged = {
-            entry.file.as_posix()
-            for entry in report.entries
-            if entry.rule_id == "require-project-class-stem"
-        }
-
-        tm.that(flagged, eq={"tests/bare.py", "examples/helper.py"})

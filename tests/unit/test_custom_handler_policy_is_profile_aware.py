@@ -22,15 +22,12 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
 from flext_infra import c, config, m
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-
-if TYPE_CHECKING:
-    from tests import t
+from tests import t
 
 
 class TestsFlextInfraCustomHandlerPolicyIsProfileAware:

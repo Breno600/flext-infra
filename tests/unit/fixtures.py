@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -69,27 +68,6 @@ def deptry_report_payload() -> t.JsonPayload:
     return parsed.value
 
 
-@pytest.fixture(autouse=True)
-def runner_ci_context_cleared() -> Iterator[None]:
-    """Keep the runner's CI context out of every test body.
-
-    The approval path runs the suite under ``CI=Y``: collection reads it to
-    deselect CI-excluded tests, but a test body must behave identically on a
-    runner and on a workstation. Inherited ``CI`` silently selected CI-only
-    contracts (the CI member identity, the CI resolution guard) in local
-    scenarios; a scenario that exercises a CI contract passes the configured
-    variable explicitly.
-
-    Yields:
-        Control inside the scoped environment.
-
-    """
-    with u.Tests.env_vars_context(
-        vars_to_clear=(config.Infra.codegen.make.ci.variable,),
-    ):
-        yield
-
-
 @pytest.fixture
 def tool_config_document() -> m.Infra.ToolConfigDocument:
     """Provide ``tool_config_document``.
@@ -146,26 +124,21 @@ def _provision_detector_template(run_root: Path, modules: t.StrSequence) -> None
             repository_root=_PROJECT_ROOT,
         ),
     )
-    python_required = config.Infra.codegen.toolchain.python_required_version
-    infrastructure_source = (
-        f"{infrastructure.distribution} @ git+{infrastructure.url}@{integration.branch}"
-    )
     root = u.Tests.mk_project(
         parent,
         _DETECTOR_PROJECT_NAME,
         with_src=True,
         pyproject=(
-            '[build-system]\nrequires = ["hatchling"]\n'
-            'build-backend = "hatchling.build"\n'
+            '[build-system]\nrequires = ["hatchling"]\nbuild-backend = "hatchling.build"\n'
             '[project]\nname = "detector-fixture"\nversion = "0.1.0"\n'
             'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
-            f'requires-python = "{python_required}"\n'
+            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
             f"dependencies = [{dependencies}]\n"
             '[project.optional-dependencies]\nfeature = ["requests"]\n'
             # A governed checkout declares every internal requirement with its
             # own direct Git source; the scaffold dev SSOT includes flext-tests.
             '[dependency-groups]\ndev = ["deptry", "mypy", "pip", '
-            f'"{infrastructure_source}", '
+            f'"{infrastructure.distribution} @ git+{infrastructure.url}@{integration.branch}", '
             f'"{u.Tests.flext_source("flext-tests")}"]\n'
             "[tool.hatch.metadata]\nallow-direct-references = true\n"
             "[tool.mypy]\n"
@@ -317,7 +290,9 @@ def _provision_make_template(run_root: Path, profile: c.Infra.MakeProfile) -> No
             env={
                 **u.Tests.hostile_uv_environment(hostile_venv),
                 make.ci.variable: make.ci.value,
-                c.Tests.MISE_DATA_DIR_ENV: str(parent / c.Tests.COLD_MISE_STORAGE),
+                u.Infra.mise_bootstrap_environment().storage_root_variable: str(
+                    parent / c.Tests.COLD_MISE_STORAGE,
+                ),
             },
         ),
     )
@@ -389,25 +364,6 @@ def hermetic_git_environment(tmp_path_factory: pytest.TempPathFactory) -> t.StrM
             mirrored = u.Tests.build_git_mirrors(_PROJECT_ROOT, mirrors)
             tm.ok(u.Cli.atomic_write_text_file(receipt, "\n".join(mirrored) + "\n"))
     return u.Tests.hermetic_git_environment(mirrors)
-
-
-@pytest.fixture(scope="session", params=tuple(c.Infra.MakeProfile))
-def generated_make_template(
-    request: pytest.FixtureRequest,
-    tmp_path_factory: pytest.TempPathFactory,
-) -> t.Pair[c.Infra.MakeProfile, Path]:
-    """Render the real Make contract once per profile and worker session.
-
-    Returns:
-        The declared profile and its generated project checkout.
-    """
-    profile = c.Infra.MakeProfile(request.param)
-    root, _ = u.Tests.render_make_environment(
-        tmp_path_factory.mktemp(f"make-contract-{profile.value}"),
-        profile,
-        bootstrap=True,
-    )
-    return profile, root
 
 
 @pytest.fixture
@@ -627,15 +583,11 @@ def cached_runner_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
         "def answer() -> int:\n    return 42\n",
         encoding="utf-8",
     )
-    # The runner contract is proven through process evidence (exit codes,
-    # manifests, accounting), not through the child's assertion library. The
-    # consumer's suite stays on plain asserts: every nested runner lifecycle
-    # imports the child suite, and the shared assertion facade drags the full
-    # infrastructure model materialization into each of those interpreters.
     (tests_root / "test_runtime.py").write_text(
+        "from flext_tests import tm\n"
         "from runner_sample import answer\n\n"
         "def test_runtime() -> None:\n"
-        "    assert answer() == 42\n",
+        "    tm.that(answer(), eq=42)\n",
         encoding="utf-8",
     )
     return project_root
@@ -704,8 +656,7 @@ def mod_workspace(tmp_path: Path) -> Path:
     tm.ok(
         u.Cli.atomic_write_text_file(
             package_dir / c.Infra.INIT_PY,
-            '"""Public refactor-mod fixture package."""\n\n'
-            "from __future__ import annotations\n",
+            '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
         ),
     )
     tm.ok(
@@ -724,8 +675,7 @@ def mod_workspace(tmp_path: Path) -> Path:
                 "from flext_core import t\n"
                 "\n"
                 "class _FixtureInfra:\n"
-                '    """Stand-in infra namespace owning every name'
-                ' the fixture uses."""\n'
+                '    """Stand-in infra namespace owning every name the fixture uses."""\n'
                 "\n"
                 "    @staticmethod\n"
                 "    def serialization_lock_execute(\n"
@@ -911,7 +861,7 @@ def semantic_rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]
 @pytest.fixture
 def models_resource(
     semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
-) -> t.Infra.RopeFile:
+) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic models fixture module.
 
     Returns:
@@ -923,13 +873,14 @@ def models_resource(
         rope_project,
         repository_root / "src" / "rope_demo" / "models.py",
     )
-    return tm.not_none(resource)
+    validated: t.Infra.RopeResource = tm.not_none(resource)
+    return validated
 
 
 @pytest.fixture
 def services_resource(
     semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
-) -> t.Infra.RopeFile:
+) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic services fixture module.
 
     Returns:
@@ -941,4 +892,5 @@ def services_resource(
         rope_project,
         repository_root / "src" / "rope_demo" / "services.py",
     )
-    return tm.not_none(resource)
+    validated: t.Infra.RopeResource = tm.not_none(resource)
+    return validated

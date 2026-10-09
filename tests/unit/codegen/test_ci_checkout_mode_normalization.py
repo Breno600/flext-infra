@@ -32,15 +32,11 @@ class TestsFlextInfraCiCheckoutModeNormalization:
             if isinstance(script, str):
                 commands.extend(line.strip() for line in script.splitlines())
         normalize_at = commands.index("chmod -R go-w .")
-        make = config.Infra.codegen.make
-        # One approval invocation owns every CI-context verb; CI never
-        # generates (gen is a local/pre-push verb) and never runs a verb
-        # outside that single blocking step.
-        approval_at = commands.index(
-            f"{make.ci.variable}={make.ci.value} make pre-commit",
-        )
-        tm.that(normalize_at < approval_at, eq=True)
-        ci_verbs = [step.verb for step in make.workflow if "ci" in step.contexts]
-        tm.that(ci_verbs, empty=False)
-        for verb in ci_verbs:
-            tm.that(verb in make.approval_verbs, eq=True)
+        ci = config.Infra.codegen.make.ci
+        generation_at = commands.index(f"{ci.variable}={ci.value} make gen")
+        tm.that(normalize_at < generation_at, eq=True)
+        for step in config.Infra.codegen.make.workflow:
+            if "ci" not in step.contexts:
+                continue
+            gate_at = commands.index(f"{ci.variable}={ci.value} make {step.verb}")
+            tm.that(normalize_at < gate_at, eq=True)

@@ -128,7 +128,7 @@ class TestsFlextInfraAuditorLinks:
         def test_broken_link_issues_with_should_skip_target_true(
             tmp_path: Path,
         ) -> None:
-            """Test broken link issues skip targets when should_skip_target is True."""
+            """Test docs_broken_link_issues skips targets when should_skip_target returns True."""
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
             (docs_dir / "test.md").write_text("[a, b]")

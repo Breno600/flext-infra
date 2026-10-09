@@ -131,20 +131,14 @@ class TestsFlextInfraApplyRenames:
                 (
                     sys.executable,
                     "-c",
-                    (
-                        "import consumer; print(consumer.__doc__); "
-                        "print(consumer.read.__doc__)"
-                    ),
+                    "import consumer; print(consumer.__doc__); print(consumer.read.__doc__)",
                 ),
                 cwd=mod_workspace,
             ),
         )
         tm.that(
             namespace.stdout,
-            eq=(
-                "campaign_renamed_token campaign_renamed_token\n"
-                "campaign_renamed_token\n"
-            ),
+            eq="campaign_renamed_token campaign_renamed_token\ncampaign_renamed_token\n",
         )
 
     @staticmethod
@@ -235,15 +229,12 @@ class TestsFlextInfraApplyRenames:
             "root = Path(sys.argv[1])\nchanged = False\n"
             "def interfere(event, args):\n"
             "    global changed\n"
-            "    if event == 'os.rename' and Path(str(args[1])).name == 'guide.md'"
-            " and not changed:\n"
+            "    if event == 'os.rename' and Path(str(args[1])).name == 'guide.md' and not changed:\n"
             "        changed = True\n"
-            "        (root / 'renames.csv')"
-            ".write_text('old,new\\ncampaign_token,concurrent_name\\n')\n"
+            "        (root / 'renames.csv').write_text('old,new\\ncampaign_token,concurrent_name\\n')\n"
             "sys.addaudithook(interfere)\n"
             "result = FlextInfraApplyRenames.run(m.Infra.ApplyRenamesInput(\n"
-            "    csv=str(root / 'renames.csv'), roots=(str(root),), apply=True,"
-            " text_globs=('**/*.md',)))\n"
+            "    csv=str(root / 'renames.csv'), roots=(str(root),), apply=True, text_globs=('**/*.md',)))\n"
             "assert changed\nassert result.failure\n"
             "assert 'authenticated state changed' in result.error, result.error\n"
         )

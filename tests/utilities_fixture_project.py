@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import dataclasses
 from pathlib import Path
 
 from flext_tests import tm
@@ -28,24 +27,18 @@ WORKSPACE_MANIFEST_VERSION = 3
 class TestsFlextInfraUtilitiesProjectFixtureMixin:
     """Typed project identity, spec, and manifest-seed fixture helpers."""
 
-    @dataclasses.dataclass(frozen=True)
-    class ProjectInfoTraits:
-        """Optional project-info knobs grouped into one fixture contract."""
-
-        stack: str = "python"
-        has_tests: bool = False
-        has_src: bool = True
-        project_class: str = "FlextTestProject"
-        make_profile: c.Infra.MakeProfile = c.Infra.MakeProfile.STANDALONE
-        declared_subproject: bool = False
-
     @staticmethod
     def create_project_info(
         project_root: Path,
         *,
         name: str = "test-project",
+        stack: str = "python",
+        has_tests: bool = False,
+        has_src: bool = True,
+        project_class: str = "FlextTestProject",
         package_name: str = "test_project",
-        traits: ProjectInfoTraits | None = None,
+        make_profile: c.Infra.MakeProfile = c.Infra.MakeProfile.STANDALONE,
+        declared_subproject: bool = False,
     ) -> m.Infra.ProjectInfo:
         """Provide the typed test helper `create_project_info`.
 
@@ -53,18 +46,16 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             The resulting ``m.Infra.ProjectInfo``.
 
         """
-        fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
-        resolved_traits = fixture.ProjectInfoTraits() if traits is None else traits
         return m.Infra.ProjectInfo(
             name=name,
             path=project_root,
-            stack=resolved_traits.stack,
-            has_tests=resolved_traits.has_tests,
-            has_src=resolved_traits.has_src,
-            project_class=resolved_traits.project_class,
+            stack=stack,
+            has_tests=has_tests,
+            has_src=has_src,
+            project_class=project_class,
             package_name=package_name,
-            make_profile=resolved_traits.make_profile,
-            declared_subproject=resolved_traits.declared_subproject,
+            make_profile=make_profile,
+            declared_subproject=declared_subproject,
         )
 
     @staticmethod
@@ -348,15 +339,14 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             The resulting ``Path``.
 
         """
-        fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
-        provider = fixture.provider()
+        provider = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
         path = repository / c.Infra.GITMODULES
         path.write_text(
             "".join(
                 f'[submodule "{project}"]\n'
                 f"\tpath = {project}\n"
                 f"\turl = {provider.base_url.rstrip('/')}/{Path(project).name}.git\n"
-                f"\tbranch = {fixture.provider_branch()}\n"
+                f"\tbranch = {TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()}\n"
                 for project in projects
             ),
             encoding="utf-8",
@@ -376,17 +366,6 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             workspace=name,
             database=name,
             issue_prefix=name,
-        )
-
-    @staticmethod
-    def write_member_package(project_dir: Path, name: str) -> None:
-        """Give one declared member its empty import package and topology input."""
-        package = project_dir / "src" / name.replace("-", "_")
-        package.mkdir(parents=True, exist_ok=True)
-        (package / "__init__.py").write_text("", encoding="utf-8")
-        TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            project_dir,
-            name,
         )
 
     @staticmethod

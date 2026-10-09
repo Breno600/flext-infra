@@ -140,7 +140,7 @@ class TestsFlextInfraDocsGeneratorGuides:
     def test_root_guide_cannot_overwrite_protected_custom_collision(
         tmp_path: Path,
     ) -> None:
-        """Reject a filename collision without adopting or overwriting custom text."""
+        """Reject a filename collision without adopting or overwriting custom content."""
         workspace, generator = u.Tests.docs_workspace_generator(
             tmp_path,
             project_names=("flext-a",),
@@ -173,10 +173,8 @@ class TestsFlextInfraDocsGeneratorGuides:
         destination = workspace / "flext-a/docs/guides/operator.md"
         destination.parent.mkdir(parents=True)
         destination.write_text(
-            "<!-- AUTO-GENERATED FILE — regenerate through `make gen`"
-            " from the workspace root. -->\n"
-            "<!-- Source of truth: `docs/guides/operator.md`;"
-            " adjust that source, never this projection. -->\n\n"
+            "<!-- AUTO-GENERATED FILE — regenerate through `make gen` from the workspace root. -->\n"
+            "<!-- Source of truth: `docs/guides/operator.md`; adjust that source, never this projection. -->\n\n"
             "# flext-a - Operator\n\n> Project profile: `flext-a`\n\nPrevious.\n",
             encoding="utf-8",
         )
@@ -207,10 +205,8 @@ class TestsFlextInfraDocsGeneratorGuides:
         destination = workspace / "flext-a/docs/guides/operator.md"
         destination.parent.mkdir(parents=True)
         destination.write_text(
-            "<!-- AUTO-GENERATED FILE — regenerate through `make gen`"
-            " from the workspace root. -->\n"
-            "<!-- Source of truth: `docs/guides/operator.md`;"
-            " adjust that source, never this projection. -->\n\n"
+            "<!-- AUTO-GENERATED FILE — regenerate through `make gen` from the workspace root. -->\n"
+            "<!-- Source of truth: `docs/guides/operator.md`; adjust that source, never this projection. -->\n\n"
             "# flext-a - Operator\n\n> Project profile: `flext-a`\n\nPrevious.\n",
             encoding="utf-8",
         )
@@ -248,7 +244,7 @@ class TestsFlextInfraDocsGeneratorGuides:
     def test_guide_parent_identity_change_rejects_prepared_bundle(
         tmp_path: Path,
     ) -> None:
-        """Replacing the root guide parent must not keep authority via same bytes."""
+        """Replacing the root guide parent must not preserve authority via same bytes."""
         workspace, generator = u.Tests.docs_workspace_generator(
             tmp_path,
             project_names=("flext-a",),
@@ -271,7 +267,7 @@ class TestsFlextInfraDocsGeneratorGuides:
     def test_stale_guide_ownership_change_rejects_prepared_delete(
         tmp_path: Path,
     ) -> None:
-        """Do not delete a member guide converted to custom text after preparation."""
+        """Do not delete a member guide converted to custom content after preparation."""
         workspace, generator = u.Tests.docs_workspace_generator(
             tmp_path,
             project_names=("flext-a",),
