@@ -14,7 +14,10 @@ from logging.handlers import BufferingHandler
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from flext_cli import u
+
 from flext_infra import c, m
+from flext_infra._utilities import FlextInfraUtilitiesDocs
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -253,10 +256,6 @@ class FlextInfraUtilitiesDocsBuild:
         report: m.Infra.DocsPhaseReport,
     ) -> None:
         """Persist the standard build summary and markdown report."""
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesDocs
-
         _ = u.Cli.json_write(
             scope.report_dir / "build-summary.json",
             {c.Infra.RK_SUMMARY: report.model_dump()},

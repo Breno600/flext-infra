@@ -171,8 +171,7 @@ class FlextInfraMypyGate(FlextInfraGate):
 
         """
         return (
-            ctx.reports_dir
-            / f"{project_dir.name}-{c.Infra.MYPY}-machine-report.jsonl"
+            ctx.reports_dir / f"{project_dir.name}-{c.Infra.MYPY}-machine-report.jsonl"
         )
 
     @override

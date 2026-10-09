@@ -1,0 +1,25 @@
+id: ban-dynamic-import
+snapshots:
+  ? |
+    from importlib import import_module
+    module = import_module("json")
+  : labels:
+    - source: import_module("json")
+      style: primary
+      start: 45
+      end: 66
+  ? |
+    import importlib as loader
+    module = loader.import_module("json")
+  : labels:
+    - source: loader.import_module("json")
+      style: primary
+      start: 36
+      end: 64
+  ? |
+    module = importlib.import_module("json")
+  : labels:
+    - source: importlib.import_module("json")
+      style: primary
+      start: 9
+      end: 40

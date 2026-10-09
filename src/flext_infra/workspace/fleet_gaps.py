@@ -11,7 +11,10 @@ from typing import override
 
 from flext_infra import c, config, m, p, r, t, u
 from flext_infra.base import s
-from flext_infra.workspace import FlextInfraWorkspaceDetector
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
@@ -293,75 +296,25 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
                     "quality-receipts requires nonempty explicit SARIF paths"
                 )
             path = (root / selected.strip()).resolve()
-            try:
-                report = m.Infra.SarifReport.model_validate_json(path.read_bytes())
-            except (OSError, ValueError) as exc:
-                return r[t.MappingKV[tuple[Path, str], int]].fail(
-                    f"Invalid quality receipt {path}: {exc}", exception=exc
-                )
-            summary = report.properties
-            if (
-                summary is None
-                or len(report.runs) != 1
-                or (report.runs[0].tool_name != "flext-infra-check")
-            ):
-                return r[t.MappingKV[tuple[Path, str], int]].fail(
-                    f"Quality receipt lacks native invocation facts: {path}"
-                )
+            parsed = self._quality_summary(path, tuple(roots))
+            if parsed.failure:
+                return r[t.MappingKV[tuple[Path, str], int]].from_failure(parsed)
+            summary = parsed.value
             targets = {target.name: target.path for target in summary.targets}
-            if len(report.runs[0].results) != sum(
-                project.total_findings for project in summary.results
-            ):
-                return r[t.MappingKV[tuple[Path, str], int]].fail(
-                    f"Quality receipt findings disagree with executions: {path}"
-                )
-            if (
-                not targets
-                or len(targets) != len(summary.targets)
-                or any(
-                    not target.is_absolute() or target.resolve() not in roots
-                    for target in targets.values()
-                )
-            ):
-                return r[t.MappingKV[tuple[Path, str], int]].fail(
-                    f"Unbound or duplicate project targets in quality receipt: {path}"
-                )
-            seen: set[str] = set()
             for project in summary.results:
-                project_root = targets.get(project.project)
-                if (
-                    project_root is None
-                    or not project_root.is_absolute()
-                    or (project_root.resolve() not in roots or project.project in seen)
+                project_root = targets[project.project]
+                for gate in (
+                    gate
+                    for gate in (c.Infra.LINT, c.Infra.PYREFLY)
+                    if gate in project.gates
                 ):
-                    return r[t.MappingKV[tuple[Path, str], int]].fail(
-                        f"Unbound or duplicate quality project {project.project}: {path}"
-                    )
-                seen.add(project.project)
-                for gate in (c.Infra.LINT, c.Infra.PYREFLY):
-                    execution = project.gates.get(gate)
-                    if execution is None:
-                        continue
-                    if execution.result.gate != gate or (
-                        execution.outcome == c.Infra.ToolOutcome.ERROR
-                        or execution.result.project != project.project
-                        or (not execution.result.passed and not execution.issues)
-                        or (
-                            execution.outcome == c.Infra.ToolOutcome.CLEAN
-                            and (execution.issues or not execution.result.passed)
-                        )
-                        or (
-                            execution.outcome == c.Infra.ToolOutcome.FINDINGS
-                            and not execution.issues
-                        )
-                        or execution.raw_receipt is None
-                        or not execution.raw_receipt.is_file()
-                        or not execution.raw_receipt.resolve().is_relative_to(
-                            path.parent
-                        )
+                    execution = project.gates[gate]
+                    if not self._quality_execution_valid(
+                        execution, project.project, gate, path
                     ):
                         return r[t.MappingKV[tuple[Path, str], int]].fail(
-                            f"Invalid quality execution {project.project}/{gate}: {path}"
+                            f"Invalid quality execution {project.project}/{gate}: "
+                            f"{path}"
                         )
                     if summary.selected_files:
                         continue
@@ -372,6 +325,87 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
                         )
                     counts[key] = execution.finding_count
         return r[t.MappingKV[tuple[Path, str], int]].ok(counts)
+
+    @staticmethod
+    def _quality_summary(
+        path: Path,
+        roots: t.SequenceOf[Path],
+    ) -> p.Result[m.Infra.CheckReportSummary]:
+        """Validate one selected receipt's project binding and finding inventory.
+
+        Returns:
+            The invocation facts, or the causal selected-evidence failure.
+        """
+        try:
+            report = m.Infra.SarifReport.model_validate_json(path.read_bytes())
+        except (OSError, ValueError) as exc:
+            return r[m.Infra.CheckReportSummary].fail(
+                f"Invalid quality receipt {path}: {exc}", exception=exc
+            )
+        summary = report.properties
+        if (
+            summary is None
+            or len(report.runs) != 1
+            or (report.runs[0].tool_name != "flext-infra-check")
+        ):
+            return r[m.Infra.CheckReportSummary].fail(
+                f"Quality receipt lacks native invocation facts: {path}"
+            )
+        if len(report.runs[0].results) != sum(
+            project.total_findings for project in summary.results
+        ):
+            return r[m.Infra.CheckReportSummary].fail(
+                f"Quality receipt findings disagree with executions: {path}"
+            )
+        targets = {target.name: target.path for target in summary.targets}
+        if (
+            not targets
+            or len(targets) != len(summary.targets)
+            or any(
+                not target.is_absolute() or target.resolve() not in roots
+                for target in targets.values()
+            )
+        ):
+            return r[m.Infra.CheckReportSummary].fail(
+                f"Unbound or duplicate project targets in quality receipt: {path}"
+            )
+        projects = {project.project for project in summary.results}
+        if len(projects) != len(summary.results) or any(
+            project not in targets for project in projects
+        ):
+            return r[m.Infra.CheckReportSummary].fail(
+                f"Unbound or duplicate quality projects: {path}"
+            )
+        return r[m.Infra.CheckReportSummary].ok(summary)
+
+    @staticmethod
+    def _quality_execution_valid(
+        execution: m.Infra.GateExecution,
+        project: str,
+        gate: str,
+        path: Path,
+    ) -> bool:
+        """Keep native findings eligible while rejecting invalid execution facts.
+
+        Returns:
+            Whether the verdict and invocation-local native output are valid.
+        """
+        if not all((
+            execution.result.gate == gate,
+            execution.result.project == project,
+            execution.outcome != c.Infra.ToolOutcome.ERROR,
+            execution.result.passed or bool(execution.issues),
+            execution.outcome != c.Infra.ToolOutcome.CLEAN
+            or (not execution.issues and execution.result.passed),
+            execution.outcome != c.Infra.ToolOutcome.FINDINGS or bool(execution.issues),
+        )):
+            return False
+        native = execution.raw_receipt
+        return (
+            native is not None
+            and native.is_file()
+            and native.resolve().is_relative_to(path.parent)
+        )
 
     @staticmethod
     def _codemod_findings(repo_root: Path) -> int:

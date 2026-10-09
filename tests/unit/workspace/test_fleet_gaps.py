@@ -421,7 +421,9 @@ class TestsFlextInfraWorkspaceFleetGaps:
         execution = project.gates[c.Infra.LINT].model_copy(
             update={"outcome": c.Infra.ToolOutcome.ERROR}
         )
-        invalid_project = project.model_copy(update={"gates": {c.Infra.LINT: execution}})
+        invalid_project = project.model_copy(
+            update={"gates": {c.Infra.LINT: execution}}
+        )
         invalid_report = report.model_copy(
             update={
                 "properties": summary.model_copy(update={"results": (invalid_project,)})

@@ -216,7 +216,12 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
                 metadata, module table, or class namespace rebinding.
 
         """
-        if cls._provider_metadata_rebind(spec, targets, bindings):
+        if FlextInfraUtilitiesRopeSourceBindingCollector._provider_metadata_rebind(
+            spec,
+            node,
+            targets,
+            bindings,
+        ):
             return
         if cls._module_table_mutation(targets, bindings):
             return
@@ -243,17 +248,28 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
     @staticmethod
     def _provider_metadata_rebind(
         spec: m.Infra.SourceBindingCollectorSpec,
+        node: ast.Assign | ast.AnnAssign,
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
     ) -> bool:
-        """Return whether every target only annotates provider metadata."""
+        """Return whether every target only annotates provider metadata.
+
+        A literal written to a dunder of a bound class (the stdlib
+        ``ABCMeta.__module__ = 'abc'``) relabels metadata: it binds no class
+        and changes no base.
+        """
+        literal = isinstance(node.value, ast.Constant)
         return spec.allow_conditional and all(
             isinstance(target, ast.Attribute)
             and isinstance(target.value, ast.Name)
             and target.value.id in bindings
             and (
                 bindings[target.value.id] is None
-                or target.attr in {"__module__", "__name__", "__qualname__", "__doc__"}
+                or (
+                    literal
+                    and target.attr.startswith("__")
+                    and target.attr.endswith("__")
+                )
             )
             for target in targets
         )

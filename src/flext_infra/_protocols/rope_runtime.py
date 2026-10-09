@@ -136,6 +136,16 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         _fields: ClassVar[t.VariadicTuple[str]]
 
     @runtime_checkable
+    class RopeSourceLines(Protocol):
+        """Native source line text and character offsets used by refactors."""
+
+        def get_line(self, lineno: int) -> str: ...
+
+        def get_line_start(self, lineno: int) -> int: ...
+
+        def get_line_end(self, lineno: int) -> int: ...
+
+    @runtime_checkable
     class RopeAssignment(Protocol):
         """Rope assignment shape."""
 

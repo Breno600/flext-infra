@@ -158,6 +158,52 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             m.Field(description="Why the rules cannot hold for this scope."),
         ]
 
+    class BanditAuthorizedException(m.ArbitraryTypesModel):
+        """One operator-authorized Bandit exception, scoped to owner modules.
+
+        Bandit applies a skip to a whole invocation and reads no per-path
+        exception, so the security gate audits the matching files in their own
+        invocation that skips only these tests; every other file keeps every
+        test. An entry missing its authority or reason is refused at load.
+        """
+
+        tests: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(min_length=1, description="Bandit test IDs the owners may raise."),
+        ]
+        files: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                min_length=1,
+                description=(
+                    "Project-relative globs of the owner modules, matched "
+                    "with full-path glob semantics."
+                ),
+            ),
+        ]
+        authority: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Operator ruling that authorized the exception."),
+        ]
+        reason: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Why the tests cannot hold for these owners."),
+        ]
+
+    class BanditConfig(m.ArbitraryTypesModel):
+        """Bandit security gate settings loaded from YAML."""
+
+        authorized_exceptions: Annotated[
+            tuple[FlextInfraModelsDepsToolConfigLinters.BanditAuthorizedException, ...],
+            m.Field(
+                alias="authorized-exceptions",
+                description=(
+                    "Operator-authorized Bandit exceptions, each audited in "
+                    "its own invocation that skips only its tests."
+                ),
+            ),
+        ]
+
     class RuffLintConfig(m.ArbitraryTypesModel):
         """Ruff lint settings loaded from YAML."""
 
@@ -212,6 +258,28 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 description=(
                     "Ruff rule name -> repair make fix applies to the findings "
                     "Ruff reports without a fix of its own."
+                ),
+            ),
+        ]
+        fix_recipe_phases: Annotated[
+            t.VariadicTuple[t.VariadicTuple[c.Infra.LintFixRecipe]],
+            m.Field(
+                alias="fix-recipe-phases",
+                description=(
+                    "Recipe phases make fix applies in order; Ruff re-reads "
+                    "the tree after each phase so a later phase sees the "
+                    "findings an earlier one created or cured."
+                ),
+            ),
+        ]
+        fix_recipe_residual: Annotated[
+            frozenset[c.Infra.LintFixRecipe],
+            m.Field(
+                alias="fix-recipe-residual",
+                description=(
+                    "Recipes whose findings may survive by law: their "
+                    "remainder stays a visible check finding for manual "
+                    "repair instead of failing make fix."
                 ),
             ),
         ]

@@ -37,7 +37,15 @@ class FlextInfraUtilitiesLogParser:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SarifResult]]``.
 
         """
-        report_dir = (repository_root / reports_dir).resolve()
+        report_dir = (
+            u.Cli.resolve_report_dir(
+                repository_root,
+                c.Infra.PROJECT,
+                c.Infra.VERB_CHECK,
+            )
+            if reports_dir is None
+            else (repository_root / reports_dir).resolve()
+        )
         sarif_path = report_dir / c.Infra.CHECK_REPORT_SARIF_FILENAME
         if not sarif_path.is_file():
             return r[t.VariadicTuple[m.Infra.SarifResult]].fail(

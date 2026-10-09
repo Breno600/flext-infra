@@ -1,0 +1,16 @@
+id: ban-subprocess-outside-run-owner
+valid:
+  - from flext_cli import u
+  - result = u.Cli.run_raw(["git", "status"])
+  - import subprocessing
+  - from subprocessing import run
+  - module = importlib.import_module("subprocess_like")
+  - text = "import subprocess"
+invalid:
+  - import subprocess
+  - import subprocess as sp
+  - import os, subprocess
+  - from subprocess import run
+  - from subprocess import PIPE, Popen
+  - module = importlib.import_module("subprocess")
+  - module = __import__("subprocess")

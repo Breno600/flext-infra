@@ -1,0 +1,24 @@
+id: ban-settings-config-own-module-import
+snapshots:
+  ? |
+    from flext_infra._constants import FlextInfraConstantsCodegenProject
+  : labels:
+    - source: from flext_infra._constants import FlextInfraConstantsCodegenProject
+      style: primary
+      start: 0
+      end: 68
+    - source: flext_infra._constants
+      style: secondary
+      start: 5
+      end: 27
+  ? |
+    from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+  : labels:
+    - source: from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+      style: primary
+      start: 0
+      end: 79
+    - source: flext_infra._models.deps_tool_config
+      style: secondary
+      start: 5
+      end: 41

@@ -20,6 +20,7 @@ from flext_infra.codegen import (
 )
 from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
 from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
+from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -473,6 +474,7 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
         return self._recover(layout, expected=expected)
 
     def _reconcile(self, identity: m.Infra.GitIdentityReport) -> p.Result[bool]:
+
         layout = self._planner.journal_layout(identity)
         if layout.failure:
             return r[bool].from_failure(layout)
