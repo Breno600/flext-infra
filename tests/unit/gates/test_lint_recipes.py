@@ -12,11 +12,33 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config, m, t, u
+from flext_infra import c, config, m, t, u
 
 
 class TestsFlextInfraLintRecipes:
     """Each recipe derives its repair from the source the finding points at."""
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "recipe",
+        [
+            c.Infra.LintFixRecipe.NORMALIZE_IMPORTS,
+            c.Infra.LintFixRecipe.WRAP_LONG_LINE,
+        ],
+    )
+    def test_gate_owned_recipe_requires_its_runtime_owner(
+        recipe: c.Infra.LintFixRecipe,
+    ) -> None:
+        """Reject a whole-module recipe instead of silently returning its input."""
+        recipes = config.Infra.tooling.tools.ruff.lint.fix_recipes
+        code = next(
+            code for code, configured in recipes.items() if configured is recipe
+        )
+        with pytest.raises(ValueError, match="requires the Ruff lint gate"):
+            TestsFlextInfraLintRecipes._apply(
+                "import os\n",
+                (code, 1, "A gate-owned repair is required"),
+            )
 
     @staticmethod
     def _apply(

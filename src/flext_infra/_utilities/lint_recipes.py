@@ -145,6 +145,9 @@ class FlextInfraUtilitiesLintRecipes:
         whose declared author signs the notice; the notice is derived only
         when a copyright finding asks for it.
 
+        Whole-module import normalization and line wrapping belong to the Ruff
+        lint gate, which runs them before passing planned edits to this utility.
+
         Returns:
             The repaired module source.
 
@@ -187,6 +190,9 @@ class FlextInfraUtilitiesLintRecipes:
         Returns:
             The resulting ``(sections, summaries, wants notice)`` triple.
 
+        Raises:
+            ValueError: If a whole-module recipe requires the Ruff lint gate.
+
         """
         sections: MutableMapping[
             ast.FunctionDef | ast.AsyncFunctionDef,
@@ -198,7 +204,8 @@ class FlextInfraUtilitiesLintRecipes:
         ] = {}
         wants_notice = False
         for issue in issues:
-            match cls._recipe_for(issue, recipes, path):
+            recipe = cls._recipe_for(issue, recipes, path)
+            match recipe:
                 case c.Infra.LintFixRecipe.RETURNS_SECTION:
                     function = cls._documented_at(tree, issue.line, path)
                     sections.setdefault(function, {}).setdefault("Returns", []).append(
@@ -222,6 +229,15 @@ class FlextInfraUtilitiesLintRecipes:
                 case c.Infra.LintFixRecipe.STATIC_METHOD:
                     # Planned per method below, after duplicates collapse.
                     continue
+                case (
+                    c.Infra.LintFixRecipe.NORMALIZE_IMPORTS
+                    | c.Infra.LintFixRecipe.WRAP_LONG_LINE
+                ):
+                    msg = (
+                        f"{path}: lint recipe {recipe.value} for {issue.code} "
+                        "requires the Ruff lint gate"
+                    )
+                    raise ValueError(msg)
         return sections, summaries, wants_notice
 
     @classmethod
