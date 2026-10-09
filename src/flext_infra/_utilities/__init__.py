@@ -137,6 +137,94 @@ from flext_infra._utilities._git.worktree_patch import (
 from flext_infra._utilities._git.worktree_removal import (
     FlextInfraUtilitiesGitWorktreeRemovalMixin,
 )
+from flext_infra._utilities._pyproject.uv_sources import (
+    FlextInfraUtilitiesPyprojectUvSources,
+)
+from flext_infra._utilities._rope.project import FlextInfraRopeProject
+from flext_infra._utilities._rope_analysis.asthelpers import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+)
+from flext_infra._utilities._rope_analysis.base import (
+    FlextInfraUtilitiesRopeAnalysisBase,
+)
+from flext_infra._utilities._rope_analysis.exports import (
+    FlextInfraUtilitiesRopeAnalysisExports,
+)
+from flext_infra._utilities._rope_analysis.importstate import (
+    FlextInfraUtilitiesRopeAnalysisImportState,
+)
+from flext_infra._utilities._rope_analysis.sourcescan import (
+    FlextInfraUtilitiesRopeAnalysisSourceScan,
+)
+from flext_infra._utilities._rope_core_pymodule import (
+    FlextInfraUtilitiesRopeCorePyModuleMixin,
+)
+from flext_infra._utilities._rope_core_resources import (
+    FlextInfraUtilitiesRopeCoreResourcesMixin,
+)
+from flext_infra._utilities._rope_method_order import (
+    FlextInfraUtilitiesRopeMethodOrderMixin,
+)
+from flext_infra._utilities._rope_source_bases_inventory_collector import (
+    FlextInfraUtilitiesRopeSourceBindingCollector,
+)
+from flext_infra._utilities._rope_source_bases_runtime import (
+    FlextInfraUtilitiesRopeSourceBasesRuntime,
+)
+from flext_infra._utilities._semantic_cutover.alias_cst import (
+    FlextInfraUtilitiesSemanticCutoverAliasCst,
+)
+from flext_infra._utilities._semantic_cutover.aliases import (
+    FlextInfraUtilitiesSemanticCutoverAliases,
+)
+from flext_infra._utilities._semantic_cutover.base import (
+    FlextInfraUtilitiesSemanticCutoverBase,
+)
+from flext_infra._utilities._semantic_cutover.bindings import (
+    FlextInfraUtilitiesSemanticCutoverBindings,
+)
+from flext_infra._utilities._semantic_cutover.class_scope import (
+    FlextInfraUtilitiesSemanticCutoverClassScope,
+)
+from flext_infra._utilities._semantic_cutover.declaration_payload import (
+    FlextInfraUtilitiesDeclarationPayload,
+)
+from flext_infra._utilities._semantic_cutover.declaration_relocation import (
+    FlextInfraUtilitiesSemanticDeclarationRelocation,
+)
+from flext_infra._utilities._semantic_cutover.dynamic_environment import (
+    FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
+)
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.facade_base_cst import (
+    FlextInfraUtilitiesSemanticCutoverFacadeBaseCst,
+)
+from flext_infra._utilities._semantic_cutover.facade_bases import (
+    FlextInfraUtilitiesSemanticCutoverFacadeBases,
+)
+from flext_infra._utilities._semantic_cutover.facade_owners import (
+    FlextInfraUtilitiesSemanticCutoverFacadeOwners,
+)
+from flext_infra._utilities._semantic_cutover.family_flatten import (
+    FlextInfraUtilitiesSemanticFamilyFlatten,
+)
+from flext_infra._utilities._semantic_cutover.family_references import (
+    FlextInfraUtilitiesSemanticFamilyReferences,
+)
+from flext_infra._utilities._semantic_cutover.family_type_references import (
+    FlextInfraUtilitiesSemanticFamilyTypeReferences,
+)
+from flext_infra._utilities._semantic_cutover.helper_references import (
+    FlextInfraUtilitiesSemanticHelperReferences,
+)
+from flext_infra._utilities._semantic_cutover.model_fields import (
+    FlextInfraUtilitiesSemanticCutoverModelFields,
+)
+from flext_infra._utilities._semantic_cutover.model_fields_bindings import (
+    FlextInfraUtilitiesSemanticCutoverModelFieldsBindings,
+)
 from flext_infra._utilities._semantic_cutover.module_layout import (
     FlextInfraUtilitiesSemanticCutoverModuleLayout,
 )
@@ -154,6 +242,45 @@ from flext_infra._utilities._semantic_cutover.nesting_owner import (
 )
 from flext_infra._utilities._semantic_cutover.nesting_references import (
     FlextInfraUtilitiesSemanticCutoverNestingReferences,
+)
+from flext_infra._utilities._semantic_cutover.nesting_types import (
+    FlextInfraUtilitiesSemanticNestingTypes,
+)
+from flext_infra._utilities._semantic_cutover.private_import_cst import (
+    FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
+)
+from flext_infra._utilities._semantic_cutover.private_imports import (
+    FlextInfraUtilitiesSemanticCutoverPrivateImports,
+)
+from flext_infra._utilities._semantic_cutover.self_facade import (
+    FlextInfraUtilitiesSemanticCutoverSelfFacade,
+)
+from flext_infra._utilities.base import FlextInfraUtilitiesBase
+from flext_infra._utilities.census import FlextInfraUtilitiesRefactorCensus
+from flext_infra._utilities.codegen import FlextInfraUtilitiesCodegen
+from flext_infra._utilities.codegen_facades import FlextInfraUtilitiesCodegenFacades
+from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
+from flext_infra._utilities.codegen_path_cutover import (
+    FlextInfraUtilitiesCodegenPathCutover,
+)
+from flext_infra._utilities.codemod_project import FlextInfraUtilitiesCodemodProject
+from flext_infra._utilities.codemod_rules import FlextInfraUtilitiesCodemodRules
+from flext_infra._utilities.compatibility_alias_validation import (
+    FlextInfraUtilitiesCompatibilityAliasValidation,
+)
+from flext_infra._utilities.deferred_self_reference_rewrite import (
+    FlextInfraUtilitiesDeferredSelfReferenceRewrite,
+)
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+from flext_infra._utilities.dependency_requirements import (
+    FlextInfraUtilitiesDependencyRequirements,
+)
+from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_audit import FlextInfraUtilitiesDocsAudit
+from flext_infra._utilities._pyproject.toml_phases import (
+    FlextInfraUtilitiesPyprojectTomlPhases,
 )
 
 if TYPE_CHECKING:
@@ -201,135 +328,6 @@ if TYPE_CHECKING:
     from flext_infra._utilities._pyproject.session import (
         FlextInfraUtilitiesPyprojectSession,
     )
-    from flext_infra._utilities._pyproject.toml_phases import (
-        FlextInfraUtilitiesPyprojectTomlPhases,
-    )
-    from flext_infra._utilities._pyproject.uv_sources import (
-        FlextInfraUtilitiesPyprojectUvSources,
-    )
-    from flext_infra._utilities._rope.project import FlextInfraRopeProject
-    from flext_infra._utilities._rope_analysis.asthelpers import (
-        FlextInfraUtilitiesRopeAnalysisAstHelpers,
-    )
-    from flext_infra._utilities._rope_analysis.base import (
-        FlextInfraUtilitiesRopeAnalysisBase,
-    )
-    from flext_infra._utilities._rope_analysis.exports import (
-        FlextInfraUtilitiesRopeAnalysisExports,
-    )
-    from flext_infra._utilities._rope_analysis.importstate import (
-        FlextInfraUtilitiesRopeAnalysisImportState,
-    )
-    from flext_infra._utilities._rope_analysis.sourcescan import (
-        FlextInfraUtilitiesRopeAnalysisSourceScan,
-    )
-    from flext_infra._utilities._rope_core_pymodule import (
-        FlextInfraUtilitiesRopeCorePyModuleMixin,
-    )
-    from flext_infra._utilities._rope_core_resources import (
-        FlextInfraUtilitiesRopeCoreResourcesMixin,
-    )
-    from flext_infra._utilities._rope_method_order import (
-        FlextInfraUtilitiesRopeMethodOrderMixin,
-    )
-    from flext_infra._utilities._rope_source_bases_inventory_collector import (
-        FlextInfraUtilitiesRopeSourceBindingCollector,
-    )
-    from flext_infra._utilities._rope_source_bases_runtime import (
-        FlextInfraUtilitiesRopeSourceBasesRuntime,
-    )
-    from flext_infra._utilities._semantic_cutover.alias_cst import (
-        FlextInfraUtilitiesSemanticCutoverAliasCst,
-    )
-    from flext_infra._utilities._semantic_cutover.aliases import (
-        FlextInfraUtilitiesSemanticCutoverAliases,
-    )
-    from flext_infra._utilities._semantic_cutover.base import (
-        FlextInfraUtilitiesSemanticCutoverBase,
-    )
-    from flext_infra._utilities._semantic_cutover.bindings import (
-        FlextInfraUtilitiesSemanticCutoverBindings,
-    )
-    from flext_infra._utilities._semantic_cutover.class_scope import (
-        FlextInfraUtilitiesSemanticCutoverClassScope,
-    )
-    from flext_infra._utilities._semantic_cutover.declaration_payload import (
-        FlextInfraUtilitiesDeclarationPayload,
-    )
-    from flext_infra._utilities._semantic_cutover.declaration_relocation import (
-        FlextInfraUtilitiesSemanticDeclarationRelocation,
-    )
-    from flext_infra._utilities._semantic_cutover.dynamic_environment import (
-        FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
-    )
-    from flext_infra._utilities._semantic_cutover.edits import (
-        FlextInfraUtilitiesSemanticCutoverEdits,
-    )
-    from flext_infra._utilities._semantic_cutover.facade_base_cst import (
-        FlextInfraUtilitiesSemanticCutoverFacadeBaseCst,
-    )
-    from flext_infra._utilities._semantic_cutover.facade_bases import (
-        FlextInfraUtilitiesSemanticCutoverFacadeBases,
-    )
-    from flext_infra._utilities._semantic_cutover.facade_owners import (
-        FlextInfraUtilitiesSemanticCutoverFacadeOwners,
-    )
-    from flext_infra._utilities._semantic_cutover.family_flatten import (
-        FlextInfraUtilitiesSemanticFamilyFlatten,
-    )
-    from flext_infra._utilities._semantic_cutover.family_references import (
-        FlextInfraUtilitiesSemanticFamilyReferences,
-    )
-    from flext_infra._utilities._semantic_cutover.family_type_references import (
-        FlextInfraUtilitiesSemanticFamilyTypeReferences,
-    )
-    from flext_infra._utilities._semantic_cutover.helper_references import (
-        FlextInfraUtilitiesSemanticHelperReferences,
-    )
-    from flext_infra._utilities._semantic_cutover.model_fields import (
-        FlextInfraUtilitiesSemanticCutoverModelFields,
-    )
-    from flext_infra._utilities._semantic_cutover.model_fields_bindings import (
-        FlextInfraUtilitiesSemanticCutoverModelFieldsBindings,
-    )
-    from flext_infra._utilities._semantic_cutover.nesting_types import (
-        FlextInfraUtilitiesSemanticNestingTypes,
-    )
-    from flext_infra._utilities._semantic_cutover.private_import_cst import (
-        FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
-    )
-    from flext_infra._utilities._semantic_cutover.private_imports import (
-        FlextInfraUtilitiesSemanticCutoverPrivateImports,
-    )
-    from flext_infra._utilities._semantic_cutover.self_facade import (
-        FlextInfraUtilitiesSemanticCutoverSelfFacade,
-    )
-    from flext_infra._utilities.base import FlextInfraUtilitiesBase
-    from flext_infra._utilities.census import FlextInfraUtilitiesRefactorCensus
-    from flext_infra._utilities.codegen import FlextInfraUtilitiesCodegen
-    from flext_infra._utilities.codegen_facades import FlextInfraUtilitiesCodegenFacades
-    from flext_infra._utilities.codegen_file_plan import (
-        FlextInfraUtilitiesCodegenFilePlan,
-    )
-    from flext_infra._utilities.codegen_path_cutover import (
-        FlextInfraUtilitiesCodegenPathCutover,
-    )
-    from flext_infra._utilities.codemod_project import FlextInfraUtilitiesCodemodProject
-    from flext_infra._utilities.codemod_rules import FlextInfraUtilitiesCodemodRules
-    from flext_infra._utilities.compatibility_alias_validation import (
-        FlextInfraUtilitiesCompatibilityAliasValidation,
-    )
-    from flext_infra._utilities.deferred_self_reference_rewrite import (
-        FlextInfraUtilitiesDeferredSelfReferenceRewrite,
-    )
-    from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-    from flext_infra._utilities.dependency_requirements import (
-        FlextInfraUtilitiesDependencyRequirements,
-    )
-    from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
-    from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
-    from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
-    from flext_infra._utilities.docs_audit import FlextInfraUtilitiesDocsAudit
     from flext_infra._utilities.docs_build import FlextInfraUtilitiesDocsBuild
     from flext_infra._utilities.docs_collection import FlextInfraUtilitiesDocsCollection
     from flext_infra._utilities.docs_collection_sources import (

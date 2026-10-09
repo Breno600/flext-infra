@@ -11,6 +11,16 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_infra.codegen import _conform
+from flext_infra.codegen._codegen_generation_file import (
+    FlextInfraCodegenGenerationFileMixin,
+)
+from flext_infra.codegen._codegen_generation_imports import (
+    FlextInfraCodegenGenerationImportsMixin,
+)
+from flext_infra.codegen._codegen_generation_lazy_entries import (
+    FlextInfraCodegenGenerationLazyEntriesMixin,
+)
 from flext_infra.codegen._codegen_generation_paths import (
     FlextInfraCodegenGenerationPathsMixin,
 )
@@ -38,7 +48,11 @@ from flext_infra.codegen._conform.docs_ownership import (
     FlextInfraCodegenConformDocsOwnership,
 )
 from flext_infra.codegen._conform.execute import FlextInfraCodegenConformExecute
+from flext_infra.codegen._conform.existing_plan import (
+    FlextInfraCodegenConformExistingPlan,
+)
 from flext_infra.codegen._conform.file_plans import FlextInfraCodegenConformFilePlans
+from flext_infra.codegen._conform.gitignore import FlextInfraCodegenConformGitignore
 from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
 from flext_infra.codegen._conform.pyproject_policy import (
     FlextInfraCodegenConformPyprojectPolicy,
@@ -100,6 +114,9 @@ from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
 from flext_infra.codegen.fixer import FlextInfraCodegenFixer
 from flext_infra.codegen.layout import FlextInfraCodegenLayout
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
+from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
+from flext_infra.codegen.make_bootstrap import FlextInfraCodegenMakeBootstrap
+from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 from flext_infra.codegen.pipeline import (
     FlextInfraCodegenLazyInitGenerationMixin,
@@ -108,31 +125,11 @@ from flext_infra.codegen.pipeline import (
     FlextInfraMiseArtifactsFiles,
     FlextInfraMisePublication,
 )
-from flext_infra.codegen._codegen_generation_lazy_entries import (
-    FlextInfraCodegenGenerationLazyEntriesMixin,
-)
-
-if TYPE_CHECKING:
-    from flext_infra.codegen import _conform
-    from flext_infra.codegen._codegen_generation_file import (
-        FlextInfraCodegenGenerationFileMixin,
-    )
-    from flext_infra.codegen._codegen_generation_imports import (
-        FlextInfraCodegenGenerationImportsMixin,
-    )
-    from flext_infra.codegen._conform.existing_plan import (
-        FlextInfraCodegenConformExistingPlan,
-    )
-    from flext_infra.codegen._conform.gitignore import FlextInfraCodegenConformGitignore
-    from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
-    from flext_infra.codegen.make_bootstrap import FlextInfraCodegenMakeBootstrap
-    from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-    from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
-    from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
-    from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
-    from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
-    from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
-
+from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
+from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
+from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
+from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
+from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
 
 __all__: tuple[str, ...] = (
     "FlextInfraCodegenCensus",

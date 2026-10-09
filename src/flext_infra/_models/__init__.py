@@ -12,16 +12,26 @@ from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
 from flext_infra._models import _codegen, _config, _git
+from flext_infra._models._codegen.base import FlextInfraCodegen
 from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
 from flext_infra._models._codegen.journal import FlextInfraModelsCodegenJournalModels
 from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
+from flext_infra._models._codegen.pipeline import FlextInfraModelsCodegenPipelineModels
+from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
+from flext_infra._models._codegen.transaction import (
+    FlextInfraModelsCodegenTransactionModels,
+)
+from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
 from flext_infra._models._config.base import FlextInfraConfigModels
+from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
 from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 from flext_infra._models._config.make import (
     ExternalCacheDirectorySpec,
     FlextInfraConfigModelsMake,
 )
 from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
+from flext_infra._models._config.release import FlextInfraConfigModelsRelease
 from flext_infra._models._config.render import FlextInfraConfigModelsRender
 from flext_infra._models._config.root import FlextInfraConfigModelsRoot
 from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
@@ -75,33 +85,16 @@ from flext_infra._models.refactor_namespace_enforcer import (
     FlextInfraModelsNamespaceEnforcer,
 )
 from flext_infra._models.release import FlextInfraModelsRelease
+from flext_infra._models.rope import FlextInfraModelsRope
 from flext_infra._models.rope_move import FlextInfraModelsRopeMove
 from flext_infra._models.scan import FlextInfraModelsScan
 from flext_infra._models.settings import FlextInfraSettingsModels
 from flext_infra._models.sonarcloud import FlextInfraModelsSonarcloud
-from flext_infra._models._codegen.transaction import (
-    FlextInfraModelsCodegenTransactionModels,
-)
-
-if TYPE_CHECKING:
-    from flext_infra._models._codegen.base import FlextInfraCodegen
-    from flext_infra._models._codegen.pipeline import (
-        FlextInfraModelsCodegenPipelineModels,
-    )
-    from flext_infra._models._codegen.scaffold import (
-        FlextInfraModelsCodegenScaffoldModels,
-    )
-    from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
-    from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
-    from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
-    from flext_infra._models._config.release import FlextInfraConfigModelsRelease
-    from flext_infra._models.rope import FlextInfraModelsRope
-    from flext_infra._models.testmon import FlextInfraModelsTestmon
-    from flext_infra._models.transformers import FlextInfraModelsTransformers
-    from flext_infra._models.validate import FlextInfraModelsCore
-    from flext_infra._models.workspace import FlextInfraModelsWorkspace
-    from flext_infra._models.worktree import FlextInfraModelsWorktree
-
+from flext_infra._models.testmon import FlextInfraModelsTestmon
+from flext_infra._models.transformers import FlextInfraModelsTransformers
+from flext_infra._models.validate import FlextInfraModelsCore
+from flext_infra._models.workspace import FlextInfraModelsWorkspace
+from flext_infra._models.worktree import FlextInfraModelsWorktree
 
 __all__: tuple[str, ...] = (
     "ExternalCacheDirectorySpec",
