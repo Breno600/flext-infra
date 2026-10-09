@@ -137,6 +137,53 @@ from flext_infra._utilities._git.worktree_patch import (
 from flext_infra._utilities._git.worktree_removal import (
     FlextInfraUtilitiesGitWorktreeRemovalMixin,
 )
+from flext_infra._utilities._git.worktree_roots import (
+    FlextInfraUtilitiesGitWorktreeRootsMixin,
+)
+from flext_infra._utilities._git.worktree_status import (
+    FlextInfraUtilitiesGitWorktreeStatusMixin,
+)
+from flext_infra._utilities._mypy_profile import FlextInfraMypyProfiler
+from flext_infra._utilities._mypy_supervisor import FlextInfraMypyDarwinSupervisor
+from flext_infra._utilities._project_discovery_candidates import (
+    FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
+)
+from flext_infra._utilities._project_discovery_shape import (
+    FlextInfraUtilitiesProjectDiscoveryShapeMixin,
+)
+from flext_infra._utilities._promoted.commands import (
+    FlextInfraUtilitiesPromotedCommands,
+)
+from flext_infra._utilities._promoted.execution import (
+    FlextInfraUtilitiesPromotedExecution,
+)
+from flext_infra._utilities._promoted.invocation import (
+    FlextInfraUtilitiesPromotedInvocation,
+)
+from flext_infra._utilities._promoted.rendering import (
+    FlextInfraUtilitiesPromotedRendering,
+)
+from flext_infra._utilities._promoted.workspace import (
+    FlextInfraUtilitiesPromotedWorkspace,
+)
+from flext_infra._utilities._pyproject.base import (
+    FlextInfraUtilitiesPyprojectConformBase,
+)
+from flext_infra._utilities._pyproject.document import (
+    FlextInfraUtilitiesPyprojectDocument,
+)
+from flext_infra._utilities._pyproject.overlay import (
+    FlextInfraUtilitiesPyprojectOverlay,
+)
+from flext_infra._utilities._pyproject.requirements import (
+    FlextInfraUtilitiesPyprojectRequirements,
+)
+from flext_infra._utilities._pyproject.session import (
+    FlextInfraUtilitiesPyprojectSession,
+)
+from flext_infra._utilities._pyproject.toml_phases import (
+    FlextInfraUtilitiesPyprojectTomlPhases,
+)
 from flext_infra._utilities._pyproject.uv_sources import (
     FlextInfraUtilitiesPyprojectUvSources,
 )
@@ -279,197 +326,127 @@ from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
 from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
 from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
 from flext_infra._utilities.docs_audit import FlextInfraUtilitiesDocsAudit
-from flext_infra._utilities._pyproject.toml_phases import (
-    FlextInfraUtilitiesPyprojectTomlPhases,
+from flext_infra._utilities.docs_build import FlextInfraUtilitiesDocsBuild
+from flext_infra._utilities.docs_collection import FlextInfraUtilitiesDocsCollection
+from flext_infra._utilities.docs_collection_sources import (
+    FlextInfraUtilitiesDocsCollectionSources,
 )
-
-if TYPE_CHECKING:
-    from flext_infra._utilities._git.worktree_roots import (
-        FlextInfraUtilitiesGitWorktreeRootsMixin,
-    )
-    from flext_infra._utilities._git.worktree_status import (
-        FlextInfraUtilitiesGitWorktreeStatusMixin,
-    )
-    from flext_infra._utilities._mypy_profile import FlextInfraMypyProfiler
-    from flext_infra._utilities._mypy_supervisor import FlextInfraMypyDarwinSupervisor
-    from flext_infra._utilities._project_discovery_candidates import (
-        FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
-    )
-    from flext_infra._utilities._project_discovery_shape import (
-        FlextInfraUtilitiesProjectDiscoveryShapeMixin,
-    )
-    from flext_infra._utilities._promoted.commands import (
-        FlextInfraUtilitiesPromotedCommands,
-    )
-    from flext_infra._utilities._promoted.execution import (
-        FlextInfraUtilitiesPromotedExecution,
-    )
-    from flext_infra._utilities._promoted.invocation import (
-        FlextInfraUtilitiesPromotedInvocation,
-    )
-    from flext_infra._utilities._promoted.rendering import (
-        FlextInfraUtilitiesPromotedRendering,
-    )
-    from flext_infra._utilities._promoted.workspace import (
-        FlextInfraUtilitiesPromotedWorkspace,
-    )
-    from flext_infra._utilities._pyproject.base import (
-        FlextInfraUtilitiesPyprojectConformBase,
-    )
-    from flext_infra._utilities._pyproject.document import (
-        FlextInfraUtilitiesPyprojectDocument,
-    )
-    from flext_infra._utilities._pyproject.overlay import (
-        FlextInfraUtilitiesPyprojectOverlay,
-    )
-    from flext_infra._utilities._pyproject.requirements import (
-        FlextInfraUtilitiesPyprojectRequirements,
-    )
-    from flext_infra._utilities._pyproject.session import (
-        FlextInfraUtilitiesPyprojectSession,
-    )
-    from flext_infra._utilities.docs_build import FlextInfraUtilitiesDocsBuild
-    from flext_infra._utilities.docs_collection import FlextInfraUtilitiesDocsCollection
-    from flext_infra._utilities.docs_collection_sources import (
-        FlextInfraUtilitiesDocsCollectionSources,
-    )
-    from flext_infra._utilities.docs_collection_verify import (
-        FlextInfraUtilitiesDocsCollectionVerify,
-    )
-    from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
-    from flext_infra._utilities.docs_fix import FlextInfraUtilitiesDocsFix
-    from flext_infra._utilities.docs_generate import FlextInfraUtilitiesDocsGenerate
-    from flext_infra._utilities.docs_render import FlextInfraUtilitiesDocsRender
-    from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-    from flext_infra._utilities.docs_validate import FlextInfraUtilitiesDocsValidate
-    from flext_infra._utilities.git import FlextInfraUtilitiesGit
-    from flext_infra._utilities.gitignore import FlextInfraUtilitiesGitignore
-    from flext_infra._utilities.iteration import FlextInfraUtilitiesIteration
-    from flext_infra._utilities.iteration_directory import (
-        FlextInfraUtilitiesIterationDirectory,
-    )
-    from flext_infra._utilities.iteration_matching import (
-        FlextInfraUtilitiesIterationMatching,
-    )
-    from flext_infra._utilities.iteration_workspace import (
-        FlextInfraUtilitiesIterationWorkspace,
-    )
-    from flext_infra._utilities.lint_recipes import FlextInfraUtilitiesLintRecipes
-    from flext_infra._utilities.log_parser import FlextInfraUtilitiesLogParser
-    from flext_infra._utilities.managed_conflicts import (
-        FlextInfraUtilitiesManagedConflicts,
-    )
-    from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
-    from flext_infra._utilities.namespace_analysis import (
-        FlextInfraUtilitiesRefactorNamespaceFlext,
-    )
-    from flext_infra._utilities.namespace_common import (
-        FlextInfraUtilitiesRefactorNamespaceCommon,
-    )
-    from flext_infra._utilities.namespace_config import (
-        FlextInfraUtilitiesNamespaceConfig,
-    )
-    from flext_infra._utilities.namespace_moves import (
-        FlextInfraUtilitiesRefactorNamespaceMoves,
-    )
-    from flext_infra._utilities.network import FlextInfraUtilitiesNetwork
-    from flext_infra._utilities.private_import_ancestry import (
-        FlextInfraUtilitiesPrivateImportAncestry,
-    )
-    from flext_infra._utilities.private_import_facades import (
-        FlextInfraUtilitiesPrivateImportFacades,
-    )
-    from flext_infra._utilities.private_import_validation import (
-        FlextInfraUtilitiesPrivateImportValidation,
-    )
-    from flext_infra._utilities.process import FlextInfraUtilitiesProcess
-    from flext_infra._utilities.project_discovery import (
-        FlextInfraUtilitiesProjectDiscovery,
-    )
-    from flext_infra._utilities.project_managed_artifacts import (
-        FlextInfraUtilitiesProjectManagedArtifacts,
-    )
-    from flext_infra._utilities.promoted import FlextInfraUtilitiesPromoted
-    from flext_infra._utilities.protected_edit import FlextInfraUtilitiesProtectedEdit
-    from flext_infra._utilities.protected_edit_apply import (
-        FlextInfraUtilitiesProtectedEditApply,
-    )
-    from flext_infra._utilities.protected_edit_linting import (
-        FlextInfraUtilitiesProtectedEditLinting,
-    )
-    from flext_infra._utilities.protected_edit_preview import (
-        FlextInfraUtilitiesProtectedEditPreview,
-    )
-    from flext_infra._utilities.protected_edit_writes import (
-        FlextInfraUtilitiesProtectedEditWrites,
-    )
-    from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
-    from flext_infra._utilities.pyproject_conform import (
-        FlextInfraUtilitiesPyprojectConform,
-    )
-    from flext_infra._utilities.pyrefly import FlextInfraUtilitiesPyrefly
-    from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
-    from flext_infra._utilities.refactor import FlextInfraUtilitiesRefactor
-    from flext_infra._utilities.release import FlextInfraUtilitiesRelease
-    from flext_infra._utilities.repository import FlextInfraUtilitiesRepository
-    from flext_infra._utilities.requirement_specs import (
-        FlextInfraUtilitiesRequirementSpecs,
-    )
-    from flext_infra._utilities.resource_limits import FlextInfraUtilitiesResourceLimits
-    from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
-    from flext_infra._utilities.rope_analysis_introspection import (
-        FlextInfraUtilitiesRopeAnalysisIntrospection,
-    )
-    from flext_infra._utilities.rope_analysis_workspace import (
-        FlextInfraUtilitiesRopeAnalysisWorkspace,
-    )
-    from flext_infra._utilities.rope_class_move import FlextInfraUtilitiesRopeClassMove
-    from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-    from flext_infra._utilities.rope_helpers import FlextInfraUtilitiesRopeHelpers
-    from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
-    from flext_infra._utilities.rope_inventory import FlextInfraUtilitiesRopeInventory
-    from flext_infra._utilities.rope_module_patch import (
-        FlextInfraUtilitiesRopeModulePatch,
-    )
-    from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-    from flext_infra._utilities.rope_runtime_base import (
-        FlextInfraUtilitiesRopeRuntimeBase,
-    )
-    from flext_infra._utilities.rope_runtime_modules import (
-        FlextInfraUtilitiesRopeRuntimeModules,
-    )
-    from flext_infra._utilities.rope_runtime_refactors import (
-        FlextInfraUtilitiesRopeRuntimeRefactors,
-    )
-    from flext_infra._utilities.rope_runtime_types import (
-        FlextInfraUtilitiesRopeRuntimeTypes,
-    )
-    from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
-    from flext_infra._utilities.rope_source_bases import (
-        FlextInfraUtilitiesRopeSourceBases,
-    )
-    from flext_infra._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
-    from flext_infra._utilities.semantic_cutover import (
-        FlextInfraUtilitiesSemanticCutover,
-    )
-    from flext_infra._utilities.transformer_header import (
-        FlextInfraUtilitiesTransformerHeader,
-    )
-    from flext_infra._utilities.transformer_header_parser import (
-        FlextInfraUtilitiesTransformerHeaderParser,
-    )
-    from flext_infra._utilities.versioning import FlextInfraUtilitiesVersioning
-    from flext_infra._utilities.workspace_fingerprint import (
-        FlextInfraUtilitiesWorkspaceFingerprint,
-    )
-    from flext_infra._utilities.workspace_manifest import (
-        FlextInfraUtilitiesWorkspaceManifest,
-    )
-    from flext_infra._utilities.worktree_lifecycle import FlextInfraWorktreeLifecycle
-    from flext_infra._utilities.worktree_provisioning import (
-        FlextInfraWorktreeProvisioning,
-    )
-
+from flext_infra._utilities.docs_collection_verify import (
+    FlextInfraUtilitiesDocsCollectionVerify,
+)
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities.docs_fix import FlextInfraUtilitiesDocsFix
+from flext_infra._utilities.docs_generate import FlextInfraUtilitiesDocsGenerate
+from flext_infra._utilities.docs_render import FlextInfraUtilitiesDocsRender
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities.docs_validate import FlextInfraUtilitiesDocsValidate
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
+from flext_infra._utilities.gitignore import FlextInfraUtilitiesGitignore
+from flext_infra._utilities.iteration import FlextInfraUtilitiesIteration
+from flext_infra._utilities.iteration_directory import (
+    FlextInfraUtilitiesIterationDirectory,
+)
+from flext_infra._utilities.iteration_matching import (
+    FlextInfraUtilitiesIterationMatching,
+)
+from flext_infra._utilities.iteration_workspace import (
+    FlextInfraUtilitiesIterationWorkspace,
+)
+from flext_infra._utilities.lint_recipes import FlextInfraUtilitiesLintRecipes
+from flext_infra._utilities.log_parser import FlextInfraUtilitiesLogParser
+from flext_infra._utilities.managed_conflicts import FlextInfraUtilitiesManagedConflicts
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.namespace_analysis import (
+    FlextInfraUtilitiesRefactorNamespaceFlext,
+)
+from flext_infra._utilities.namespace_common import (
+    FlextInfraUtilitiesRefactorNamespaceCommon,
+)
+from flext_infra._utilities.namespace_config import FlextInfraUtilitiesNamespaceConfig
+from flext_infra._utilities.namespace_moves import (
+    FlextInfraUtilitiesRefactorNamespaceMoves,
+)
+from flext_infra._utilities.network import FlextInfraUtilitiesNetwork
+from flext_infra._utilities.private_import_ancestry import (
+    FlextInfraUtilitiesPrivateImportAncestry,
+)
+from flext_infra._utilities.private_import_facades import (
+    FlextInfraUtilitiesPrivateImportFacades,
+)
+from flext_infra._utilities.private_import_validation import (
+    FlextInfraUtilitiesPrivateImportValidation,
+)
+from flext_infra._utilities.process import FlextInfraUtilitiesProcess
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities.project_managed_artifacts import (
+    FlextInfraUtilitiesProjectManagedArtifacts,
+)
+from flext_infra._utilities.promoted import FlextInfraUtilitiesPromoted
+from flext_infra._utilities.protected_edit import FlextInfraUtilitiesProtectedEdit
+from flext_infra._utilities.protected_edit_apply import (
+    FlextInfraUtilitiesProtectedEditApply,
+)
+from flext_infra._utilities.protected_edit_linting import (
+    FlextInfraUtilitiesProtectedEditLinting,
+)
+from flext_infra._utilities.protected_edit_preview import (
+    FlextInfraUtilitiesProtectedEditPreview,
+)
+from flext_infra._utilities.protected_edit_writes import (
+    FlextInfraUtilitiesProtectedEditWrites,
+)
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.pyproject_conform import FlextInfraUtilitiesPyprojectConform
+from flext_infra._utilities.pyrefly import FlextInfraUtilitiesPyrefly
+from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
+from flext_infra._utilities.refactor import FlextInfraUtilitiesRefactor
+from flext_infra._utilities.release import FlextInfraUtilitiesRelease
+from flext_infra._utilities.repository import FlextInfraUtilitiesRepository
+from flext_infra._utilities.requirement_specs import FlextInfraUtilitiesRequirementSpecs
+from flext_infra._utilities.resource_limits import FlextInfraUtilitiesResourceLimits
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.rope_analysis_introspection import (
+    FlextInfraUtilitiesRopeAnalysisIntrospection,
+)
+from flext_infra._utilities.rope_analysis_workspace import (
+    FlextInfraUtilitiesRopeAnalysisWorkspace,
+)
+from flext_infra._utilities.rope_class_move import FlextInfraUtilitiesRopeClassMove
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_helpers import FlextInfraUtilitiesRopeHelpers
+from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities.rope_inventory import FlextInfraUtilitiesRopeInventory
+from flext_infra._utilities.rope_module_patch import FlextInfraUtilitiesRopeModulePatch
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities.rope_runtime_modules import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
+from flext_infra._utilities.rope_runtime_refactors import (
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+)
+from flext_infra._utilities.rope_runtime_types import (
+    FlextInfraUtilitiesRopeRuntimeTypes,
+)
+from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
+from flext_infra._utilities.rope_source_bases import FlextInfraUtilitiesRopeSourceBases
+from flext_infra._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
+from flext_infra._utilities.semantic_cutover import FlextInfraUtilitiesSemanticCutover
+from flext_infra._utilities.transformer_header import (
+    FlextInfraUtilitiesTransformerHeader,
+)
+from flext_infra._utilities.transformer_header_parser import (
+    FlextInfraUtilitiesTransformerHeaderParser,
+)
+from flext_infra._utilities.versioning import FlextInfraUtilitiesVersioning
+from flext_infra._utilities.workspace_fingerprint import (
+    FlextInfraUtilitiesWorkspaceFingerprint,
+)
+from flext_infra._utilities.workspace_manifest import (
+    FlextInfraUtilitiesWorkspaceManifest,
+)
+from flext_infra._utilities.worktree_lifecycle import FlextInfraWorktreeLifecycle
+from flext_infra._utilities.worktree_provisioning import FlextInfraWorktreeProvisioning
 
 __all__: tuple[str, ...] = (
     "FlextInfraMypyDarwinSupervisor",
