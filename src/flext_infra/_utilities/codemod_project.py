@@ -355,22 +355,17 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     @classmethod
     def codemod_context_admits(
         cls,
-        root: Path,
-        rule: m.Infra.CodemodRule,
-        file_path: Path,
-        captures: t.JsonMapping,
-        facts: m.Infra.CodemodProjectFacts,
-        snapshot: m.Infra.CodemodBindingSnapshot | None = None,
+        admission: m.Infra.CodemodAdmission,
     ) -> bool:
         """Return whether one finding satisfies its rule's project context.
 
-        ``captures`` maps each metavariable of the finding to its ast-grep
-        single capture (``{"text": ...}``) or transformed value (a string). A
-        declared variable the finding did not capture is a rule defect and
-        raises; the syntactic match alone never stands in for it.
+        ``admission.captures`` maps each metavariable of the finding to its
+        ast-grep single capture (``{"text": ...}``) or transformed value (a
+        string). A declared variable the finding did not capture is a rule
+        defect and raises; the syntactic match alone never stands in for it.
 
-        ``facts`` is the admission pass's project snapshot; it must have been
-        built for every predicate the rule names.
+        ``admission.facts`` is the admission pass's project snapshot; it must
+        have been built for every predicate the rule names.
 
         Returns:
             Whether one finding satisfies its rule's project context.
@@ -379,6 +374,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If the facts were not built for a predicate of the rule.
 
         """
+        root = admission.root
+        rule = admission.rule
+        file_path = admission.file_path
+        captures = admission.captures
+        facts = admission.facts
+        snapshot = admission.snapshot
         missing = {condition.predicate for condition in rule.context} - facts.predicates
         if missing:
             msg = (
