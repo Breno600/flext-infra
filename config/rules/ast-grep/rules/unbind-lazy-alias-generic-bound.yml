@@ -1,0 +1,44 @@
+# A PEP 695 generic parameter must not bind a lazy facade alias chain. The
+# bound `t.Cli.ResultValue` resolves through the generated lazy init to a
+# class-scoped PEP 695 TypeAliasType (flext-cli _typings.domain.Cli) whose
+# target is itself a lazy alias. mypy 2.3.1 semanal, synthesizing model
+# members for the generic class through the pydantic plugin, defers on that
+# unresolved bound every pass and crashes at the final iteration:
+# `INTERNAL ERROR ... AssertionError: Must not defer during final iteration`
+# — the whole mypy gate dies (observed at base.py:18 and every same-shape
+# declaration, 2026-10-03). The parameter's use sites already carry the
+# typing (`p.Result[T]` contracts); dropping the bound preserves every
+# instantiation while the alias family gains eager resolution upstream.
+#
+# Idempotent: an unbounded parameter matches nothing on re-scan. Concrete
+# class bounds and plain annotations of the same chain are untouched.
+id: unbind-lazy-alias-generic-bound
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/node_modules/**"
+rule:
+  kind: constrained_type
+  all:
+    - has:
+        kind: type
+        has:
+          kind: attribute
+          pattern: t.Cli.ResultValue
+    - has:
+        kind: type
+        has:
+          kind: identifier
+          pattern: $NAME
+fix: $NAME
+message: >-
+  Generic parameters must not bind the lazy `t.Cli.ResultValue` alias chain:
+  mypy semanal defers past final iteration resolving it and crashes the
+  mypy gate (INTERNAL ERROR). Drop the bound; the `p.Result[T]` use sites
+  carry the typing. The bound returns when the alias family resolves
+  eagerly at its owner.

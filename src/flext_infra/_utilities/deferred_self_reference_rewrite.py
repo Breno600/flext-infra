@@ -135,7 +135,10 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
         edits: MutableMapping[t.Pair[int, int], str] = {}
         for sibling in siblings:
             for expression in cls._annotation_expressions(sibling):
-                for node in ast.walk(expression):
+                edits.update(
+                    cls._call_value_edits(offsets, outer.name, owned_names, expression),
+                )
+                for node in cls._deferred_type_nodes(expression):
                     if (
                         isinstance(node, ast.Attribute)
                         and isinstance(node.value, ast.Name)
@@ -158,6 +161,107 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
                     edits[span] = f"{outer.name}.{node.id}"
         return tuple((*span, replacement) for span, replacement in edits.items())
 
+    @staticmethod
+    def _deferred_type_nodes(expression: ast.expr) -> t.SequenceOf[ast.expr]:
+        """Walk one deferred annotation without descending into call arguments.
+
+        Names inside nested calls (``u.Field(default_factory=...)``,
+        ``m.BeforeValidator(...)``) are runtime value positions, not type
+        positions: pydantic resolves them through the parent frame locals at
+        deferred-evaluation time, and static checkers evaluate them in the
+        class-body scope where the owner class is not yet bound. Qualifying
+        those through the owner produced ``reportUndefinedVariable`` and
+        unknown-member findings on every consumer.
+
+        Returns:
+            The resulting type-position nodes of the annotation.
+
+        """
+        stack = [expression]
+        nodes: list[ast.expr] = []
+        while stack:
+            node = stack.pop()
+            nodes.append(node)
+            if isinstance(node, ast.Call):
+                continue
+            stack.extend(
+                child
+                for child in ast.iter_child_nodes(node)
+                if isinstance(child, ast.expr)
+            )
+        return tuple(nodes)
+
+    @classmethod
+    def _call_value_edits(
+        cls,
+        offsets: t.VariadicTuple[int],
+        owner: str,
+        owned_names: frozenset[str],
+        expression: ast.expr,
+    ) -> t.MappingKV[t.Pair[int, int], str]:
+        """Repair owner-qualified siblings in one annotation's value positions.
+
+        Every call reached through the annotation's type positions carries
+        value arguments (``u.Field(default_factory=...)``); a sibling there
+        must stay bare, so ``Owner.X`` is rewritten back to the ``X`` the
+        parent-frame locals resolve.
+
+        Returns:
+            The span-to-replacement edits for those references.
+
+        """
+        return {
+            cls._node_span(offsets, node): node.attr
+            for call in cls._deferred_type_nodes(expression)
+            if isinstance(call, ast.Call)
+            for argument in (
+                *call.args,
+                *(keyword.value for keyword in call.keywords),
+            )
+            for node in ast.walk(argument)
+            if isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id == owner
+            and node.attr in owned_names
+        }
+
+    @classmethod
+    def _collect_annotation_expressions(
+        cls,
+        expressions: list[ast.expr],
+        statement: ast.stmt,
+    ) -> None:
+        """Append one statement's deferred annotations, then descend.
+
+        Names inside nested calls (``u.Field(default_factory=...)``,
+        ``m.BeforeValidator(...)``) are runtime value positions, not type
+        positions: pydantic resolves them through the parent frame locals at
+        deferred-evaluation time, and static checkers evaluate them in the
+        class-body scope where the owner class is not yet bound.
+
+        """
+        if isinstance(statement, ast.AnnAssign):
+            expressions.append(statement.annotation)
+            return
+        if isinstance(statement, ast.FunctionDef | ast.AsyncFunctionDef):
+            expressions.extend(cls._evaluated_function_annotations(statement))
+        if isinstance(
+            statement,
+            ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+        ):
+            children: t.SequenceOf[ast.stmt] = statement.body
+        elif isinstance(statement, ast.TypeAlias):
+            expressions.append(statement.value)
+            return
+        else:
+            children = tuple(
+                child
+                for child in ast.iter_child_nodes(statement)
+                if isinstance(child, ast.stmt)
+            )
+        for child in children:
+            cls._collect_annotation_expressions(expressions, child)
+
     @classmethod
     def _annotation_expressions(cls, node: ast.ClassDef) -> t.SequenceOf[ast.expr]:
         """Collect deferred annotations while excluding executable class bases.
@@ -167,29 +271,8 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
         """
         expressions: list[ast.expr] = []
-
-        def collect(statement: ast.stmt) -> None:
-            if isinstance(statement, ast.AnnAssign):
-                expressions.append(statement.annotation)
-                return
-            if isinstance(statement, ast.FunctionDef | ast.AsyncFunctionDef):
-                expressions.extend(cls._evaluated_function_annotations(statement))
-                for child in statement.body:
-                    collect(child)
-                return
-            if isinstance(statement, ast.ClassDef):
-                for child in statement.body:
-                    collect(child)
-                return
-            if isinstance(statement, ast.TypeAlias):
-                expressions.append(statement.value)
-                return
-            for child in ast.iter_child_nodes(statement):
-                if isinstance(child, ast.stmt):
-                    collect(child)
-
         for statement in node.body:
-            collect(statement)
+            cls._collect_annotation_expressions(expressions, statement)
         return tuple(expressions)
 
     @staticmethod

@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 from flext_cli import u
 
 from flext_infra import c, config, m, t
-from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities import FlextInfraUtilitiesDocs
 
 
 class FlextInfraUtilitiesDocsRender:
@@ -341,7 +341,7 @@ class FlextInfraUtilitiesDocsRender:
         """Return a thin pointer to the canonical Collection Rules.
 
         SSOT: the actual content lives in ``flext/AGENTS.md`` §9 — duplicating
-        it 33× per project (once for ``docs/index.md`` and once for
+        it 33x per project (once for ``docs/index.md`` and once for
         ``README.md``) is the "fake markdown" the user flagged. Each project
         page now points back to the canonical source instead of carrying a
         copy. ``scope`` is preserved on the signature for symmetry with the

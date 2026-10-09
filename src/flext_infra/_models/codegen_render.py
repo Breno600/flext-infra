@@ -31,6 +31,25 @@ class FlextInfraModelsCodegenRender:
             m.Field(description="Canonical validated tooling policy."),
         ]
 
+    class QltyRenderSpec(m.ContractModel):
+        """Validated context for the generated qlty repository configuration."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="forbid",
+            frozen=True,
+            strict=True,
+        )
+
+        generated_source_globs: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Tracked generated-source trees excluded from the smells "
+                    "scan, derived from the codegen artifact key."
+                ),
+            ),
+        ] = ()
+
     # Keep the module-skeleton template boundary model-backed and immutable.
     class ModuleSkeletonRenderContext(m.ContractModel):
         """Validated context for one generated module skeleton."""
@@ -117,11 +136,8 @@ class FlextInfraModelsCodegenRender:
         exports_tuple: t.NonEmptyStr = m.Field(
             description="Canonical rendered root ``__all__`` tuple.",
         )
-        lazy_module_mapping: t.NonEmptyStr = m.Field(
-            description="Canonical rendered lazy module mapping.",
-        )
-        lazy_alias_mapping: t.NonEmptyStr = m.Field(
-            description="Canonical rendered lazy alias mapping.",
+        lazy_export_mapping: t.NonEmptyStr = m.Field(
+            description="Immutable elected export-to-target installer argument.",
         )
 
     class StaticPackageInitRender(m.ArbitraryTypesModel):

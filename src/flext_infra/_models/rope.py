@@ -6,14 +6,16 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Annotated, ClassVar
 
 from flext_cli import m
 
 from flext_infra import c, p, t
-from flext_infra._models import FlextInfraModelsMixins as mm
-from flext_infra._models._codegen.base import FlextInfraCodegen
+from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
+from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsRope:
@@ -31,6 +33,45 @@ class FlextInfraModelsRope:
                 description="Non-empty ordered project roots to scan",
             ),
         ]
+
+    class SubscriptRebind(m.ContractModel):
+        """Typed rule for one subscript-assignment rebind target.
+
+        External runtimes legitimately re-register aliases through the
+        interpreter's module table (CPython's ``collections`` publishes
+        ``sys.modules['collections.abc'] = _collections_abc``). The rule owns
+        the decision: such a rebind never redefines a class binding.
+        """
+
+        root_name: Annotated[
+            str,
+            m.Field(
+                description="Root name of the subscript's value expression.",
+            ),
+        ]
+        attribute: Annotated[
+            str | None,
+            m.Field(
+                description=(
+                    "Dotted attribute path between the root and the subscript "
+                    "when the subscript applies to an attribute expression "
+                    "(for example ``modules`` in ``sys.modules[...]``)."
+                ),
+            ),
+        ] = None
+
+        @m.computed_field
+        @property
+        def is_module_table_mutation(self) -> bool:
+            """Whether the rebind mutates an interpreter module table.
+
+            ``<alias>.modules[...] = ...`` only ever writes the interpreter's
+            module registry (``sys`` aliases included), never a class binding
+            of the indexed module.
+            """
+            if self.attribute == "modules":
+                return True
+            return self.root_name.lstrip("_") == "sys"
 
     class ExportOptions(m.ContractModel):
         """Canonical options for Rope module export discovery."""
@@ -58,13 +99,124 @@ class FlextInfraModelsRope:
             ),
         ] = False
 
-    class ClassInfo(mm.PositiveLineMixin, m.ContractModel):
+    class ClassInfo(FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel):
         """Semantic class info from rope — name, line, bases in one shot."""
 
         name: Annotated[str, m.Field(description="Class name")]
         bases: Annotated[t.StrSequence, m.Field(description="Base class names")] = ()
 
-    class ScopeDefinition(mm.PositiveLineMixin, m.ContractModel):
+    class SourceClassReference(m.ContractModel):
+        """A lexical binding and its attribute path, distinct from Ruff's spelling."""
+
+        target: Annotated[str, m.Field(description="Dotted target the binding names")]
+        attributes: Annotated[
+            t.StrTuple,
+            m.Field(description="Attribute path read off the binding target"),
+        ] = ()
+        qualified_base: Annotated[
+            str,
+            m.Field(description="Fully qualified base spelling when resolved"),
+        ] = ""
+
+    class SourceClassDefinition(m.ContractModel):
+        """One source declaration, preserving ordered bases and member shadowing."""
+
+        identity: Annotated[
+            str,
+            m.Field(description="Qualified identity of the declared class"),
+        ]
+        bases: Annotated[
+            t.VariadicTuple[FlextInfraModelsRope.SourceClassReference],
+            m.Field(description="Ordered base references of the declaration"),
+        ]
+        members: Annotated[
+            t.MappingKV[str, FlextInfraModelsRope.SourceClassReference | None],
+            m.Field(description="Member name to shadowing reference mapping"),
+        ]
+
+    class SourceBindingCollectorSpec(m.ContractModel):
+        """Execution context one lexical-binding collector pass consumes.
+
+        The scalar fields describe the module under inventory. The two
+        injected maps are shared execution state the caller owns: they
+        travel unvalidated by reference so every pass accumulates directly
+        into the caller's inventories instead of pydantic copies.
+        """
+
+        module: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Qualified module name under inventory"),
+        ]
+        package: Annotated[
+            str,
+            m.Field(description="Enclosing package name of the module"),
+        ]
+        required_line: Annotated[
+            int | None,
+            m.Field(
+                ge=1,
+                description="Index only bindings visible at this line when set",
+            ),
+        ] = None
+        allow_conditional: Annotated[
+            bool,
+            m.Field(
+                description="Whether conditional bindings may degrade to unknown",
+            ),
+        ] = False
+        definitions: Annotated[
+            MutableMapping[str, FlextInfraModelsRope.SourceClassDefinition],
+            m.SkipValidation,
+            m.Field(
+                description="Cross-module definition inventory the walk extends",
+            ),
+        ]
+        lexical: Annotated[
+            MutableMapping[str, FlextInfraModelsRope.SourceClassReference | None],
+            m.SkipValidation,
+            m.Field(
+                description="Module-scope bindings visible to every nested base",
+            ),
+        ]
+
+    class SourceBindingInventoryRequest(m.ContractModel):
+        """One captured module's request for a lexical-binding inventory."""
+
+        project: Annotated[
+            t.Infra.RopeProject,
+            m.SkipValidation,
+            m.Field(description="Open Rope project scoped to the analysis roots"),
+        ]
+        module: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Qualified module name under inventory"),
+        ]
+        path: Annotated[Path, m.Field(description="Captured module path")]
+        # Why: the family contract strips field whitespace, which would shift
+        # every parsed line number of captured source; the inventory indexes
+        # declarations by their exact 1-based lines, so the text must survive
+        # byte-for-byte. An empty module (a bare package __init__.py) is valid
+        # captured source, so the text is not required to be non-empty.
+        source: Annotated[
+            str,
+            t.StringConstraints(strip_whitespace=False),
+            m.Field(description="Captured module source text"),
+        ]
+        required_line: Annotated[
+            int | None,
+            m.Field(
+                ge=1,
+                description="Index only bindings visible at this line when set",
+            ),
+        ] = None
+        allow_conditional: Annotated[
+            bool,
+            m.Field(
+                description="Whether conditional bindings may degrade to unknown",
+            ),
+        ] = False
+
+    class ScopeDefinition(FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel):
         """One semantic scope (def/class) discovered via rope's scope tree.
 
         Built from ``PyScope.get_kind()``/``get_scopes()`` and the scope's
@@ -82,7 +234,7 @@ class FlextInfraModelsRope:
             m.Field(description="Whether the scope is a direct child of the module"),
         ]
 
-    class LogicalStatement(mm.PositiveLineMixin, m.ContractModel):
+    class LogicalStatement(FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel):
         """One logical statement from the rope structure boundary (no ``ast``).
 
         Built from a rope ``LogicalLineFinder`` region plus an indent stack over
@@ -126,8 +278,11 @@ class FlextInfraModelsRope:
             bool,
             m.Field(description="Whether the statement is inside TYPE_CHECKING"),
         ] = False
+        # Why: the slice is rope-owned line/offset-aligned source text; the
+        # family whitespace strip would detach it from its declared offsets.
         text: Annotated[
             str,
+            t.StringConstraints(strip_whitespace=False),
             m.Field(description="Rope-owned source slice for the statement"),
         ] = ""
 
@@ -158,8 +313,8 @@ class FlextInfraModelsRope:
         ]
 
     class ConstantInfo(
-        mm.NonNegativeLineMixin,
-        mm.NestedClassPathMixin,
+        FlextInfraModelsMixins.NonNegativeLineMixin,
+        FlextInfraModelsMixins.NestedClassPathMixin,
         m.ContractModel,
     ):
         """Final-annotated constant definition from rope semantic analysis."""
@@ -168,7 +323,7 @@ class FlextInfraModelsRope:
         annotation: Annotated[str, m.Field(description="Type annotation text")] = ""
         value: Annotated[str, m.Field(description="Value representation")] = ""
 
-    class SymbolInfo(mm.NonNegativeLineMixin, m.ContractModel):
+    class SymbolInfo(FlextInfraModelsMixins.NonNegativeLineMixin, m.ContractModel):
         """Top-level symbol metadata from rope semantic analysis."""
 
         name: Annotated[str, m.Field(description="Symbol name")]
@@ -373,11 +528,11 @@ class FlextInfraModelsRope:
             m.Field(description="Resolved package directory containing the module"),
         ]
         package_context: Annotated[
-            FlextInfraCodegen.LazyInitPackageContext,
+            FlextInfraModelsCodegenLazyInitModels.LazyInitPackageContext,
             m.Field(description="Resolved lazy-init package context for the module"),
         ]
         module_policy: Annotated[
-            FlextInfraCodegen.NamespaceModulePolicy,
+            FlextInfraModelsCodegenFixModels.NamespaceModulePolicy,
             m.Field(description="Canonical module policy derived for the module"),
         ]
         project_layout: Annotated[

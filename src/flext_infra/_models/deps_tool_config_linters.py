@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
@@ -115,16 +115,18 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ]
 
-    class RuffPylintConfig(m.ArbitraryTypesModel):
-        """Ruff Pylint policy for operator-approved native type descriptors."""
+    class RuffTypeCheckingConfig(m.ArbitraryTypesModel):
+        """Ruff flake8-type-checking settings loaded from YAML."""
 
-        allow_dunder_method_names: Annotated[
-            t.SequenceOf[Literal["__base__", "__bases__"]],
+        runtime_evaluated_roots: Annotated[
+            t.SequenceOf[t.NonEmptyStr],
             m.Field(
-                alias="allow-dunder-method-names",
+                alias="runtime-evaluated-roots",
+                min_length=1,
                 description=(
-                    "Only Python type.__base__ and type.__bases__ read-only "
-                    "protocol properties are authorized by the operator."
+                    "Qualified base classes whose subclasses evaluate their "
+                    "annotations at runtime; codegen derives every project "
+                    "base inheriting one into runtime-evaluated-base-classes."
                 ),
             ),
         ]
@@ -156,18 +158,48 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             m.Field(description="Why the rules cannot hold for this scope."),
         ]
 
-    class RuffTypeCheckingConfig(m.ArbitraryTypesModel):
-        """Ruff flake8-type-checking settings loaded from YAML."""
+    class BanditAuthorizedException(m.ArbitraryTypesModel):
+        """One operator-authorized Bandit exception, scoped to owner modules.
 
-        runtime_evaluated_roots: Annotated[
-            t.SequenceOf[t.NonEmptyStr],
+        Bandit applies a skip to a whole invocation and reads no per-path
+        exception, so the security gate audits the matching files in their own
+        invocation that skips only these tests; every other file keeps every
+        test. An entry missing its authority or reason is refused at load.
+        """
+
+        tests: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(min_length=1, description="Bandit test IDs the owners may raise."),
+        ]
+        files: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                alias="runtime-evaluated-roots",
                 min_length=1,
                 description=(
-                    "Qualified base classes whose subclasses evaluate their "
-                    "annotations at runtime, so TYPE_CHECKING-only names are "
-                    "forbidden there."
+                    "Project-relative globs of the owner modules, matched "
+                    "with full-path glob semantics."
+                ),
+            ),
+        ]
+        authority: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Operator ruling that authorized the exception."),
+        ]
+        reason: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Why the tests cannot hold for these owners."),
+        ]
+
+    class BanditConfig(m.ArbitraryTypesModel):
+        """Bandit security gate settings loaded from YAML."""
+
+        authorized_exceptions: Annotated[
+            tuple[FlextInfraModelsDepsToolConfigLinters.BanditAuthorizedException, ...],
+            m.Field(
+                alias="authorized-exceptions",
+                description=(
+                    "Operator-authorized Bandit exceptions, each audited in "
+                    "its own invocation that skips only its tests."
                 ),
             ),
         ]
@@ -257,9 +289,6 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         pydocstyle: FlextInfraModelsDepsToolConfigLinters.RuffPydocstyleConfig = (
             m.Field(description="Ruff pydocstyle configuration")
         )
-        pylint: FlextInfraModelsDepsToolConfigLinters.RuffPylintConfig = m.Field(
-            description="Ruff Pylint native type descriptor policy",
-        )
         flake8_type_checking: Annotated[
             FlextInfraModelsDepsToolConfigLinters.RuffTypeCheckingConfig,
             m.Field(
@@ -281,7 +310,11 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         @m.computed_field
         @property
         def ignore(self) -> t.StrSequence:
-            """Rules excepted for every file, rendered as Ruff ``ignore``."""
+            """Rules excepted for every file, rendered as Ruff ``ignore``.
+
+            Returns:
+                The resulting ``t.StrSequence``.
+            """
             return tuple(
                 sorted({
                     rule
@@ -294,7 +327,11 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         @m.computed_field
         @property
         def per_file_ignores(self) -> t.Infra.PerFileIgnores:
-            """Scoped exceptions, rendered as Ruff ``per-file-ignores``."""
+            """Scoped exceptions, rendered as Ruff ``per-file-ignores``.
+
+            Returns:
+                The resulting ``t.Infra.PerFileIgnores``.
+            """
             return {
                 pattern: tuple(
                     sorted({
@@ -342,6 +379,17 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
     class RuffConfig(m.ArbitraryTypesModel):
         """Ruff top-level settings loaded from YAML."""
 
+        extend_exclude: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="extend-exclude",
+                description=(
+                    "Workspace exclusions added to Ruff's defaults: "
+                    "provider-owned tool-home projections stay outside the "
+                    "member lint scope."
+                ),
+            ),
+        ] = m.Field(default_factory=tuple)
         namespace_packages: Annotated[
             t.StrSequence,
             m.Field(
@@ -350,6 +398,19 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ] = m.Field(default_factory=tuple)
         fix: Annotated[bool, m.Field(description="Enable automatic ruff fixes")]
+        informative_rules: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                alias="informative-rules",
+                description=(
+                    "Ruff rule names reported as warnings: their findings "
+                    "stay visible in the gate log, the summary, and the SARIF "
+                    "reports, but never fail the lint gate (operator ruling "
+                    "2026-10-05: rules the operator never authorized as "
+                    "blocking are informative only)."
+                ),
+            ),
+        ] = ()
         findings_exit_codes: Annotated[
             t.VariadicTuple[int],
             m.Field(
@@ -433,9 +494,30 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 ),
             ),
         ]
-        plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
-            m.Field(default_factory=tuple)
-        )
+        plugins: Annotated[
+            t.StrSequence,
+            m.Field(
+                description="Mypy plugins, including mandatory Pydantic 2 support.",
+            ),
+        ]
+
+        @m.field_validator("plugins")
+        @classmethod
+        def require_pydantic_plugin(cls, plugins: t.StrSequence) -> t.StrSequence:
+            """Reject configurations without the mandatory Pydantic 2 plugin.
+
+            Returns:
+                The validated plugin declarations.
+
+            Raises:
+                ValueError: If Pydantic 2 support is missing or replaced by v1.
+
+            """
+            if "pydantic.mypy" not in plugins or "pydantic.v1.mypy" in plugins:
+                msg = "Mypy requires pydantic.mypy and forbids pydantic.v1.mypy"
+                raise ValueError(msg)
+            return plugins
+
         facade_rebind_error_codes: Annotated[
             t.StrSequence,
             m.Field(
@@ -446,6 +528,35 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 ),
             ),
         ]
+        disable_error_code: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="disable-error-code",
+                description=(
+                    "Mypy error codes an operator ruling suspends project-wide; "
+                    "rendered as [tool.mypy] disable_error_code. The pydantic "
+                    "mypy plugin stays mandatory (Pydantic 2 is the contract)."
+                ),
+            ),
+        ]
+
+        @m.field_validator("disable_error_code")
+        @classmethod
+        def require_mypy_ruling_codes(cls, codes: t.StrSequence) -> t.StrSequence:
+            """Validate the operator's immutable Mypy diagnostic contract.
+
+            Returns:
+                The declared policy without adding or replacing configured values.
+
+            Raises:
+                ValueError: If a mandatory code is removed or another is suspended.
+
+            """
+            if set(codes) != {"prop-decorator", "call-arg"}:
+                msg = "Mypy ruling requires only prop-decorator and call-arg"
+                raise ValueError(msg)
+            return codes
+
         boolean_settings: Annotated[
             t.BoolMapping,
             m.Field(
@@ -478,6 +589,65 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 "auto-generated files and PEP 695 generics."
             ),
         )
+
+        @m.model_validator(mode="after")
+        def reject_policy_shadow(self) -> Self:
+            """Refuse ambiguous options and re-enabling suspended diagnostics.
+
+            Returns:
+                The validated settings without modifying their declared values.
+
+            Raises:
+                ValueError: If generic settings bypass a dedicated policy owner.
+
+            """
+            boolean_keys = {
+                key.strip().replace("-", "_") for key in self.boolean_settings
+            }
+            strings = {
+                key.strip().replace("-", "_"): value
+                for key, value in self.string_settings.items()
+            }
+            reserved = {
+                c.Infra.PLUGINS,
+                "disable_error_code",
+                c.Infra.PYTHON_VERSION_UNDERSCORE,
+                "overrides",
+                "mypy_path",
+            }
+            if (boolean_keys | strings.keys()) & reserved:
+                msg = "Mypy policy cannot be shadowed by generic options"
+                raise ValueError(msg)
+            if (
+                boolean_keys & strings.keys()
+                or len(boolean_keys) != len(self.boolean_settings)
+                or len(strings) != len(self.string_settings)
+            ):
+                msg = "Mypy policy rejects duplicate generic options"
+                raise ValueError(msg)
+            if "enable_error_code" in boolean_keys:
+                msg = "Mypy policy enable_error_code requires a string setting"
+                raise ValueError(msg)
+            if any(
+                not key.isascii() or not key.isidentifier()
+                for key in (*self.boolean_settings, *self.string_settings)
+            ):
+                msg = "Mypy policy requires plain option names, not TOML syntax"
+                raise ValueError(msg)
+            if self.boolean_settings.get("ignore_errors", False) or (
+                "ignore_errors" in strings
+            ):
+                msg = "Mypy policy cannot ignore unsuspended diagnostics"
+                raise ValueError(msg)
+            enabled = {
+                code.strip()
+                for code in strings.get("enable_error_code", "").split(",")
+                if code.strip()
+            }
+            if enabled.intersection(self.disable_error_code):
+                msg = "Mypy policy cannot re-enable suspended error codes"
+                raise ValueError(msg)
+            return self
 
     class PydanticMypyConfig(m.ArbitraryTypesModel):
         """Pydantic mypy plugin settings loaded from YAML."""

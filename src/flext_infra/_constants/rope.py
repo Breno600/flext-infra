@@ -16,6 +16,13 @@ if TYPE_CHECKING:
 class FlextInfraConstantsRope:
     """Rope Project configuration constants — accessed via c.Infra.*."""
 
+    ROPE_WALK_DEPTH_BUDGET: ClassVar[int] = 128
+    "Bound for the external-base walk's provider/reexport hops; the workspace"
+    " facade chain (examples -> flext -> flext_infra -> flext_core pydantic) is"
+    " a finite multi-layer walk, cycles terminate through the preserved"
+    " visiting stack, and self-referential definition references short-circuit"
+    " through the direct identity map."
+
     @unique
     class RopeScopeKind(StrEnum):
         """Semantic scope kinds returned by rope's ``PyScope.get_kind()``.

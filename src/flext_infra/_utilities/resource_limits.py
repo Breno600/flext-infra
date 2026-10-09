@@ -10,17 +10,17 @@ import platform
 import shutil
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 from flext_cli import u
 
-from flext_infra import c, config, m, settings, t
-from flext_infra._utilities.process import FlextInfraUtilitiesProcess
-from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
-from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra import c, config, m, p, t
+from flext_infra._settings import settings
+from flext_infra._utilities import (
+    FlextInfraUtilitiesProcess,
+    FlextInfraUtilitiesProjectDiscovery,
+    FlextInfraUtilitiesPyproject,
+)
 
 
 class FlextInfraUtilitiesResourceLimits:
@@ -150,13 +150,6 @@ class FlextInfraUtilitiesResourceLimits:
                 f"{__package__}._mypy_profile",
                 invocation.model_dump_json(),
             )
-        if invocation.report_file is not None:
-            return (
-                interpreter,
-                "-m",
-                f"{__package__}._mypy_report",
-                invocation.model_dump_json(),
-            )
         return (
             interpreter,
             "-m",
@@ -197,7 +190,9 @@ class FlextInfraUtilitiesResourceLimits:
 
     @staticmethod
     def external_cache_directory(
-        spec: m.Infra.MakeSpec.MypyCacheSpec | m.Infra.MakeSpec.CodemodRulesCacheSpec,
+        spec: m.Infra.MypyCacheSpec
+        | m.Infra.MakeSpec.MypyCacheSpec
+        | m.Infra.MakeSpec.CodemodRulesCacheSpec,
     ) -> Path:
         """Resolve one declared FLEXT cache below the XDG cache home.
 
@@ -323,15 +318,16 @@ class FlextInfraUtilitiesResourceLimits:
         tooling = project_dir / "config" / "tooling.yaml"
         if not tooling.is_file():
             return None
-        node: t.JsonValue = u.Cli.yaml_safe_load(tooling).unwrap()
+        loaded: t.JsonMapping = u.Cli.yaml_safe_load(tooling).unwrap()
+        current: t.JsonValue = dict(loaded)
         for key in ("Infra", "tooling", "tools", "mypy", "timeout_seconds"):
-            if not isinstance(node, dict):
+            if not isinstance(current, dict):
                 msg = f"project tooling.yaml level above {key!r} is not a mapping"
                 raise TypeError(msg)
-            if key not in node:
+            if key not in current:
                 return None
-            node = node[key]
-        raw_budget = node
+            current = current[key]
+        raw_budget = current
         if not isinstance(raw_budget, int) or isinstance(raw_budget, bool):
             msg = f"project mypy budget must be a plain integer: {raw_budget!r}"
             raise TypeError(msg)

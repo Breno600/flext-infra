@@ -14,8 +14,8 @@ from flext_cli import m
 from flext_infra import c, t
 from flext_infra._models._config.base import FlextInfraConfigModels
 from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
-from flext_infra._models._git import FlextInfraModelsGitIdentity
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models._git.identity import FlextInfraModelsGitIdentity
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsWorkspace:
@@ -32,6 +32,37 @@ class FlextInfraModelsWorkspace:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
+
+    class LifecycleReceipt(m.ContractModel):
+        """One public Make invocation; an absent exit is never a green receipt."""
+
+        command: Annotated[
+            t.VariadicTuple[str], m.Field(description="Public Make argv")
+        ]
+        cwd: Annotated[Path, m.Field(description="Repository execution directory")]
+        output_file: Annotated[
+            Path,
+            m.Field(description="Durable combined stdout/stderr for reached steps"),
+        ]
+        exit_code: Annotated[
+            int | None,
+            m.Field(
+                description="Observed exit; absent when unreached or launch failed"
+            ),
+        ] = None
+        error: Annotated[
+            str | None, m.Field(description="First execution failure, if observed")
+        ] = None
+
+    class LifecycleReport(m.ContractModel):
+        """Complete declared scope and ordered reached/unreached lifecycle receipts."""
+
+        workspace_root: Annotated[Path, m.Field(description="Invoking workspace root")]
+        scope: Annotated[t.VariadicTuple[Path], m.Field(description="Governed roots")]
+        receipts: Annotated[
+            t.VariadicTuple[FlextInfraModelsWorkspace.LifecycleReceipt],
+            m.Field(description="Ordered public command receipts for the entire scope"),
+        ]
 
     class SubprojectLoadContext(m.ContractModel):
         """Workspace governance scope shared by every declared subproject entry."""
@@ -62,12 +93,14 @@ class FlextInfraModelsWorkspace:
         declared_member: Annotated[
             FlextInfraConfigModelsContexts.RepositoryRef | None,
             m.Field(
-                default=None,
                 description="Catalog-declared member reference for this entry",
             ),
-        ]
+        ] = None
 
-    class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):
+    class EnvironmentContractViolation(
+        FlextInfraModelsMixins.PositiveLineMixin,
+        m.ContractModel,
+    ):
         """One static ``.envrc``/``.envrc.local`` contract violation.
 
         The line is carried as a typed field; the consuming gate renders the
@@ -128,7 +161,17 @@ class FlextInfraModelsWorkspace:
         editable: Annotated[
             bool,
             m.Field(description="Distribution is installed as editable"),
-        ]
+        ] = False
+
+    class DirectUrlVcsInfo(m.ContractModel):
+        """Native PEP 610 VCS identity, independent of a moving requested ref."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="ignore",
+            frozen=True,
+        )
+        vcs: Annotated[str, m.Field(description="Native VCS kind")]
+        commit_id: Annotated[str, m.Field(description="Installed full commit identity")]
 
     class DirectUrlReceipt(m.ContractModel):
         """Any installed distribution's PEP 610 receipt, read for its kind only.
@@ -143,6 +186,49 @@ class FlextInfraModelsWorkspace:
             FlextInfraModelsWorkspace.DirectUrlDirectoryInfo | None,
             m.Field(description="Directory metadata of a local install"),
         ] = None
+        url: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Required PEP 610 origin URL"),
+        ]
+        vcs_info: FlextInfraModelsWorkspace.DirectUrlVcsInfo | None = m.Field(
+            default=None,
+            description="Installed immutable VCS identity",
+        )
+
+    class LockedPackageSource(m.ContractModel):
+        """Only the lock's immutable installation source fields cross this boundary."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+        git: str | None = m.Field(default=None, description="Locked VCS URL and SHA")
+        registry: str | None = m.Field(
+            default=None,
+            description="Locked registry artifact",
+        )
+        editable: str | None = m.Field(default=None, description="Local root source")
+        directory: str | None = m.Field(
+            default=None,
+            description="Noneditable directory",
+        )
+
+    class LockedPackage(m.ContractModel):
+        """Installed identity selected from the committed uv lock."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+        name: Annotated[str, m.Field(description="Locked distribution name")]
+        version: Annotated[str, m.Field(description="Locked distribution version")]
+        source: Annotated[
+            FlextInfraModelsWorkspace.LockedPackageSource,
+            m.Field(description="Locked source identity"),
+        ]
+
+    class LockedEnvironment(m.ContractModel):
+        """Typed installation identities, never a dependency resolver."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+        package: Annotated[
+            t.VariadicTuple[FlextInfraModelsWorkspace.LockedPackage],
+            m.Field(description="Lock-owned package inventory"),
+        ]
 
     class EditableDirectUrl(m.ContractModel):
         """Validated PEP 610 editable provenance payload."""
@@ -172,9 +258,11 @@ class FlextInfraModelsWorkspace:
     class FleetRepoGaps(m.ContractModel):
         """One repository's row of the workspace fleet-gaps report.
 
-        Quality counts come only from explicitly selected, project-bound check
-        invocations. None means unknown/not executed, never PASS. Other hygiene
-        probes retain their independent presence and empty-value contracts.
+        Every count column reads that repository's own published reports and
+        degrades to zero when the artifact is absent; the standards columns
+        report presence facts only. Probes that cannot run (a missing
+        checkout, an unreachable provider) degrade to their empty value so
+        one repository never blocks the fleet's picture.
         """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
@@ -198,15 +286,15 @@ class FlextInfraModelsWorkspace:
             m.Field(description="Local branches not merged into the integration line"),
         ]
         lint_findings: Annotated[
-            t.NonNegativeInt | None,
+            int,
             m.Field(
-                description="Executed eligible lint findings; null is unknown/not executed",
+                description="Lint count from the checkout's check report; 0 absent",
             ),
         ]
         pyrefly_findings: Annotated[
-            t.NonNegativeInt | None,
+            int,
             m.Field(
-                description="Executed eligible Pyrefly findings; null is unknown/not executed",
+                description="Pyrefly errors from the checkout's JSON report; 0 absent",
             ),
         ]
         codemod_findings: Annotated[
@@ -260,7 +348,7 @@ class FlextInfraModelsWorkspace:
         ]
 
     class ProjectInfo(
-        mm.ProjectEntryNameMixin,
+        FlextInfraModelsMixins.ProjectEntryNameMixin,
         m.ArbitraryTypesModel,
     ):
         """Discovered project metadata for workspace operations."""

@@ -141,8 +141,14 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         Returns:
             The resulting ``t.Infra.EditResultWithDescs``.
 
+        Raises:
+            TypeError: If the scanned resource is not a Rope file resource.
+
         """
         resource = scanned.resource
+        if not u.Infra.file_resource(resource):
+            msg = f"expected a Rope file resource: {py_file}"
+            raise TypeError(msg)
         original_source = scanned.source
         src_lines = original_source.splitlines(keepends=True)
         rel = py_file.relative_to(workspace)

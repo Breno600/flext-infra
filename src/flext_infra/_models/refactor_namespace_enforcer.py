@@ -11,19 +11,26 @@ from typing import Annotated
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsNamespaceEnforcer:
     """Namespace enforcer report models."""
 
-    class ParseFailureViolation(mm.FilePathMixin, mm.ErrorDetailMixin, m.ContractModel):
+    class ParseFailureViolation(
+        FlextInfraModelsMixins.FilePathMixin,
+        FlextInfraModelsMixins.ErrorDetailMixin,
+        m.ContractModel,
+    ):
         """Parse failure violation."""
 
         stage: Annotated[t.NonEmptyStr, m.Field(description="Parse stage")]
         error_type: Annotated[t.NonEmptyStr, m.Field(description="Error type")]
 
-    class ProjectEnforcementReport(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class ProjectEnforcementReport(
+        FlextInfraModelsMixins.ProjectNameMixin,
+        m.ArbitraryTypesModel,
+    ):
         """Rule-catalog relocation outcome of one project."""
 
         project_root: Annotated[str, m.Field(description="Project root path")]
@@ -44,7 +51,11 @@ class FlextInfraModelsNamespaceEnforcer:
         @m.computed_field
         @property
         def has_violations(self) -> bool:
-            """Whether relocatable findings remain in this project."""
+            """Whether relocatable findings remain in this project.
+
+            Returns:
+                The resulting ``bool``.
+            """
             return self.relocation_findings > 0
 
     class WorkspaceEnforcementReport(m.ArbitraryTypesModel):
@@ -54,15 +65,18 @@ class FlextInfraModelsNamespaceEnforcer:
         projects: Annotated[
             t.SequenceOf[FlextInfraModelsNamespaceEnforcer.ProjectEnforcementReport],
             m.Field(
-                default_factory=tuple,
                 description="Per-project enforcement reports for the workspace.",
             ),
-        ]
+        ] = m.Field(default_factory=tuple)
 
         @m.computed_field
         @property
         def has_violations(self) -> bool:
-            """Whether any project carries a violation."""
+            """Whether any project carries a violation.
+
+            Returns:
+                The resulting ``bool``.
+            """
             return any(project.has_violations for project in self.projects)
 
 

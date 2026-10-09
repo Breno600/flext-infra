@@ -12,9 +12,10 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
 from flext_infra._models.deps_toml import FlextInfraModelsDepsToml
 from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsToml):
@@ -81,7 +82,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             m.Field(description="Active consumer resolution constraints"),
         ]
 
-    class DetectCommand(mm.WriteMixin, m.ContractModel):
+    class DetectCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra deps detect``.
 
         Inherits ``apply``/``dry_run``, ``repository_root``, ``projects``,
@@ -144,10 +145,10 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
                 return None
             return Path(self.limits).expanduser().resolve()
 
-    class ExtraPathsCommand(mm.WriteMixin, m.ContractModel):
+    class ExtraPathsCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra deps extra-paths``."""
 
-    class ModernizeCommand(mm.WriteMixin, m.ContractModel):
+    class ModernizeCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra deps modernize``."""
 
         check: Annotated[
@@ -203,7 +204,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         payload: Annotated[
             t.MutableJsonMapping,
             m.Field(description="Validated plain TOML payload"),
-        ] = m.Field(default_factory=dict)
+        ] = m.Field(default_factory=dict[str, t.JsonValue])
 
     class PackagedDataSelection(m.ContractModel):
         """Validated data inputs separated by Hatch selection semantics."""
@@ -236,12 +237,11 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         analysis_exclusions: Annotated[
             t.StrSequence | None,
             m.Field(
-                default=None,
                 description=(
                     "Declared analysis exclusions; None derives workspace globs"
                 ),
             ),
-        ]
+        ] = None
         generated_python_roots: Annotated[
             t.StrSequence,
             m.Field(description="Generated python roots to exclude"),
@@ -412,7 +412,10 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             m.Field(0, description="Raw issue count"),
         ] = 0
 
-    class ProjectDependencyReport(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class ProjectDependencyReport(
+        FlextInfraModelsMixins.ProjectNameMixin,
+        m.ArbitraryTypesModel,
+    ):
         """Project-level dependency report combining deptry results."""
 
         deptry: FlextInfraModelsDeps.DeptryReport = m.Field(description="Deptry report")
@@ -490,6 +493,42 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             description="Dependency limits",
             validate_default=True,
         )
+
+    class ToolingContextRequest(m.ArbitraryTypesModel):
+        """Declared inputs the modernizer resolves into a runtime context."""
+
+        project_name: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Distribution name of the project"),
+        ]
+        package_name: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Importable package name of the project"),
+        ]
+        path: Annotated[
+            Path,
+            m.Field(description="Absolute path of the project's pyproject file"),
+        ]
+        topology: Annotated[
+            FlextInfraModelsDeps.PyprojectDeclaredTopology,
+            m.Field(description="Declared repository topology"),
+        ]
+        scaffold_project: Annotated[
+            FlextInfraConfigModelsScaffold.ScaffoldProjectSpec,
+            m.Field(description="Scaffold project specification"),
+        ]
+        upstream: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Upstream branch the project integrates on"),
+        ]
+        runtime_dependency_overlay: Annotated[
+            t.StrSequence,
+            m.Field(description="Runtime dependency overlay requirement lines"),
+        ]
+        declared_project_dependencies: Annotated[
+            t.StrSequence,
+            m.Field(description="Declared project dependency requirement lines"),
+        ]
 
 
 __all__: list[str] = ["FlextInfraModelsDeps"]

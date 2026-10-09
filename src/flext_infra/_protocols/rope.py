@@ -51,7 +51,7 @@ class FlextInfraProtocolsRope(Protocol):
 
         def get_defined_names(self) -> t.MappingKV[str, t.Infra.RopePyName]: ...
 
-        def get_kind(self) -> str: ...
+        def get_kind(self) -> str | None: ...
 
         def get_start(self) -> int: ...
 
@@ -61,8 +61,9 @@ class FlextInfraProtocolsRope(Protocol):
         def pyobject(self) -> t.Infra.RopePyObject: ...
 
     @runtime_checkable
-    class RopeWorkspaceDsl(Protocol):
-        """Public DSL contract for one shared Rope workspace session."""
+    @runtime_checkable
+    class RopeSessionLifecycleDsl(Protocol):
+        """Lifecycle contract of one shared Rope workspace session."""
 
         repository_root: Path
 
@@ -95,7 +96,11 @@ class FlextInfraProtocolsRope(Protocol):
 
         def close(self) -> None: ...
 
-        def resource(self, file_path: Path) -> t.Infra.RopeResource | None: ...
+    @runtime_checkable
+    class RopeWorkspaceDsl(RopeSessionLifecycleDsl, Protocol):
+        """Public DSL contract for one shared Rope workspace session."""
+
+        def resource(self, file_path: Path) -> t.Infra.RopeFile | None: ...
 
         def module(self, file_path: Path) -> m.Infra.RopeModuleIndexEntry | None: ...
 

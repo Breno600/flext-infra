@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Annotated, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._models.deps_tool_config_linters import (
@@ -403,6 +403,13 @@ class FlextInfraModelsDepsToolConfig(
                 description="Declared markers deselected in CI and pre-commit only.",
             ),
         ]
+        ci_excluded_fixtures: Annotated[
+            t.StrTuple,
+            m.Field(
+                alias="ci-excluded-fixtures",
+                description="Fixtures that need local-only provisioning",
+            ),
+        ] = ()
 
         @property
         def process_timeout_seconds(self) -> int:
@@ -431,9 +438,7 @@ class FlextInfraModelsDepsToolConfig(
 
         @property
         def slow_suite_stop_reserve_seconds(self) -> int:
-            """Derive the slow-phase reserve: in-flight items bounded
-            by the slow ceiling.
-            """
+            """Derive the slow-phase reserve bounded by the slow ceiling."""
             return (
                 self.xdist_items_per_worker * self.slow_timeout_seconds
                 + self.termination_grace_seconds
@@ -449,25 +454,29 @@ class FlextInfraModelsDepsToolConfig(
             """Xdist depth per worker: the running item plus one queued, or a chunk."""
             return max(2, self.parallel_schedule_chunk)
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
             """Keep item and termination budgets inside the hard invocation cap.
 
             Returns:
                 The resulting ``Self``.
 
+            """
+            self._validate_timeouts()
+            self._validate_arg_vocabulary()
+            return self
+
+        def _validate_timeouts(self) -> None:
+            """Keep item and termination budgets inside the hard invocation cap.
+
             Raises:
-                ValueError: If pytest case timeout must be less than run timeout; or if
-                    pytest termination grace must be less than run timeout; or if pytest
-                    slow timeout must exceed the per-case timeout; or if pytest slow
-                    timeout must be less than run timeout; or if pytest run timeout must
-                    exceed the suite stop reserve; or if pytest runtime policy options
-                    are derived from typed fields; or if pytest progress args must
-                    expose verbose item progress; or if pytest ci-excluded-markers must
-                    be declared in standard-markers; or if pytest slow-marker must be
-                    declared in standard-markers; or if pytest external-gate-markers
-                    must be a non-empty subset of standard-markers; undeclared; or if
-                    pytest reporting args must not override runner-owned policy.
+                ValueError: If pytest case timeout must be less than run timeout; or
+                    if pytest termination grace must be less than run timeout; or if
+                    pytest slow timeout must exceed the per-case timeout; or if pytest
+                    slow timeout must be less than run timeout; or if pytest run
+                    timeout must exceed the suite stop reserve; or if pytest runtime
+                    policy options are derived from typed fields; or if pytest
+                    progress args must expose verbose item progress.
 
             """
             if self.case_timeout_seconds >= self.run_timeout_seconds:
@@ -511,6 +520,18 @@ class FlextInfraModelsDepsToolConfig(
             if "--verbose" not in self.progress_args:
                 msg = "pytest progress args must expose verbose item progress"
                 raise ValueError(msg)
+
+        def _validate_arg_vocabulary(self) -> None:
+            """Bind the declared CLI vocabulary to the standard marker table.
+
+            Raises:
+                ValueError: If pytest ci-excluded-markers must be declared in
+                    standard-markers; or if pytest slow-marker must be declared in
+                    standard-markers; or if pytest external-gate-markers must be a
+                    non-empty subset of standard-markers; undeclared; or if pytest
+                    reporting args must not override runner-owned policy.
+
+            """
             declared_markers = {
                 marker.split(":", 1)[0].strip() for marker in self.standard_markers
             }
@@ -557,7 +578,6 @@ class FlextInfraModelsDepsToolConfig(
                 ):
                     msg = "pytest reporting args must not override runner-owned policy"
                     raise ValueError(msg)
-            return self
 
     class TomlsortConfig(m.ArbitraryTypesModel):
         """tomlsort baseline settings loaded from YAML."""
@@ -637,10 +657,9 @@ class FlextInfraModelsDepsToolConfig(
         omit: Annotated[
             t.StrSequence,
             m.Field(
-                default_factory=tuple,
                 description="Glob patterns excluded from coverage collection.",
             ),
-        ]
+        ] = m.Field(default_factory=tuple)
 
     class VultureConfig(m.ArbitraryTypesModel):
         """Vulture production-reachability policy loaded from YAML."""
@@ -667,31 +686,6 @@ class FlextInfraModelsDepsToolConfig(
             description="Enable Vulture's internal scanner trace when requested.",
         )
 
-    class MarkdownPrettierConfig(m.ArbitraryTypesModel):
-        """Prettier projection policy: ``make fmt``'s markdown formatter."""
-
-        prose_wrap: Annotated[
-            str,
-            m.Field(
-                alias="prose-wrap",
-                description="Prettier proseWrap contract for markdown prose.",
-            ),
-        ]
-        tab_width: Annotated[
-            int,
-            m.Field(
-                alias="tab-width",
-                description="Prettier tabWidth for non-markdown targets.",
-            ),
-        ]
-        md_tab_width: Annotated[
-            int,
-            m.Field(
-                alias="md-tab-width",
-                description="Prettier tabWidth override for markdown targets.",
-            ),
-        ]
-
     class MarkdownConfig(m.ArbitraryTypesModel):
         """Markdown lint rules and excluded non-documentation surfaces."""
 
@@ -707,16 +701,12 @@ class FlextInfraModelsDepsToolConfig(
             description="Glob patterns excluded from Markdown quality checks.",
         )
 
-        prettier: Annotated[
-            FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig,
-            m.Field(
-                description="Prettier formatting policy projected into .prettierrc.",
-            ),
-        ]
-
     class ToolConfigTools(m.ArbitraryTypesModel):
         """Tool map loaded from YAML."""
 
+        bandit: FlextInfraModelsDepsToolConfig.BanditConfig = m.Field(
+            description="Bandit gate authorization policy.",
+        )
         codespell: FlextInfraModelsDepsToolConfig.CodespellConfig = m.Field(
             description="Codespell settings",
         )
@@ -732,6 +722,16 @@ class FlextInfraModelsDepsToolConfig(
         ruff: FlextInfraModelsDepsToolConfig.RuffConfig = m.Field(
             description="Ruff settings",
         )
+        ruff_extend_exclude: Annotated[
+            t.StrTuple,
+            m.Field(
+                validation_alias=m.AliasPath("ruff", "extend-exclude"),
+                description=(
+                    "Workspace exclusions added to Ruff's defaults, read "
+                    "flattened for the tooling runtime projection."
+                ),
+            ),
+        ] = ()
         mypy: FlextInfraModelsDepsToolConfig.MypyConfig = m.Field(
             description="Mypy settings",
         )
@@ -808,6 +808,14 @@ class FlextInfraModelsDepsToolConfig(
     class ToolConfigDocument(m.ArbitraryTypesModel):
         """Root schema for canonical ``config/tooling.yaml`` policy data."""
 
+        raw_check_receipt_suffix: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="raw-check-receipt-suffix",
+                pattern=r"^\.[A-Za-z0-9_.-]+$",
+                description="Filename suffix for verbatim native check receipts.",
+            ),
+        ]
         tools: FlextInfraModelsDepsToolConfig.ToolConfigTools = m.Field(
             description="Tools",
         )
@@ -916,6 +924,24 @@ class FlextInfraModelsDepsToolConfig(
             t.StrTuple,
             m.Field(description="Modules written in the canonical facade-rebind form"),
         ]
+        mypy_generated_source_modules: Annotated[
+            t.StrTuple,
+            m.Field(
+                description=(
+                    "Module patterns of the generated source trees, which Mypy "
+                    "analyzes for their importers but never reports on"
+                ),
+            ),
+        ] = ()
+        ruff_runtime_evaluated_base_classes: Annotated[
+            t.StrTuple,
+            m.Field(
+                description=(
+                    "Imported base classes whose subclasses evaluate their "
+                    "annotations at runtime"
+                ),
+            ),
+        ]
         pyrefly_search_path: Annotated[
             t.StrTuple,
             m.Field(description="Resolved Pyrefly search paths"),
@@ -923,6 +949,15 @@ class FlextInfraModelsDepsToolConfig(
         pyrefly_project_includes: Annotated[
             t.StrTuple,
             m.Field(description="Resolved Pyrefly production includes"),
+        ]
+        pyrefly_project_excludes: Annotated[
+            t.StrTuple,
+            m.Field(
+                description=(
+                    "Resolved Pyrefly exclusions: declared globs plus the "
+                    "generated-source trees"
+                ),
+            ),
         ]
         pyright_exclude: Annotated[
             t.StrTuple,

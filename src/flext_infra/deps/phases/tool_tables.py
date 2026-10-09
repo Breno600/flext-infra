@@ -14,6 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import c, config, m, t, u
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraToolTablesPhase:
@@ -74,6 +75,14 @@ class FlextInfraToolTablesPhase:
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
+        workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
+            project_dir,
+            allow_unprovisioned_members=True,
+        )
+        if workspace.failure:
+            raise ValueError(workspace.error)
+        if workspace.value.repository.role != c.Infra.MakeProfile.WORKSPACE:
+            return ()
         discovered = u.Infra.discover_projects(project_dir)
         if discovered.failure:
             # A real discovery error (malformed pyproject, IO) must never
@@ -84,11 +93,11 @@ class FlextInfraToolTablesPhase:
                 discovered.error or "workspace project discovery is unavailable",
             )
         return sorted({
-            project.package_name
+            project.package_name.replace("-", "_")
             for project in discovered.value
             if (
                 project.package_name
-                and project.package_name.isidentifier()
+                and project.package_name.replace("-", "_").isidentifier()
                 and project.declared_subproject
             )
         })
@@ -112,6 +121,11 @@ class FlextInfraToolTablesPhase:
                 value=config.Infra.codegen.toolchain.python_version,
             ),
             toml.ListOp(key=c.Infra.PLUGINS, values=mypy.plugins, strategy=replace),
+            toml.ListOp(
+                key="disable_error_code",
+                values=mypy.disable_error_code,
+                strategy=replace,
+            ),
         ]
         operations.append(
             toml.SetOp(

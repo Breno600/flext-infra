@@ -1,0 +1,23 @@
+id: pydantic-annotated-field-sole-default-factory-assignment
+# `valid` MUST NOT match: the factory is assigned, the metadata carries more
+# than the factory, or the construct is text.
+valid:
+  - |
+    class Spec:
+        items: t.StrSequence = m.Field(default_factory=tuple)
+  - |
+    class Spec:
+        items: Annotated[t.StrSequence, m.Field(default_factory=tuple, description="d")]
+  - |
+    """A docstring mentioning x: Annotated[X, m.Field(default_factory=X)]."""
+# `invalid` MUST match: the factory is the whole Annotated metadata.
+invalid:
+  - |
+    class Spec:
+        items: Annotated[t.StrSequence, m.Field(default_factory=tuple)]
+  - |
+    class Spec:
+        audit: Annotated[
+            Audit,
+            m.Field(default_factory=Audit),
+        ]

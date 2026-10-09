@@ -9,13 +9,15 @@ from __future__ import annotations
 import time
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import cli
 
-from flext_infra import c, m, p, r, t, u
-from flext_infra.check.gate_registry import FlextInfraGateRegistry
-from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra import c, config, m, p, r, t, u
+
+if TYPE_CHECKING:
+    from flext_infra.check.gate_registry import FlextInfraGateRegistry
+    from flext_infra.gates.base_gate import FlextInfraGate
 
 
 class FlextInfraWorkspaceCheckGatesMixin:
@@ -45,6 +47,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
             fail_fast=ctx.fail_fast,
             ruff_args=ctx.ruff_args,
             pyright_args=ctx.pyright_args,
+            selected_files=ctx.selected_files,
         )
 
     def _run_single_project(
@@ -148,6 +151,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 ),
                 issues=(),
                 raw_output=f"{gate_id} gate not registered",
+                outcome=c.Infra.ToolOutcome.ERROR,
             )
         return gate.check(project_dir, ctx or self._gate_ctx(reports_dir))
 
@@ -183,7 +187,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
             if gate_instance is None:
                 msg = f"{gate_id} gate not registered"
                 raise ValueError(msg)
-            if not gate_instance.selected_for(project_dir):
+            if not ctx.selected_files and not gate_instance.selected_for(project_dir):
                 continue
             stages.append(
                 m.Cli.PipelineStageSpec(
@@ -217,19 +221,15 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 passed=execution.result.passed,
                 elapsed=execution.result.duration,
             )
-            if not execution.result.passed:
-                for finding in execution.result.errors:
-                    u.Cli.info(finding)
-                # Missing or malformed findings must retain the producer's failure.
-                if execution.raw_output.strip() and (
-                    not execution.result.errors
-                    or any(
-                        issue.code == c.Infra.ToolOutcome.ERROR
-                        for issue in execution.issues
+            if execution.issues or not execution.result.passed:
+                for issue in execution.issues:
+                    u.Cli.info(issue.formatted)
+                if execution.raw_receipt is not None:
+                    u.Cli.info(
+                        f"{stage.stage_id}: {execution.outcome.value}; "
+                        f"Native output receipt: {execution.raw_receipt}",
                     )
-                ):
-                    u.Cli.info(execution.raw_output)
-                if ctx.fail_fast or mutating:
+                if not execution.result.passed and (ctx.fail_fast or mutating):
                     break
         return result
 
@@ -274,8 +274,17 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 fail_fast=ctx.fail_fast,
                 ruff_args=ctx.ruff_args,
                 pyright_args=ctx.pyright_args,
+                selected_files=ctx.selected_files,
             )
             execution = self._execute_gate(gate_instance, project_dir, gate_ctx)
+            raw_receipt = gate_ctx.reports_dir / (
+                f"{gate_id}{config.Infra.tooling.raw_check_receipt_suffix}"
+            )
+            u.Cli.atomic_write_text_file(
+                raw_receipt,
+                execution.raw_output,
+            ).unwrap()
+            execution = execution.model_copy(update={"raw_receipt": raw_receipt})
             gates_sink[gate_id] = execution
             self._gate_logger.info(
                 "gate_executed",
@@ -319,6 +328,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
             The resulting ``m.Infra.GateExecution``.
 
         """
+        if ctx.selected_files:
+            return gate_instance.check_files(ctx.selected_files, project_dir, ctx)
         if ctx.apply_fixes and (not ctx.check_only) and gate_instance.can_fix:
             return gate_instance.fix(project_dir, ctx)
         return gate_instance.check(project_dir, ctx)

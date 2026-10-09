@@ -17,9 +17,11 @@ import collections.abc
 
 from flext_cli import FlextCliTypes
 
-from flext_infra._typings.adapters import FlextInfraTypesAdapters
-from flext_infra._typings.base import FlextInfraTypesBase
-from flext_infra._typings.rope import FlextInfraTypesRope
+from flext_infra._typings import (
+    FlextInfraTypesAdapters,
+    FlextInfraTypesBase,
+    FlextInfraTypesRope,
+)
 
 
 class FlextInfraTypes(FlextCliTypes):

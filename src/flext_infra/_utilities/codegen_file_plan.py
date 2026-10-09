@@ -9,6 +9,7 @@ from __future__ import annotations
 import difflib
 import errno
 import os
+import sys
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -19,7 +20,7 @@ from flext_cli import m as cli_m, u
 
 from flext_infra import c, m, p, r, t
 
-if os.name == "nt":
+if sys.platform == "win32":
     import msvcrt
 else:
     import fcntl
@@ -70,13 +71,17 @@ class FlextInfraUtilitiesCodegenFilePlan:
         """
         lock_path = journal_path.with_name(f"{journal_path.name}.lock")
         lock_path.parent.mkdir(parents=True, exist_ok=True)
-        descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
+        descriptor = os.open(
+            lock_path,
+            os.O_RDWR | os.O_CREAT,
+            c.Infra.JOURNAL_MODE,
+        )
         acquired = False
         try:
             deadline = time.monotonic() + wait_seconds
             while True:
                 try:
-                    if os.name == "nt":
+                    if sys.platform == "win32":
                         os.lseek(descriptor, 0, os.SEEK_SET)
                         msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
                     else:
@@ -89,12 +94,9 @@ class FlextInfraUtilitiesCodegenFilePlan:
                     }:
                         raise
                     if time.monotonic() >= deadline:
-                        timeout_error = (
+                        raise (
                             FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError
-                        )
-                        raise timeout_error(
-                            lock_path,
-                        ) from error
+                        )(lock_path) from error
                     time.sleep(c.Infra.JOURNAL_LEASE_POLL_SECONDS)
                     continue
                 acquired = True
@@ -102,7 +104,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
             yield
         finally:
             try:
-                if acquired and os.name == "nt":
+                if sys.platform == "win32" and acquired:
                     os.lseek(descriptor, 0, os.SEEK_SET)
                     msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
             finally:
@@ -169,7 +171,8 @@ class FlextInfraUtilitiesCodegenFilePlan:
         """Whether publication must change a generated-file destination.
 
         Returns:
-            The resulting ``bool``.
+                    The resulting ``bool``.
+        from flext_cli import m as cli_m
 
         """
         if isinstance(plan.before, cli_m.Cli.AtomicDirectoryChainPlan):
@@ -179,6 +182,30 @@ class FlextInfraUtilitiesCodegenFilePlan:
             desired_content=plan.desired_content,
             desired_mode=plan.desired_mode,
         )
+
+    @staticmethod
+    def codegen_fixed_point(
+        plans: t.SequenceOf[m.Infra.CodegenFilePlan],
+        *,
+        subject: str,
+    ) -> p.Result[bool]:
+        """Reject a re-plan that still has to change any generated destination.
+
+        Returns:
+            Success only when no plan requires an effect; otherwise the failure
+            names every residual destination.
+
+        """
+        residual = [
+            str(plan.path)
+            for plan in plans
+            if FlextInfraUtilitiesCodegenFilePlan.codegen_file_requires_effect(plan)
+        ]
+        if residual:
+            return r[bool].fail(
+                f"{subject} did not reach a fixed point: {', '.join(residual)}",
+            )
+        return r[bool].ok(value=True)
 
     @staticmethod
     def codegen_file_drift_report(

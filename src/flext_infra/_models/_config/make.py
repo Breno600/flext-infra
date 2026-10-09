@@ -11,51 +11,15 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
-from flext_infra import t
-from flext_infra._constants import (
-    FlextInfraConstantsCheck,
-    FlextInfraConstantsCodegenProject,
-    FlextInfraConstantsDocs,
-    FlextInfraConstantsMake,
-)
+from flext_infra import c, t
 from flext_infra._models._config.contract import FlextInfraConfigModelsContract
-
-
-class ExternalCacheDirectorySpec(FlextInfraConfigModelsContract.ConfigContract):
-    """External-cache path pair every tool cache spec owns identically."""
-
-    home_cache_directory: Annotated[
-        Path,
-        m.Field(description="Standard cache directory below the user home"),
-    ]
-    external_storage_directory: Annotated[
-        Path,
-        m.Field(description="FLEXT-owned directory below the cache home"),
-    ]
-
-    @u.model_validator(mode="after")
-    def require_relative_cache_directories(self) -> Self:
-        """Keep both cache directories normalized and repository-relative.
-
-        Returns:
-            The resulting ``Self``.
-
-        Raises:
-            ValueError: If cache.
-
-        """
-        for name, path in (
-            ("home_cache_directory", self.home_cache_directory),
-            ("external_storage_directory", self.external_storage_directory),
-        ):
-            if path.is_absolute() or any(
-                part in {"", ".", ".."} for part in path.parts
-            ):
-                msg = f"cache {name} must be normalized and relative"
-                raise ValueError(msg)
-        return self
+from flext_infra._models._config.external_cache import (
+    FlextInfraExternalCacheDirectorySpec,
+)
+from flext_infra._models._config.make_clean import FlextInfraConfigModelsMakeClean
+from flext_infra._models._config.make_docs import FlextInfraConfigModelsMakeDocs
 
 
 def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
@@ -82,7 +46,10 @@ def _default_testmon_cache_policy() -> (
     return FlextInfraConfigModelsMake.TestmonCachePolicySpec()
 
 
-class FlextInfraConfigModelsMake:
+class FlextInfraConfigModelsMake(
+    FlextInfraConfigModelsMakeClean,
+    FlextInfraConfigModelsMakeDocs,
+):
     """Make workflow, verb, CI, and cache specification models."""
 
     class MakeCiSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -104,15 +71,21 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 description=(
-                    "Gate ids run by make check under the local CI token: the "
-                    "slow whole-program type checkers. This is the ONLY "
-                    "declared set; the CI token runs its strict complement and "
-                    "an unset token runs every active default gate."
+                    "Gate ids run by make check under the local CI token. This "
+                    "is the ONLY declared set; the CI token runs its strict "
+                    "complement and an unset token runs every active default "
+                    "gate."
                 ),
             ),
         ]
+        informative_check_gates: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description="CI check findings are informative; execution errors block",
+            ),
+        ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_local_check_gates(self) -> Self:
             """Every locally owned gate must be in the allowed check vocabulary.
 
@@ -122,8 +95,10 @@ class FlextInfraConfigModelsMake:
             Raises:
                 ValueError: If make.ci.local_check_gates contains unknown gates.
             """
-            allowed = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
-            unknown = sorted(set(self.local_check_gates) - allowed)
+            allowed = set(c.Infra.CANONICAL_GATE_IDS)
+            unknown = sorted(
+                {*self.local_check_gates, *self.informative_check_gates} - allowed,
+            )
             if unknown:
                 msg = (
                     "make.ci.local_check_gates contains unknown gates: "
@@ -150,7 +125,7 @@ class FlextInfraConfigModelsMake:
             ),
         ] = False
         profiles: Annotated[
-            t.VariadicTuple[FlextInfraConstantsCodegenProject.MakeProfile],
+            t.VariadicTuple[c.Infra.MakeProfile],
             m.Field(
                 min_length=1,
                 description=(
@@ -158,7 +133,7 @@ class FlextInfraConfigModelsMake:
                     "a verb exists only where its operation applies"
                 ),
             ),
-        ] = tuple(FlextInfraConstantsCodegenProject.MakeProfile)
+        ] = tuple(c.Infra.MakeProfile)
 
     class MakeWorkflowStepSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One canonical workflow step."""
@@ -183,7 +158,7 @@ class FlextInfraConfigModelsMake:
             ),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_contexts(self) -> Self:
             """Require unique contexts and retain every step in the local workflow.
 
@@ -201,141 +176,12 @@ class FlextInfraConfigModelsMake:
             if "local" not in self.contexts:
                 msg = f"make workflow step {self.verb} must run locally"
                 raise ValueError(msg)
-            allowed = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
+            allowed = set(c.Infra.CANONICAL_GATE_IDS)
             unknown = sorted(set(self.gates_skip) - allowed)
             if unknown:
                 msg = (
                     f"make workflow step {self.verb} gates_skip contains "
                     f"unknown gates: {', '.join(unknown)}"
-                )
-                raise ValueError(msg)
-            return self
-
-    class MakeCleanSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Disposable artifacts the generated clean verb removes.
-
-        Stale caches and traces cause FALSE DIAGNOSES, so the disposable set is
-        declared data rather than a literal buried in a recipe: every project
-        cleans exactly the same things and a new artifact kind is one config row.
-        """
-
-        cache_dirs: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Cache directory names removed anywhere in the tree"),
-        ]
-        root_dirs: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Directories removed at the project root only"),
-        ]
-        root_files: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Files removed at the project root only"),
-        ]
-        trace_globs: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Trace/profile globs removed anywhere in the tree"),
-        ]
-
-    class DocsOverviewPreviewLimitsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Maximum list sizes in the generated public API overview."""
-
-        aliases: Annotated[int, m.Field(gt=0, description="Alias preview limit")]
-        public_symbols: Annotated[
-            int,
-            m.Field(gt=0, description="Public symbol preview limit"),
-        ]
-        facades: Annotated[int, m.Field(gt=0, description="Facade preview limit")]
-        module_exports: Annotated[
-            int,
-            m.Field(gt=0, description="Module export preview limit"),
-        ]
-        keywords: Annotated[int, m.Field(gt=0, description="Keyword preview limit")]
-
-    class MakeDocsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Generated Makefile docs verb lifecycle and audit policy."""
-
-        actions: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                min_length=1,
-                description=(
-                    "Docs verb lifecycle actions in execution order; every "
-                    "entry must be a registered docs CLI action"
-                ),
-            ),
-        ]
-        mutable_actions: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(min_length=1, description="Docs actions that mutate"),
-        ]
-        reports_dir: Annotated[
-            Path,
-            m.Field(description="Repository-relative docs reports directory"),
-        ]
-        overview_preview_limits: Annotated[
-            FlextInfraConfigModelsMake.DocsOverviewPreviewLimitsSpec,
-            m.Field(description="Maximum preview sizes for generated API overviews"),
-        ]
-        cross_project_relative_link_pattern: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description="Regex rejecting cross-project relative Markdown links",
-            ),
-        ]
-        stale_github_organizations: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=("organization",),
-                description="Placeholder GitHub orgs that must be rewritten",
-            ),
-        ] = ("organization",)
-        github_repos: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsMake.DocsGithubRepoSpec],
-            m.Field(
-                default=(),
-                description="Governed org/repo/branch map for cross-repo doc URLs",
-            ),
-        ] = ()
-
-        @u.model_validator(mode="after")
-        def _validate_actions(self) -> Self:
-            """Reject unknown, duplicated, or out-of-lifecycle docs actions.
-
-            Returns:
-                The resulting ``Self``.
-
-            Raises:
-                ValueError: If docs actions must be unique; or if docs action is not a
-                    registered CLI action; or if mutable_actions entry is not part of
-                    the docs lifecycle.
-
-            """
-            if len(set(self.actions)) != len(self.actions):
-                msg = "docs actions must be unique"
-                raise ValueError(msg)
-            unknown = next(
-                (
-                    action
-                    for action in self.actions
-                    if action not in FlextInfraConstantsDocs.DOCS_ACTION_IDS
-                ),
-                None,
-            )
-            if unknown is not None:
-                msg = f"docs action is not a registered CLI action: {unknown}"
-                raise ValueError(msg)
-            outside = next(
-                (
-                    action
-                    for action in self.mutable_actions
-                    if action not in self.actions
-                ),
-                None,
-            )
-            if outside is not None:
-                msg = (
-                    "mutable_actions entry is not part of the docs lifecycle:"
-                    f" {outside}"
                 )
                 raise ValueError(msg)
             return self
@@ -390,7 +236,7 @@ class FlextInfraConfigModelsMake:
             m.Field(description="Actions cache key namespace"),
         ] = "flext-testmon"
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_ascending_quota_ladder(self) -> Self:
             """Keep the quota ladder strictly ascending within the percent scale.
 
@@ -408,53 +254,51 @@ class FlextInfraConfigModelsMake:
                 < self.block_threshold_percent
                 <= full_scale
             ):
-                msg = "testmon cache quota ladder must ascend warning < maintenance < block <= 100"
+                msg = (
+                    "testmon cache quota ladder must ascend "
+                    "warning < maintenance < block <= 100"
+                )
                 raise ValueError(msg)
             return self
 
     class MypyCacheSpec(
-        ExternalCacheDirectorySpec,
+        FlextInfraExternalCacheDirectorySpec,
         FlextInfraConfigModelsContract.ConfigContract,
     ):
-        """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
+        """Project-keyed shared Mypy cache, one analysis reused across relocks."""
 
         cache_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
+            c.Infra.MypyCacheEnvironment,
             m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
                 description="Mypy's cache-directory environment variable",
             ),
-        ]
+        ] = c.Infra.MypyCacheEnvironment.CACHE_DIR
         data_home_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
+            c.Infra.MypyCacheEnvironment,
             m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
                 description="XDG persistent cache-home variable",
             ),
-        ]
+        ] = c.Infra.MypyCacheEnvironment.DATA_HOME
         user_home_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
+            c.Infra.MypyCacheEnvironment,
             m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
                 description="User home variable for the XDG default",
             ),
-        ]
+        ] = c.Infra.MypyCacheEnvironment.USER_HOME
         home_cache_directory: Annotated[
             Path,
             m.Field(
-                default=Path(".cache"),
                 description="Standard cache directory below the user home",
             ),
-        ]
+        ] = Path(".cache")
         external_storage_directory: Annotated[
             Path,
             m.Field(
-                default=Path("flext/infra/mypy"),
                 description="FLEXT-owned directory below the cache home",
             ),
-        ]
+        ] = Path("flext/infra/mypy")
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_external_cache_contract(self) -> Self:
             """Keep the official cache variable and the external path policy exact.
 
@@ -468,17 +312,17 @@ class FlextInfraConfigModelsMake:
                 (
                     "cache_environment_variable",
                     self.cache_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                    c.Infra.MypyCacheEnvironment.CACHE_DIR,
                 ),
                 (
                     "data_home_environment_variable",
                     self.data_home_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                    c.Infra.MypyCacheEnvironment.DATA_HOME,
                 ),
                 (
                     "user_home_environment_variable",
                     self.user_home_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                    c.Infra.MypyCacheEnvironment.USER_HOME,
                 ),
             ):
                 if actual != expected:
@@ -552,10 +396,15 @@ class FlextInfraConfigModelsMake:
         there is deliberately no ``lint_apply`` key, because a lint pass
         inside fmt would repeat the lint gate's fix.
 
-        ``make fix`` never deletes information (flext-itpd1.5): the lint repair
-        applies Ruff's safe fixes only, so ``lint_fix`` rejects the unsafe-fix
-        flag. Rules whose fixes delete code stay reported through the
-        ``unfixable`` list rendered from ``tooling.yaml``.
+        *** Operator law 2026-10-05 (direct order, OBLIGATORY and NEVER to be
+        disabled again): ``make fix`` ALWAYS applies Ruff's unsafe fixes —
+        ``lint_fix`` MUST carry the unsafe-fix flag in every project and
+        subproject, forever. A configuration without it fails validation;
+        re-adding it after a removal is a mandated repair, and removing it is
+        a regression against an explicit operator order. Rules whose fixes
+        would destroy information stay declared ``unfixable`` in
+        ``tooling.yaml`` — that is rule selection, never disabling the
+        mandatory unsafe channel. ***
         """
 
         format_check: Annotated[
@@ -574,28 +423,30 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 description=(
-                    "Flags for ruff check --fix applying safe fixes only; the "
-                    "lint gate's apply mode (make fix), which reports leftovers"
+                    "Flags for ruff check --fix; MANDATORY unsafe-fix channel"
+                    " (operator law 2026-10-05): the lint gate's apply mode"
+                    " (make fix) always applies safe and unsafe fixes"
                 ),
             ),
         ]
 
-        @u.model_validator(mode="after")
-        def _reject_unsafe_fixes(self) -> Self:
-            """Keep the lint repair information-preserving.
+        @m.model_validator(mode="after")
+        def _require_unsafe_fixes(self) -> Self:
+            """Keep the mandatory unsafe lint-repair channel enabled.
 
             Returns:
                 The resulting ``Self``.
 
             Raises:
-                ValueError: If make.ruff.lint_fix must not enable.
+                ValueError: If make.ruff.lint_fix lacks the mandatory flag.
 
             """
-            if FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG in self.lint_fix:
+            if c.Infra.RUFF_UNSAFE_FIXES_FLAG not in self.lint_fix:
                 msg = (
-                    "make.ruff.lint_fix must not enable "
-                    f"{FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG}: unsafe "
-                    "Ruff fixes delete code, comments and diagnostics"
+                    "make.ruff.lint_fix must carry "
+                    f"{c.Infra.RUFF_UNSAFE_FIXES_FLAG} (operator"
+                    " law 2026-10-05: the unsafe repair channel is mandatory"
+                    " and never disabled again)"
                 )
                 raise ValueError(msg)
             return self
@@ -664,7 +515,7 @@ class FlextInfraConfigModelsMake:
                 m.Field(description="Actions cache key namespace"),
             ] = "flext-testmon"
 
-            @u.model_validator(mode="after")
+            @m.model_validator(mode="after")
             def require_ascending_quota_ladder(self) -> Self:
                 """Keep the quota ladder strictly ascending within the percent scale.
 
@@ -691,7 +542,7 @@ class FlextInfraConfigModelsMake:
                 return self
 
         class TestmonCacheSpec(
-            ExternalCacheDirectorySpec,
+            FlextInfraExternalCacheDirectorySpec,
             FlextInfraConfigModelsContract.ConfigContract,
         ):
             """Persistent pytest-testmon database and runner paths."""
@@ -701,17 +552,17 @@ class FlextInfraConfigModelsMake:
                 m.Field(description="pytest-testmon database filename"),
             ]
             database_environment_variable: Annotated[
-                FlextInfraConstantsMake.PytestCacheEnvironment,
+                c.Infra.PytestCacheEnvironment,
                 m.Field(
                     description="pytest-testmon's supported database-path variable",
                 ),
             ]
             data_home_environment_variable: Annotated[
-                FlextInfraConstantsMake.PytestCacheEnvironment,
+                c.Infra.PytestCacheEnvironment,
                 m.Field(description="XDG persistent cache-home variable"),
             ]
             user_home_environment_variable: Annotated[
-                FlextInfraConstantsMake.PytestCacheEnvironment,
+                c.Infra.PytestCacheEnvironment,
                 m.Field(description="User home variable for the XDG default"),
             ]
             target_directory: Annotated[
@@ -723,7 +574,7 @@ class FlextInfraConfigModelsMake:
                 m.Field(description="Repository-relative pytest reports root"),
             ]
 
-            @u.model_validator(mode="after")
+            @m.model_validator(mode="after")
             def require_external_database_contract(self) -> Self:
                 """Keep testmon's official path variable and external path policy exact.
 
@@ -739,17 +590,17 @@ class FlextInfraConfigModelsMake:
                     (
                         "database_environment_variable",
                         self.database_environment_variable,
-                        FlextInfraConstantsMake.PytestCacheEnvironment.DATABASE_FILE,
+                        c.Infra.PytestCacheEnvironment.DATABASE_FILE,
                     ),
                     (
                         "data_home_environment_variable",
                         self.data_home_environment_variable,
-                        FlextInfraConstantsMake.PytestCacheEnvironment.DATA_HOME,
+                        c.Infra.PytestCacheEnvironment.DATA_HOME,
                     ),
                     (
                         "user_home_environment_variable",
                         self.user_home_environment_variable,
-                        FlextInfraConstantsMake.PytestCacheEnvironment.USER_HOME,
+                        c.Infra.PytestCacheEnvironment.USER_HOME,
                     ),
                 ):
                     if actual != expected:
@@ -760,8 +611,69 @@ class FlextInfraConfigModelsMake:
                     raise ValueError(msg)
                 return self
 
+        class PytestScratchSpec(FlextInfraConfigModelsContract.ConfigContract):
+            """Scratch root every pytest-running verb declares (storage law).
+
+            The root is ``$<home>/<home_relative_directory>/<state_directory_name>``
+            followed by the absolute checkout path and ``<namespace>``: never
+            ``/tmp`` and never inside a versioned tree (a workspace member's
+            parent directory is the superproject checkout).
+            """
+
+            user_home_environment_variable: Annotated[
+                c.Infra.PytestCacheEnvironment,
+                m.Field(description="User home variable anchoring the scratch root"),
+            ]
+            home_relative_directory: Annotated[
+                t.NonEmptyStr,
+                m.Field(description="Home-relative scratch base directory"),
+            ]
+            state_directory_name: Annotated[
+                t.NonEmptyStr,
+                m.Field(description="Runtime-state directory name under the base"),
+            ]
+            namespace: Annotated[
+                t.NonEmptyStr,
+                m.Field(description="Scratch namespace below the checkout path"),
+            ]
+
+            @m.model_validator(mode="after")
+            def require_home_relative_components(self) -> Self:
+                """Keep the scratch root anchored at home and free of traversal.
+
+                Returns:
+                    The resulting ``Self``.
+
+                Raises:
+                    ValueError: If the home variable is not the user home, or a
+                        component is absolute, traverses upward, or is not a
+                        single path segment where one is required.
+
+                """
+                if (
+                    self.user_home_environment_variable
+                    != c.Infra.PytestCacheEnvironment.USER_HOME
+                ):
+                    msg = (
+                        "pytest scratch user_home_environment_variable must be "
+                        f"{c.Infra.PytestCacheEnvironment.USER_HOME.value}"
+                    )
+                    raise ValueError(msg)
+                base = Path(self.home_relative_directory)
+                if base.is_absolute() or ".." in base.parts:
+                    msg = "pytest scratch home_relative_directory must stay below home"
+                    raise ValueError(msg)
+                for name, value in (
+                    ("state_directory_name", self.state_directory_name),
+                    ("namespace", self.namespace),
+                ):
+                    if Path(value).name != value or value in {".", ".."}:
+                        msg = f"pytest scratch {name} must be one path segment"
+                        raise ValueError(msg)
+                return self
+
         class CodemodRulesCacheSpec(
-            ExternalCacheDirectorySpec,
+            FlextInfraExternalCacheDirectorySpec,
             FlextInfraConfigModelsContract.ConfigContract,
         ):
             """Content-keyed parsed codemod rule catalogs shared by every process."""
@@ -776,50 +688,43 @@ class FlextInfraConfigModelsMake:
             ]
 
         class MypyCacheSpec(
-            ExternalCacheDirectorySpec,
+            FlextInfraExternalCacheDirectorySpec,
             FlextInfraConfigModelsContract.ConfigContract,
         ):
-            """Project-keyed shared Mypy cache: one analysis per project,
-            reused across relocks.
-            """
+            """Project-keyed shared Mypy cache: one analysis per project."""
 
             cache_environment_variable: Annotated[
-                FlextInfraConstantsMake.MypyCacheEnvironment,
+                c.Infra.MypyCacheEnvironment,
                 m.Field(
-                    default=FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
                     description="Mypy's cache-directory environment variable",
                 ),
-            ]
+            ] = c.Infra.MypyCacheEnvironment.CACHE_DIR
             data_home_environment_variable: Annotated[
-                FlextInfraConstantsMake.MypyCacheEnvironment,
+                c.Infra.MypyCacheEnvironment,
                 m.Field(
-                    default=FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
                     description="XDG persistent cache-home variable",
                 ),
-            ]
+            ] = c.Infra.MypyCacheEnvironment.DATA_HOME
             user_home_environment_variable: Annotated[
-                FlextInfraConstantsMake.MypyCacheEnvironment,
+                c.Infra.MypyCacheEnvironment,
                 m.Field(
-                    default=FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
                     description="User home variable for the XDG default",
                 ),
-            ]
+            ] = c.Infra.MypyCacheEnvironment.USER_HOME
             home_cache_directory: Annotated[
                 Path,
                 m.Field(
-                    default=Path(".cache"),
                     description="Standard cache directory below the user home",
                 ),
-            ]
+            ] = Path(".cache")
             external_storage_directory: Annotated[
                 Path,
                 m.Field(
-                    default=Path("flext/infra/mypy"),
                     description="FLEXT-owned directory below the cache home",
                 ),
-            ]
+            ] = Path("flext/infra/mypy")
 
-            @u.model_validator(mode="after")
+            @m.model_validator(mode="after")
             def require_external_cache_contract(self) -> Self:
                 """Keep the official cache variable and the external path policy exact.
 
@@ -834,17 +739,17 @@ class FlextInfraConfigModelsMake:
                     (
                         "cache_environment_variable",
                         self.cache_environment_variable,
-                        FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                        c.Infra.MypyCacheEnvironment.CACHE_DIR,
                     ),
                     (
                         "data_home_environment_variable",
                         self.data_home_environment_variable,
-                        FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                        c.Infra.MypyCacheEnvironment.DATA_HOME,
                     ),
                     (
                         "user_home_environment_variable",
                         self.user_home_environment_variable,
-                        FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                        c.Infra.MypyCacheEnvironment.USER_HOME,
                     ),
                 ):
                     if actual != expected:
@@ -867,29 +772,24 @@ class FlextInfraConfigModelsMake:
         fmt_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                default=("markdown-format",),
                 description=(
                     "Gates whose mutating side `make fmt` drives (formatters). "
                     "The read-only side runs in `make check`; `make fix` never "
                     "repeats them (single-pass verb law)."
                 ),
             ),
-        ]
+        ] = ("markdown-format",)
         work_in_progress: Annotated[
             FlextInfraConfigModelsMake.MakeWorkInProgressSpec,
             m.Field(description="WIP branch and draft PR gate predicate"),
         ]
-        # Why (operator law 2026-08-24): git-hook stages are OFF by default and
-        # re-enabled case by case via these config gates. The workflow keeps
-        # owning WHICH steps belong to each stage; the booleans only govern
-        # whether the stage is generated and installed at all.
         pre_commit: Annotated[
-            bool,
+            Literal[True],
             m.Field(
-                default=False,
-                description="Generate and install the pre-commit git-hook stage",
+                default=True,
+                description="Mandatory projected approval hook; host owns installation",
             ),
-        ] = False
+        ] = True
         pre_push: Annotated[
             bool,
             m.Field(
@@ -909,16 +809,19 @@ class FlextInfraConfigModelsMake:
             TestmonCacheSpec,
             m.Field(description="Adaptive testmon Actions cache policy"),
         ]
+        pytest_scratch: Annotated[
+            PytestScratchSpec,
+            m.Field(description="Scratch root declared by every pytest verb"),
+        ]
         testmon_cache_policy: Annotated[
             FlextInfraConfigModelsMake.TestmonCachePolicySpec,
             m.Field(
-                default_factory=FlextInfraConfigModelsMake.TestmonCachePolicySpec,
                 description=(
                     "Declarative save/budget/quota policy for the shared"
                     " testmon cache (#1001 delta)"
                 ),
             ),
-        ]
+        ] = m.Field(default_factory=_default_testmon_cache_policy)
         codemod_rules_cache: Annotated[
             FlextInfraConfigModelsMake.MakeSpec.CodemodRulesCacheSpec,
             m.Field(description="Content-keyed parsed codemod rule catalog cache"),
@@ -926,10 +829,9 @@ class FlextInfraConfigModelsMake:
         mypy_cache: Annotated[
             FlextInfraConfigModelsMake.MypyCacheSpec,
             m.Field(
-                default_factory=_shared_mypy_cache_spec,
                 description="Project-keyed shared Mypy analysis cache policy",
             ),
-        ]
+        ] = m.Field(default_factory=_shared_mypy_cache_spec)
         verbs: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeVerbSpec],
             m.Field(description="Ordered canonical public verbs"),
@@ -967,7 +869,7 @@ class FlextInfraConfigModelsMake:
                     "references, agents, census and waza ended up outside the "
                     "gate matrix in consuming repositories. Each id must have a "
                     "`_custom_check_<id>` handler in the project's "
-                    f"{FlextInfraConstantsCodegenProject.CUSTOM_MAKE_FILENAME}."
+                    f"{c.Infra.CUSTOM_MAKE_FILENAME}."
                 ),
             ),
         ] = ()
@@ -978,24 +880,34 @@ class FlextInfraConfigModelsMake:
                     "Public Make verb to checker gate mapping outside make check"
                 ),
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ] = m.Field(default_factory=lambda: MappingProxyType[str, str]({}))
+        opt_in_check_gates: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Built-in gates that stay allowed and explicitly invocable "
+                    "but never join the default check, CI, or hook gate sets"
+                ),
+            ),
+        ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:
-            """Project gates must be unique and must not shadow a built-in.
+            """Project gates are unique built-in strangers; opt-in gates are built-ins.
 
             Returns:
                 The resulting ``Self``.
 
             Raises:
                 ValueError: If make project_check_gates must be unique; or if make
-                    project_check_gates shadow built-in gates.
+                    project_check_gates shadow built-in gates; or if make
+                    opt_in_check_gates name unknown gates.
 
             """
             if len(set(self.project_check_gates)) != len(self.project_check_gates):
                 msg = "make project_check_gates must be unique"
                 raise ValueError(msg)
-            builtin = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
+            builtin = set(c.Infra.CANONICAL_GATE_IDS)
             shadowed = sorted(set(self.project_check_gates) & builtin)
             if shadowed:
                 msg = (
@@ -1003,9 +915,15 @@ class FlextInfraConfigModelsMake:
                     f"{', '.join(shadowed)}"
                 )
                 raise ValueError(msg)
+            unknown = sorted(set(self.opt_in_check_gates) - builtin)
+            if unknown:
+                msg = (
+                    f"make opt_in_check_gates name unknown gates: {', '.join(unknown)}"
+                )
+                raise ValueError(msg)
             return self
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_verbs(self) -> Self:
             """Validate declared public verbs against workflow and contract.
 
@@ -1044,6 +962,31 @@ class FlextInfraConfigModelsMake:
             if len(declared) != len(self.verbs):
                 msg = "make public verb names must be unique"
                 raise ValueError(msg)
+            self._validate_standalone_gates(declared)
+            # Why (hq-36xk, flext-lq86m): the guard that lived here read
+            # `if "setup" in serialized` and protected `make setup` from being
+            # placed in the serialized mutation set, so it could never require
+            # the managed validation environment it is supposed to CREATE.
+            # 3e5fbc747 exterminated the serialize-make lifecycle and deleted
+            # `self.serialization`, but rebound this condition to `declared`
+            # instead of removing it with the concept it guarded. `setup` is a
+            # mandatory canonical verb, so the inverted check rejected every
+            # valid configuration and `flext_infra.config` could not be built at
+            # all. The serialized set no longer exists; the guard has no object.
+            self._validate_workflow(declared)
+            self._validate_docs_verb(declared)
+            return self
+
+        def _validate_standalone_gates(self, declared: t.Infra.StrSet) -> None:
+            """Validate the standalone check-gate routing against declared verbs.
+
+            Raises:
+                ValueError: If make standalone_check_gates names undeclared verbs; or
+                    if make standalone_check_gates requires verbs in every profile; or
+                    if make standalone_check_gates names unknown gates; or if make
+                    standalone_check_gates must route each gate once.
+
+            """
             unknown_standalone_verbs = sorted(
                 set(self.standalone_check_gates) - declared,
             )
@@ -1057,8 +1000,7 @@ class FlextInfraConfigModelsMake:
                 verb.name
                 for verb in self.verbs
                 if verb.name in self.standalone_check_gates
-                and set(verb.profiles)
-                != set(FlextInfraConstantsCodegenProject.MakeProfile)
+                and set(verb.profiles) != set(c.Infra.MakeProfile)
             )
             if partial_standalone:
                 msg = (
@@ -1080,16 +1022,29 @@ class FlextInfraConfigModelsMake:
             if len(standalone_gates) != len(set(standalone_gates)):
                 msg = "make standalone_check_gates must route each gate once"
                 raise ValueError(msg)
-            # Why (hq-36xk, flext-lq86m): the guard that lived here read
-            # `if "setup" in serialized` and protected `make setup` from being
-            # placed in the serialized mutation set, so it could never require
-            # the managed validation environment it is supposed to CREATE.
-            # 3e5fbc747 exterminated the serialize-make lifecycle and deleted
-            # `self.serialization`, but rebound this condition to `declared`
-            # instead of removing it with the concept it guarded. `setup` is a
-            # mandatory canonical verb, so the inverted check rejected every
-            # valid configuration and `flext_infra.config` could not be built at
-            # all. The serialized set no longer exists; the guard has no object.
+
+        def _validate_workflow(self, declared: t.Infra.StrSet) -> None:
+            """Validate the workflow verbs against the declared public verbs.
+
+            Why (hq-36xk, flext-lq86m): the guard that lived here read
+            ``if "setup" in serialized`` and protected ``make setup`` from being
+            placed in the serialized mutation set, so it could never require
+            the managed validation environment it is supposed to CREATE.
+            3e5fbc747 exterminated the serialize-make lifecycle and deleted
+            ``self.serialization``, but rebound this condition to ``declared``
+            instead of removing it with the concept it guarded. ``setup`` is a
+            mandatory canonical verb, so the inverted check rejected every
+            valid configuration and ``flext_infra.config`` could not be built
+            at all. The serialized set no longer exists; the guard has no
+            object.
+
+            Raises:
+                ValueError: If make workflow verbs must be unique; or if make
+                    workflow verbs are not declared public verbs; or if make
+                    workflow verbs must exist in every profile; or if make pre-commit
+                    must be declared in every profile.
+
+            """
             workflow_verbs = tuple(step.verb for step in self.workflow)
             if len(set(workflow_verbs)) != len(workflow_verbs):
                 msg = "make workflow verbs must be unique"
@@ -1106,9 +1061,8 @@ class FlextInfraConfigModelsMake:
             partial_workflow = sorted(
                 verb.name
                 for verb in self.verbs
-                if verb.name in workflow_verbs
-                and set(verb.profiles)
-                != set(FlextInfraConstantsCodegenProject.MakeProfile)
+                if verb.name in {*workflow_verbs, "pre-commit"}
+                and set(verb.profiles) != set(c.Infra.MakeProfile)
             )
             if partial_workflow:
                 msg = (
@@ -1116,8 +1070,32 @@ class FlextInfraConfigModelsMake:
                     f"{', '.join(partial_workflow)}"
                 )
                 raise ValueError(msg)
+            approval = tuple(
+                step.verb for step in self.workflow if "ci" in step.contexts
+            )
+            hook = tuple(
+                step.verb for step in self.workflow if "pre_commit" in step.contexts
+            )
+            if approval != hook or approval != ("setup", "audit", "check", "test"):
+                msg = (
+                    "CI and pre-commit require the same setup/audit/check/test workflow"
+                )
+                raise ValueError(msg)
+            if "pre-commit" not in declared:
+                msg = "make pre-commit must be declared in every profile"
+                raise ValueError(msg)
+
+        def _validate_docs_verb(self, declared: t.Infra.StrSet) -> None:
+            """Validate the docs verb declaration and its report directory.
+
+            Raises:
+                ValueError: If make fmt gates are not declared gate vocabulary; or
+                    if make docs verb must be declared; or if make docs reports_dir
+                    must be repository-relative.
+
+            """
             unknown_fmt_gates = set(self.fmt_gates) - set(
-                FlextInfraConstantsCheck.SARIF_TOOL_INFO,
+                c.Infra.SARIF_TOOL_INFO,
             )
             if unknown_fmt_gates:
                 msg = (
@@ -1134,7 +1112,12 @@ class FlextInfraConfigModelsMake:
             ):
                 msg = "make docs reports_dir must be repository-relative"
                 raise ValueError(msg)
-            return self
+
+        @m.computed_field
+        @property
+        def approval_verbs(self) -> t.VariadicTuple[str]:
+            """Ordered approval derived once from the validated workflow."""
+            return tuple(step.verb for step in self.workflow if "ci" in step.contexts)
 
         @m.computed_field
         @property
@@ -1146,9 +1129,12 @@ class FlextInfraConfigModelsMake:
             the whole vocabulary: a consuming repository owns gates this
             package knows nothing about, and rejecting them as unknown is what
             kept working handlers unreachable from `make check`.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
             """
             return (
-                *FlextInfraConstantsMake.CANONICAL_GATE_IDS,
+                *c.Infra.CANONICAL_GATE_IDS,
                 *self.project_check_gates,
             )
 
@@ -1156,24 +1142,35 @@ class FlextInfraConfigModelsMake:
         @property
         def check_gates_default(self) -> t.VariadicTuple[str]:
             """Active default gates, shared by local, CI, hooks, and project gates."""
-            standalone = frozenset(self.standalone_check_gates.values())
+            excluded = frozenset((
+                *self.standalone_check_gates.values(),
+                *self.opt_in_check_gates,
+            ))
             declared = (
-                *FlextInfraConstantsMake.CANONICAL_DEFAULT_GATE_IDS,
+                *c.Infra.CANONICAL_GATE_IDS,
                 *self.project_check_gates,
             )
-            return tuple(gate for gate in declared if gate not in standalone)
+            return tuple(gate for gate in declared if gate not in excluded)
 
         @m.computed_field
         @property
         def check_gates_local(self) -> t.VariadicTuple[str]:
-            """Intersect the local partition with the same active default universe."""
+            """Intersect the local partition with the same active default universe.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
+            """
             local = frozenset(self.ci.local_check_gates)
             return tuple(gate for gate in self.check_gates_default if gate in local)
 
         @m.computed_field
         @property
         def check_gates_ci(self) -> t.VariadicTuple[str]:
-            """Preserve the CI partition within the same active default universe."""
+            """Preserve the CI partition within the same active default universe.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
+            """
             local = frozenset(self.check_gates_local)
             return tuple(gate for gate in self.check_gates_default if gate not in local)
 
@@ -1185,8 +1182,11 @@ class FlextInfraConfigModelsMake:
             Asking for a gate that cannot fix anything still pays its full cost;
             a fix pass built from the ALLOWED vocabulary once timed out doing
             exactly that.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
             """
-            return FlextInfraConstantsMake.CANONICAL_FIXABLE_GATE_IDS
+            return c.Infra.CANONICAL_FIXABLE_GATE_IDS
 
         @m.computed_field
         @property
@@ -1200,6 +1200,10 @@ class FlextInfraConfigModelsMake:
             a workspace root orchestrating its subprojects -- declares only the
             fields it relaxes, so the engine never has to know which project
             it is conforming.
+
+            Returns:
+                The resulting ``Mapping[str,
+                    FlextInfraConfigModelsMake.CustomHandlerPolicy]``.
             """
             base = self.custom_handler_policy
             overrides = self.custom_handler_profile_overrides
@@ -1215,31 +1219,9 @@ class FlextInfraConfigModelsMake:
                 )
                 for profile in (
                     *overrides,
-                    *FlextInfraConstantsCodegenProject.MakeProfile,
+                    *c.Infra.MakeProfile,
                 )
             }
-
-    class DocsGithubRepoSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One governed GitHub repository used for cross-repo doc links."""
-
-        organization: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="GitHub organization"),
-        ]
-        repository: Annotated[t.NonEmptyStr, m.Field(description="GitHub repository")]
-        branch: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Working-line branch for doc links"),
-        ]
-        local_checkout: Annotated[
-            str,
-            m.Field(
-                default="",
-                description=(
-                    "Optional local checkout path (~ expanded) for existence checks"
-                ),
-            ),
-        ] = ""
 
     class CustomHandlerPolicy(FlextInfraConfigModelsContract.ConfigContract):
         """Strict schema for the only handwritten Make extension file."""

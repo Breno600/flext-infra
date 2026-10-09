@@ -52,9 +52,9 @@ class FlextInfraManualCommandValidator(s[bool]):
             The resulting ``bool``.
 
         """
-        if not segment:
-            return False
-        tokens = cls._strip_wrappers(shlex.split(segment))
+        tokens: t.MutableSequenceOf[str] = (
+            cls._strip_wrappers(shlex.split(segment)) if segment else []
+        )
         if not tokens:
             return False
         head = Path(tokens[0]).name
