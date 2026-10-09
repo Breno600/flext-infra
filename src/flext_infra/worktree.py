@@ -240,7 +240,7 @@ class FlextInfraWorktreeService(s[str]):
 
     @classmethod
     def setup_lane(cls, lane: Path) -> p.Result[bool]:
-        """Provision an isolated environment inside one lane.
+        """Provision one lane through its primary worktree's environment.
 
         Returns:
             The resulting ``p.Result[bool]``.
