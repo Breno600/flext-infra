@@ -141,6 +141,26 @@ class TestsFlextInfraRopeAnalysis:
         tm.that(imports["Path"], eq="pathlib.Path")
 
     @staticmethod
+    def test_facade_namespaces_skip_builtin_bases(tmp_path: Path) -> None:
+        """A builtin base has no source scope and contributes no namespace."""
+        project, package = u.Tests.demo_project(tmp_path)
+        source = package / "errors.py"
+        source.write_text(
+            "class Parent:\n"
+            "    class Shared:\n        pass\n"
+            "class Errors(Parent, Exception):\n    pass\n",
+            encoding="utf-8",
+        )
+        with u.Infra.open_project(project) as rope_project:
+            resource = tm.not_none(u.Infra.fetch_python_resource(rope_project, source))
+            names = u.Infra.inherited_facade_namespaces(
+                rope_project,
+                resource,
+                class_name="Errors",
+            )
+        tm.that(tuple(names), eq=("Shared",))
+
+    @staticmethod
     def test_declared_imports_reject_relative_level_beyond_package(
         tmp_path: Path,
     ) -> None:
