@@ -1,0 +1,44 @@
+# Operator ruling 2026-10-08 (operator-ruling-2026-10-08-subprocess-test-imports):
+# only the u.Cli.run process owner in flext-cli and the flext-core source may
+# import subprocess; every other module runs processes through u.Cli.run (or
+# the u.Cli process family). The same owner scope is the Bandit authorized
+# exception at config/tooling.yaml Infra.tooling.tools.bandit; the ignores
+# below name it in both scan contexts (project root and workspace root).
+#
+# Detection only: the u.Cli process member that replaces a direct use is
+# chosen per call site.
+id: ban-subprocess-outside-run-owner
+language: Python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/src/flext_cli/_utilities/processes.py"
+  - "**/src/flext_cli/_utilities/runtime.py"
+  - "**/src/flext_core/**"
+rule:
+  any:
+    - all:
+        - kind: import_statement
+        - has:
+            stopBy: end
+            kind: dotted_name
+            regex: "^subprocess(?:\\.|$)"
+    - all:
+        - kind: import_from_statement
+        - has:
+            field: module_name
+            regex: "^subprocess(?:\\.|$)"
+    - all:
+        - kind: call
+          has:
+            field: function
+            regex: "(^|\\.)import_module$|^__import__$"
+        - has:
+            kind: string
+            stopBy: end
+            regex: "^['\\\"]subprocess['\\\"]$"
+message: >-
+  Only the u.Cli.run owner in flext-cli and the flext-core source spawn
+  processes: run commands through u.Cli.run, u.Cli.run_raw, u.Cli.run_checked
+  or u.Cli.process_start instead of importing subprocess.

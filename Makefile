@@ -1716,7 +1716,7 @@ if [ "$$file_executed" -eq 0 ]; then printf 'ERROR: test-file executed zero requ
 # Export the raw Make value instead of interpolating operator input into shell code.
 export FLEXT_FILE_GATE_FILE := $(value FILE)
 _builtin_file_gate_all: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint,format,pyrefly,mypy,pyright,codemod" --file "$$FLEXT_FILE_GATE_FILE"
+	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint format pyrefly mypy pyright codemod" --file "$$FLEXT_FILE_GATE_FILE"
 
 _builtin_tests_all: _builtin_require_environment
 	+@$(SELF_MAKE) test
@@ -1958,11 +1958,9 @@ _builtin-fix: _builtin_fix_all
 _builtin-fix-namespace: _builtin_fix_namespace
 _builtin-fix-accessors: _builtin_fix_accessors
 _builtin-audit:
-ifneq ($(CI),Y)
-	@$(PROJECT_FLEXT_INFRA) workspace verify-lanes --repo-root "$(PROJECT_ROOT)"
-endif
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 	@$(if $(filter Y,$(CI)),$(PROJECT_FLEXT_INFRA) workspace verify-environment --repository-root "$(PROJECT_ROOT)",:)
+	@$(if $(filter Y,$(CI)),:,$(PROJECT_FLEXT_INFRA) workspace verify-lanes --repo-root "$(PROJECT_ROOT)")
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope self --mode check
 _builtin-status: _builtin_status_diagnostics
 _builtin-verify-clean: _builtin_require_environment

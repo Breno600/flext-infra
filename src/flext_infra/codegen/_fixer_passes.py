@@ -10,7 +10,10 @@ from collections.abc import Callable
 from pathlib import Path
 
 from flext_infra import m, u
-from flext_infra.codegen import FlextInfraCodegenFixerResultsMixin
+from flext_infra.codegen import (
+    FlextInfraCodegenFixerResultsMixin,
+    FlextInfraCodegenLazyInit,
+)
 
 
 class FlextInfraCodegenFixerPassesMixin(FlextInfraCodegenFixerResultsMixin):
@@ -82,8 +85,6 @@ class FlextInfraCodegenFixerPassesMixin(FlextInfraCodegenFixerResultsMixin):
     @staticmethod
     def _run_lazy_init_preflight(ctx: m.Infra.FixContext, project_path: Path) -> None:
         """Preflight lazy-init plans and leave publication to conform."""
-        from flext_infra.codegen import FlextInfraCodegenLazyInit
-
         plans = (
             FlextInfraCodegenLazyInit(repository_root=project_path)
             .plan_files()
