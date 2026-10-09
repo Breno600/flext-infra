@@ -54,6 +54,12 @@ class FlextInfraCodegenTransaction(
         identity = self._planner.scope_identity()
         if identity.failure:
             return r[T].from_failure(identity)
+        authorized = self._authorize_roots(tuple(roots.values()))
+        if authorized.failure:
+            return r[T].from_failure(authorized)
+        preflight = self._preflight_journal(identity.value)
+        if preflight.failure:
+            return r[T].from_failure(preflight)
         proposed = self._planner.file_layout(
             identity.value.repo_root,
             roots,
@@ -91,8 +97,8 @@ class FlextInfraCodegenTransaction(
                     operation=operation,
                 )
 
-    @staticmethod
     def _file_recovery_participants(
+        self,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         *,
         prepare: bool,
@@ -118,6 +124,9 @@ class FlextInfraCodegenTransaction(
             loaded = journal_io.read(layout)
             if loaded.failure:
                 return result_type.from_failure(loaded)
+            authorized = self._authorize_journal(layout, loaded.value[0])
+            if authorized.failure:
+                return result_type.from_failure(authorized)
             for participant in loaded.value[0].file_participants:
                 current = participants.get(participant.root)
                 if current is not None and (current.device, current.inode) != (
@@ -423,6 +432,9 @@ class FlextInfraCodegenTransaction(
         identity = self._planner.scope_identity()
         if identity.failure:
             return r[T].from_failure(identity)
+        preflight = self._preflight_journal(identity.value)
+        if preflight.failure:
+            return r[T].from_failure(preflight)
         with u.Infra.codegen_transaction_lease(
             self._planner.journal_path(identity.value),
         ):
@@ -445,6 +457,9 @@ class FlextInfraCodegenTransaction(
             The resulting ``p.Result[T]``.
 
         """
+        preflight = self._preflight_journal(identity)
+        if preflight.failure:
+            return r[T].from_failure(preflight)
         if prepare:
             reconciled = self._reconcile(identity)
             if reconciled.failure:

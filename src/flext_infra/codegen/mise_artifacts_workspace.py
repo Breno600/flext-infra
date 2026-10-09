@@ -10,11 +10,9 @@ import stat
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, m, r, u
-from flext_infra.codegen._mise_artifacts_files import (
-    FlextInfraMiseArtifactsFiles as files,
-)
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+from flext_infra import c, config, m, r, u
+from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -194,7 +192,7 @@ class FlextInfraMiseWorkspacePlanner:
         for selector, root in sorted(roots.items()):
             if not root.is_absolute() or ".." in root.parts or root.resolve() != root:
                 return result_type.fail(f"file capability root is not physical: {root}")
-            physical = files.physical_directory_identity(root)
+            physical = FlextInfraMiseArtifactsFiles.physical_directory_identity(root)
             if physical.failure:
                 return result_type.from_failure(physical)
             staging = self._state_root(root)
@@ -413,7 +411,7 @@ class FlextInfraMiseWorkspacePlanner:
         layout: m.Infra.MiseToolchainProjectLayout,
         config_plan: m.Infra.CodegenFilePlan | None,
     ) -> p.Result[m.Infra.MiseToolchainProjectState]:
-        config_state = files.read_state(
+        config_state = FlextInfraMiseArtifactsFiles.read_state(
             layout.config,
             required=config_plan is None,
         )
@@ -425,12 +423,23 @@ class FlextInfraMiseWorkspacePlanner:
                     f"committed Mise configuration is absent: {layout.config}",
                 )
             replacement_content = config_state.value.content
+            declarations = tuple(
+                item
+                for item in config.Infra.codegen.managed_files
+                if item.path == Path(c.Infra.CONFIG_SPEC[0])
+            )
+            if len(declarations) != 1:
+                return r[m.Infra.MiseToolchainProjectState].fail(
+                    "Mise configuration requires exactly one managed file declaration",
+                )
+            replacement_mode = declarations[0].mode
         else:
-            if config_plan.desired_content is None:
+            if config_plan.desired_content is None or config_plan.desired_mode is None:
                 return r[m.Infra.MiseToolchainProjectState].fail(
                     f"invalid Mise configuration plan: {config_plan.path}",
                 )
             replacement_content = config_plan.desired_content
+            replacement_mode = config_plan.desired_mode
         if (
             config_plan is not None
             and isinstance(config_plan.before, m.Cli.AtomicFileState)
@@ -454,7 +463,7 @@ class FlextInfraMiseWorkspacePlanner:
                 config=m.Infra.MiseToolchainConfigState(
                     before=config_state.value,
                     replacement_content=replacement_content,
-                    replacement_mode=c.Infra.CONFIG_SPEC[1],
+                    replacement_mode=replacement_mode,
                     sources=config_sources,
                 ),
             ),

@@ -173,9 +173,15 @@ class TestsFlextInfraCodegenMakeUpgrade:
         installs = re.findall(r"install --yes(.*?)(?:; \\|$)", makefile, re.MULTILINE)
         tm.that(len(installs), eq=2)
         tm.that({install.strip() for install in installs}, eq={declared})
-        # Setup proves the provisioned toolchain before post-setup runs.
+        # Setup proves the provisioned toolchain before post-setup runs; the
+        # proof consumes Make's resolved UV so it can pin it against the
+        # mise.lock release.
         activated = makefile.split("_setup_activated:\n", 1)[1].split("\n\n", 1)[0]
         tm.that(activated.splitlines()[0], has="codegen mise-proof")
+        tm.that(
+            activated.splitlines()[0],
+            has='--uv-executable "$$(command -v $(UV))"',
+        )
         tm.that(makefile, has='if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then')
         resolve_assignments = re.findall(
             r"^(?:([\w-]+): )?TOOL_BOOTSTRAP_RESOLVE :=[ ]?(.*)$",

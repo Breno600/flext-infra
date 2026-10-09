@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 
 class FlextInfra(
     FlextInfraWorkspaceEnvironmentMixin,
-    _FlextInfraConformWiringMixin,
+    FlextInfraConformWiring,
     s[t.JsonDict],
 ):
     """Thin public FLEXT facade over infra services."""

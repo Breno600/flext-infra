@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+from flext_infra.codegen import FlextInfraMiseStaging
 from flext_infra.codegen._codegen_transaction_recovery import (
     FlextInfraCodegenTransactionRecovery,
 )
@@ -36,9 +36,14 @@ if TYPE_CHECKING:
 class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecovery):
     """Stage, prepare, and publish the first conform+Mise generation phase."""
 
-    def __init__(self, owner: p.Infra.MiseArtifactsOwner) -> None:
+    def __init__(
+        self,
+        owner: p.Infra.MiseArtifactsOwner,
+        *,
+        participant_policy: m.Infra.CodegenParticipantPolicy | None = None,
+    ) -> None:
         """Initialize the transaction with its configured Mise artifact owner."""
-        super().__init__(owner)
+        super().__init__(owner, participant_policy=participant_policy)
         self._owner = owner
         self._mise_staging = FlextInfraMiseStaging()
 

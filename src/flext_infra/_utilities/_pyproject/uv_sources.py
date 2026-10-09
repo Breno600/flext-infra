@@ -278,6 +278,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``t.VariadicTuple[str]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         required_names = {
             name
             for line in cls._document_requirement_lines(document).unwrap()

@@ -159,7 +159,7 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         if not cls._file_contains_tests(py_file):
             compile_result = u.Cli.run_raw(
                 [
-                    *cls._workspace_tool_command(workspace, c.Infra.PYTHON),
+                    *cls._workspace_tool_command(c.Infra.PYTHON),
                     "-m",
                     "py_compile",
                     str(py_file),
@@ -173,7 +173,7 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
             return r[bool].ok(value=True)
         run_result = u.Cli.run_raw(
             [
-                *cls._workspace_tool_command(workspace, "pytest"),
+                *cls._workspace_tool_command("pytest"),
                 str(py_file),
                 "-x",
                 "--tb=short",

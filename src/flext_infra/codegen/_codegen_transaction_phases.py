@@ -942,6 +942,9 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
         committed = self._verified_commit(session)
         if committed.failure:
             return r[t.VariadicTuple[Path]].from_failure(committed)
+        authorized = self._authorize_journal(session.plan.layout, committed.value[0])
+        if authorized.failure:
+            return r[t.VariadicTuple[Path]].from_failure(authorized)
         cleaned = journal_io.cleanup(
             session.plan.layout,
             committed.value[0],

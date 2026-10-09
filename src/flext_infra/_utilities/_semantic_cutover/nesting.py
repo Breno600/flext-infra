@@ -187,6 +187,9 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         Returns:
             Bindings holding a nested class or its instance in the same snapshot.
 
+        Raises:
+            ValueError: If the module exposes no root semantic scope.
+
         Loose top-level helper and sentinel classes can move together with their
         construction sites. A class already inside an owner is not such a helper.
         """
@@ -194,7 +197,11 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             file_path.relative_to(Path(project.root.real_path)).as_posix(),
         )
         module = project.get_pymodule(resource)
-        pending = [(module.get_scope(), 0)]
+        root_scope = module.get_scope()
+        if root_scope is None:
+            msg = f"module has no root scope: {file_path}"
+            raise ValueError(msg)
+        pending: list[tuple[t.Infra.RopeScope, int]] = [(root_scope, 0)]
         identities: list[t.Infra.RopePyObject] = []
         while pending:
             scope, class_depth = pending.pop()
@@ -214,7 +221,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             if name is None or not isinstance(value, ast.Name | ast.Attribute):
                 continue
             resolved = FlextInfraUtilitiesRopeRuntimeModules.resolve_symbol(
-                module.get_scope(),
+                root_scope,
                 value,
             )
             if resolved is not None and any(

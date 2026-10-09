@@ -13,8 +13,7 @@ import tempfile
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
-from flext_infra import c, m, p, r, t, u
-from flext_infra._settings import settings
+from flext_infra import c, m, p, r, settings, t, u
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 from flext_infra.codemod.snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
 
@@ -472,11 +471,6 @@ class FlextInfraModGateEngine:
     def _validate_finding_receipt(stderr: str, errors: int) -> p.Result[bool]:
         """Authenticate ast-grep's exact error-finding stderr receipt.
 
-        The mise toolchain wrapper may prepend its own ``mise WARN``/``hint:``
-        resolution notices to any managed tool's stderr; they are wrapper
-        noise, never tool output, and are dropped before authentication (the
-        same standing the mypy gate gives its verbose ``LOG:`` channel).
-
         Returns:
             The resulting ``p.Result[bool]``.
 
@@ -485,11 +479,7 @@ class FlextInfraModGateEngine:
             c.Infra.AST_GREP_ERROR_FINDING_RECEIPT.format(count=errors),
             c.Infra.AST_GREP_ERROR_FINDING_HELP,
         ))
-        receipt = "\n".join(
-            line
-            for line in stderr.splitlines()
-            if not line.startswith(("mise WARN", "hint:"))
-        ).strip()
+        receipt = stderr.strip()
         if receipt != expected:
             return r[bool].fail(
                 f"ast-grep finding receipt mismatch: parsed_errors={errors} "
@@ -854,7 +844,7 @@ class FlextInfraModGateEngine:
                 continue
             parsed = u.Cli.json_parse(line)
             if parsed.failure:
-                return r.from_failure(parsed)
+                return r[m.Infra.ModScanReport].from_failure(parsed)
             if not isinstance(parsed.value, Mapping):
                 return r[m.Infra.ModScanReport].fail(
                     f"ast-grep JSONL finding is not an object: {line}",

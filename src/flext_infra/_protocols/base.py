@@ -129,6 +129,17 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
     @runtime_checkable
+    class CodegenParticipantPolicyFactory(Protocol):
+        """Composition-root authorization for one generation request."""
+
+        def __call__(
+            self,
+            root: Path,
+        ) -> p.Result[m.Infra.CodegenParticipantPolicy]:
+            """Read the request's physical topology without acquiring a lease."""
+            ...
+
+    @runtime_checkable
     class CandidateBootstrapPlanner(Protocol):
         """Conform plan boundary consumed by the candidate campaign."""
 

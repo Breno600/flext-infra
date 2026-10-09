@@ -475,6 +475,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                     if not isinstance(resource, p.Infra.RopeRoot):
                         msg = f"binding package has no source resource contract: {path}"
                         raise TypeError(msg)
+                    # A directory without an initializer (a namespace package or
+                    # a compiled extension's stub folder) carries no module
+                    # source, so the static import closure has nothing to read.
+                    if not resource.has_child(c.Infra.INIT_PY):
+                        continue
                     resource = resource.get_child(c.Infra.INIT_PY)
                     path = Path(resource.real_path).resolve()
                 if path in visited or not path.is_file() or path.suffix != ".py":
@@ -997,8 +1002,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         match predicate:
             case c.Infra.CodemodContextPredicate.PAYLOAD_DECLARATION:
                 with FlextInfraUtilitiesRopeCore.open_project(root) as project:
-                    resource = project.get_resource(
-                        file_path.relative_to(root).as_posix(),
+                    resource = FlextInfraUtilitiesRopeRuntime.require_file_resource(
+                        project.get_resource(
+                            file_path.relative_to(root).as_posix(),
+                        ),
+                        file_path,
                     )
                     declarations = tuple(
                         node
@@ -1059,6 +1067,17 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                     file_path,
                     facts,
                 )
+            case (
+                c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL
+                | c.Infra.CodemodContextPredicate.SAME_BINDING
+                | c.Infra.CodemodContextPredicate.EXECUTABLE_OCCURRENCE
+                | c.Infra.CodemodContextPredicate.UNREFERENCED_IMPORT
+            ):
+                msg = (
+                    "semantic predicate is owned by the occurrence evaluator, "
+                    f"never the project-fact evaluator: {predicate}"
+                )
+                raise ValueError(msg)
 
     @classmethod
     def _context_package_holds(

@@ -63,6 +63,7 @@ class FlextInfraConstantsCodegenProject:
         FACADES = "facades"
         LAZY_INIT = "lazy-init"
         MAKEFILE = "makefile"
+        MISE_CONFIG = "mise-config"
         PYPROJECT = "pyproject"
 
     @unique

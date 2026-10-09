@@ -247,6 +247,67 @@ class FlextInfraModelsCodegenTransactionModels:
                 msg = "non-recovering codegen journal contains rollback identities"
                 raise ValueError(msg)
 
+    class CodegenFootprint(m.Value):
+        """Effect-free observed journal and requested publication footprint."""
+
+        scope_root: Path = m.Field(description="Authenticated coordination root")
+        journal_path: Path = m.Field(description="Canonical journal anchor")
+        snapshot_identity: str = m.Field(
+            description="Normalized canonical file-state fields excluding raw content",
+        )
+        snapshot_sha256: str | None = m.Field(
+            description="Digest of the exact observed journal bytes, or absent",
+        )
+        journal_version: int | None = m.Field(
+            description="Schema version read from the typed journal, or absent",
+        )
+        transaction_id: str | None = m.Field(
+            description="Transaction identity read from the typed journal, or absent",
+        )
+        normalized_journal_sha256: str | None = m.Field(
+            description="Digest of the parsed journal representation, not disk bytes",
+        )
+        authorized_roots: t.VariadicTuple[Path] = m.Field(
+            default=(),
+            description="Physical roots authorized by current topology",
+        )
+        journal_state: Literal[
+            "absent", "staging", "prepared", "recovering", "committed"
+        ] = m.Field(
+            description="Observed durable state, never a readiness or green receipt",
+        )
+        pending_roots: t.VariadicTuple[Path] = m.Field(
+            description="Actual recorded participant roots",
+        )
+        pending_destinations: t.VariadicTuple[str] = m.Field(
+            description="Journal-relative destination selectors",
+        )
+        pending_directories: t.VariadicTuple[str] = m.Field(
+            description="Journal-relative directory selectors",
+        )
+        pending_staging: t.VariadicTuple[Path] = m.Field(
+            description="Absolute recorded staging paths",
+        )
+        planned_roots: t.VariadicTuple[Path] = m.Field(
+            default=(),
+            description="Roots selected by the public conform plan",
+        )
+        planned_destinations: t.VariadicTuple[Path] = m.Field(
+            default=(),
+            description="Absolute requested publication paths",
+        )
+        journal: (
+            FlextInfraModelsCodegenTransactionModels.CodegenTransactionJournal | None
+        ) = m.Field(
+            default=None,
+            exclude=True,
+            description="Typed observed recovery authority",
+        )
+        snapshot: m.Cli.AtomicFileState = m.Field(
+            exclude=True,
+            description="Exact journal observation retained for revalidation",
+        )
+
     class CodegenFileSessionPlan(m.ArbitraryTypesModel):
         """File-only transaction topology; contains no Mise artifact snapshot."""
 

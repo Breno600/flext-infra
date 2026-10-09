@@ -24,9 +24,10 @@ from __future__ import annotations
 import os
 import platform
 import re
+import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Annotated, override
 
 from flext_infra import c, config, m, r, t, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
@@ -37,6 +38,11 @@ if TYPE_CHECKING:
 
 class FlextInfraCodegenMiseToolchainProof(FlextInfraCodegenExecutionBase[bool]):
     """Prove every declared fleet tool is the self-contained locked release."""
+
+    uv_executable: Annotated[
+        Path,
+        m.Field(description="Absolute UV executable consumed by the invoking Make"),
+    ]
 
     @staticmethod
     def current_platform() -> p.Result[str]:
@@ -182,6 +188,8 @@ class FlextInfraCodegenMiseToolchainProof(FlextInfraCodegenExecutionBase[bool]):
         )
         if run.failure:
             return r[bool].from_failure(run)
+        if run.value.stderr.strip():
+            return r[bool].fail(run.value.stderr)
         output = f"{run.value.stdout}\n{run.value.stderr}"
         pattern = probe.pattern.replace(
             c.Infra.MISE_VERSION_PLACEHOLDER,
@@ -244,7 +252,7 @@ class FlextInfraCodegenMiseToolchainProof(FlextInfraCodegenExecutionBase[bool]):
             return receipt
         return r[str].ok(f"{receipt.value} {checksum or 'checksum:none'}")
 
-    def _mise_line(self, *arguments: str) -> p.Result[str]:
+    def _mise_line(self, mise_binary: Path, *arguments: str) -> p.Result[str]:
         """Run one read-only ``mise -C <root>`` query and return its line.
 
         Returns:
@@ -252,14 +260,18 @@ class FlextInfraCodegenMiseToolchainProof(FlextInfraCodegenExecutionBase[bool]):
 
         """
         run = u.Cli.run_raw(
-            (c.Infra.MISE, "-C", str(self.repository_root), *arguments),
+            (str(mise_binary), "-C", str(self.repository_root), *arguments),
             cwd=self.repository_root,
             timeout=c.Infra.TIMEOUT_SHORT,
         )
         if run.failure:
             return r[str].from_failure(run)
         line = run.value.stdout.strip()
-        if not u.Cli.process_succeeded(run.value.outcome) or not line:
+        if (
+            not u.Cli.process_succeeded(run.value.outcome)
+            or run.value.stderr.strip()
+            or not line
+        ):
             return r[str].fail(
                 f"mise {' '.join(arguments)} failed: "
                 f"{(run.value.stderr or run.value.stdout).strip()}",
@@ -271,6 +283,7 @@ class FlextInfraCodegenMiseToolchainProof(FlextInfraCodegenExecutionBase[bool]):
         entry: m.Infra.MiseToolEntry,
         lock: t.JsonMapping,
         platform_name: str,
+        mise_binary: Path,
     ) -> p.Result[str]:
         """Prove one declared tool against the real Mise resolution.
 
@@ -282,10 +295,12 @@ class FlextInfraCodegenMiseToolchainProof(FlextInfraCodegenExecutionBase[bool]):
         if identity.failure:
             return r[str].from_failure(identity)
         version, checksum = identity.value
-        root = self._mise_line("where", f"{entry.selector or entry.name}@{version}")
+        root = self._mise_line(
+            mise_binary, "where", f"{entry.selector or entry.name}@{version}"
+        )
         if root.failure:
             return r[str].from_failure(root)
-        binary = self._mise_line("which", entry.version_probe.binary)
+        binary = self._mise_line(mise_binary, "which", entry.version_probe.binary)
         if binary.failure:
             return r[str].from_failure(binary)
         receipt = self.installation(
@@ -303,6 +318,14 @@ class FlextInfraCodegenMiseToolchainProof(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[bool]``.
 
         """
+        mise_binary = u.Infra.managed_mise_self(self.repository_root)
+        if mise_binary.failure:
+            return r[bool].from_failure(mise_binary)
+        self.logger.info(
+            "mise_reader_qualified",
+            executable=str(mise_binary.value),
+            sha256=u.Cli.sha256_bytes(mise_binary.value.read_bytes()),
+        )
         lock_path = self.repository_root / c.Infra.MISE_LOCK_FILENAME
         source = u.Cli.files_read_text(lock_path)
         if source.failure:
@@ -310,14 +333,110 @@ class FlextInfraCodegenMiseToolchainProof(FlextInfraCodegenExecutionBase[bool]):
         lock = u.Cli.toml_mapping_from_text(source.value)
         if lock is None:
             return r[bool].fail(f"invalid TOML in {lock_path}")
+        self.logger.info(
+            "mise_proof_inputs",
+            lock_path=str(lock_path),
+            lock_sha256=u.Cli.sha256_bytes(source.value.encode(c.Cli.ENCODING_DEFAULT)),
+            config_sha256=u.Cli.sha256_bytes(
+                config.Infra.codegen.model_dump_json().encode(c.Cli.ENCODING_DEFAULT)
+            ),
+            uv_executable=str(self.uv_executable),
+            python_executable=sys.executable,
+            python_base_prefix=sys.base_prefix,
+            python_prefix=sys.prefix,
+        )
         platform_name = self.current_platform()
         if platform_name.failure:
             return r[bool].from_failure(platform_name)
-        for entry in config.Infra.codegen.toolchain.tools:
-            receipt = self._prove_declared(entry, lock, platform_name.value)
+        toolchain = config.Infra.codegen.toolchain
+        runtime_entries = (
+            m.Infra.MiseToolEntry(
+                name=c.Infra.MISE,
+                selector=toolchain.mise_selector,
+                version=toolchain.mise_version,
+                version_probe=m.Infra.MiseToolVersionProbe(
+                    binary=c.Infra.MISE,
+                    arguments=("--version",),
+                    pattern="^{version} ",
+                ),
+            ),
+            m.Infra.MiseToolEntry(
+                name="python",
+                version=toolchain.python_version,
+                version_probe=m.Infra.MiseToolVersionProbe(
+                    binary="python",
+                    arguments=("--version",),
+                    pattern="^Python {version}$",
+                ),
+            ),
+        )
+        for entry in (*runtime_entries, *toolchain.tools):
+            receipt = self._prove_declared(
+                entry, lock, platform_name.value, mise_binary.value
+            )
             if receipt.failure:
                 return r[bool].from_failure(receipt)
             self.logger.info("mise_toolchain_proven", receipt=receipt.value)
+        return self._prove_runtime(
+            lock, runtime_entries[1], mise_binary.value, platform_name.value
+        )
+
+    def _prove_uv_consumer(self) -> p.Result[bool]:
+        """Compare the actual consumer to the one locked producer.
+
+        Returns:
+            Success only for the authenticated physical UV executable.
+        """
+        uv = u.Infra.managed_mise_binary("uv", self.repository_root)
+        if uv.failure:
+            return r[bool].from_failure(uv)
+        if not self.uv_executable.is_absolute() or not self.uv_executable.is_file():
+            return r[bool].fail(
+                f"Make UV is not an absolute executable file: {self.uv_executable}"
+            )
+        actual_uv = self.uv_executable.resolve(strict=True)
+        if actual_uv != uv.value:
+            return r[bool].fail(
+                f"Make UV differs from the locked producer: actual={actual_uv} "
+                f"sha256={u.Cli.sha256_bytes(actual_uv.read_bytes())} "
+                f"expected={uv.value} "
+                f"sha256={u.Cli.sha256_bytes(uv.value.read_bytes())}"
+            )
+        return r[bool].ok(value=True)
+
+    def _prove_runtime(
+        self,
+        lock: t.JsonMapping,
+        python_entry: m.Infra.MiseToolEntry,
+        mise_binary: Path,
+        platform_name: str,
+    ) -> p.Result[bool]:
+        """Prove the invoking consumer, not just separately installed tools.
+
+        Returns:
+            Success only for the locked UV and Python-backed project venv.
+        """
+        uv = self._prove_uv_consumer()
+        if uv.failure:
+            return uv
+        python_version = self.lock_identity(python_entry, lock, platform_name)
+        if python_version.failure:
+            return r[bool].from_failure(python_version)
+        python_root = self._mise_line(
+            mise_binary, "where", f"{python_entry.name}@{python_version.value[0]}"
+        )
+        if python_root.failure:
+            return r[bool].from_failure(python_root)
+        if (
+            Path(sys.base_prefix).resolve() != Path(python_root.value).resolve()
+            or sys.prefix == sys.base_prefix
+        ):
+            return r[bool].fail(
+                f"Runtime Python venv ancestry differs from the lock: "
+                f"executable={sys.executable} version={sys.version.split()[0]} "
+                f"prefix={sys.prefix} base={sys.base_prefix} "
+                f"expected-base={python_root.value}"
+            )
         return r[bool].ok(value=True)
 
 

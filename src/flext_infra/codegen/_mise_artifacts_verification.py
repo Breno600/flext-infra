@@ -11,10 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t, u
-from flext_infra.codegen._mise_artifacts_files import (
-    FlextInfraMiseArtifactsFiles as files,
-)
+from flext_infra import m, t, u
+from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
 from flext_infra.codegen._mise_artifacts_verification_manifest import (
     FlextInfraMiseArtifactsVerificationManifest,
 )
@@ -70,7 +68,7 @@ class FlextInfraMiseArtifactsVerification(
                 rebound_expected = rebound.value
             else:
                 rebound_expected = expected
-            observed = files.read_state(
+            observed = FlextInfraMiseArtifactsFiles.read_state(
                 rebound_expected.path,
                 required=rebound_expected.content is not None,
             )
@@ -194,7 +192,7 @@ class FlextInfraMiseArtifactsVerification(
             before = u.Infra.codegen_file_before_state(plan)
             if before.failure:
                 return r[bool].from_failure(before)
-            observed = files.read_state(
+            observed = FlextInfraMiseArtifactsFiles.read_state(
                 plan.path,
                 required=plan.desired_content is not None,
             )
@@ -266,7 +264,10 @@ class FlextInfraMiseArtifactsVerification(
 
         """
         for publication in publications:
-            observed = files.read_state(publication.before.path, required=False)
+            observed = FlextInfraMiseArtifactsFiles.read_state(
+                publication.before.path,
+                required=False,
+            )
             if observed.failure:
                 return r[bool].from_failure(observed)
             current = observed.value
@@ -405,10 +406,13 @@ class FlextInfraMiseArtifactsVerification(
             artifacts = (project.config.before,)
             for expected, required_mode in zip(
                 artifacts,
-                (c.Infra.CONFIG_SPEC[1],),
+                (project.config.replacement_mode,),
                 strict=True,
             ):
-                current = files.read_state(expected.path, required=False)
+                current = FlextInfraMiseArtifactsFiles.read_state(
+                    expected.path,
+                    required=False,
+                )
                 if current.failure:
                     return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(current)
                 if current.value.content is None:

@@ -300,7 +300,7 @@ class FlextInfraBanditGate(FlextInfraGate):
         """
         return tuple(
             m.Infra.Issue(
-                file=str(PurePosixPath(finding.filename)),
+                file=finding.filename,
                 line=finding.line_number,
                 column=0,
                 code=finding.test_id,
