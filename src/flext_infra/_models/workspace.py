@@ -286,15 +286,15 @@ class FlextInfraModelsWorkspace:
             m.Field(description="Local branches not merged into the integration line"),
         ]
         lint_findings: Annotated[
-            int,
+            t.NonNegativeInt | None,
             m.Field(
-                description="Lint count from the checkout's check report; 0 absent",
+                description="Executed eligible lint findings; null is unknown/not executed",
             ),
         ]
         pyrefly_findings: Annotated[
-            int,
+            t.NonNegativeInt | None,
             m.Field(
-                description="Pyrefly errors from the checkout's JSON report; 0 absent",
+                description="Executed eligible Pyrefly findings; null is unknown/not executed",
             ),
         ]
         codemod_findings: Annotated[
