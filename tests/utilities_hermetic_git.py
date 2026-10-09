@@ -43,7 +43,7 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         """
         toml = TestsFlextInfraUtilitiesTomlMixin
         lock = (project_root / c.Infra.UV_LOCK_FILENAME).read_text(encoding="utf-8")
-        sources: dict[str, t.Triple[str, str, str]] = {}
+        sources: t.MutableMappingKV[str, t.Triple[str, str, str]] = {}
         for package in toml.toml_tables_at(lock, "package"):
             source = toml.toml_mapping(package.get("source"))
             locator = source.get("git")
@@ -71,9 +71,9 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         """Mirror each locked source's exact commit under its host and path.
 
         Objects come from this checkout or from the Git databases ``make setup``
-        and ``make upg`` fetched into the persistent uv cache of the typed Mise
-        storage contract — not the ambient ``uv cache dir``, which the activated
-        environment leaves to the caller. No source is fetched from its remote;
+        and ``make upg`` fetched into the native uv cache selected by the
+        activated environment. Query uv itself so the fixture follows the same
+        cache configuration as provisioning. No source is fetched from its remote;
         a commit found nowhere locally fails loudly: ``make setup`` provisions it.
         Each mirror borrows the origin database through ``objects/info/alternates``
         and pins only the branch ref: full history at zero copy cost (git
@@ -87,10 +87,10 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
             FileNotFoundError: If locked Git source is not held locally.
 
         """
-        storage_root = Path(os.environ[c.Infra.MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE])
-        cache = (
-            storage_root
-            / dict(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT)["UV_CACHE_DIR"]
+        cache = Path(
+            tm.ok(
+                u.Cli.capture([c.Infra.UV, "cache", "dir"], cwd=project_root),
+            ).strip(),
         )
         databases = (project_root, *sorted(cache.glob("git-v*/db/*")))
         mirrored: list[str] = []

@@ -67,11 +67,14 @@ def _isolated_cache_home(
     Gates resolve their persistent caches (codemod rule catalogs, Mypy) below
     ``XDG_CACHE_HOME``; a unit test writes only inside fixture-owned storage,
     so the session scopes that home to one directory per worker and restores
-    the environment on exit.
+    the environment on exit. Preserve the native UV source cache selected before
+    that isolation so hermetic Git fixtures can read provisioned objects.
     """
     spec = config.Infra.codegen.make.codemod_rules_cache
+    uv_cache = u.Cli.capture([c.Infra.UV, "cache", "dir"]).unwrap().strip()
     with u.Tests.env_vars_context({
-        str(spec.data_home_environment_variable): str(
+        "UV_CACHE_DIR": uv_cache,
+        spec.data_home_environment_variable: str(
             tmp_path_factory.mktemp("xdg-cache"),
         ),
     }):
@@ -144,11 +147,11 @@ def infra_test_workspace(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def infra_subprocess() -> u.Cli:
+def infra_subprocess() -> p.Cli.CommandRunner:
     """Provide the public CLI utility facade for subprocess tests.
 
     Returns:
-        The resulting ``u.Cli``.
+        The public command runner implemented by ``u.Cli``.
 
     """
     return u.Cli()
@@ -222,7 +225,7 @@ def infra_selection() -> u.Infra:
 
 @pytest.fixture
 def infra_safe_command_output(
-    infra_subprocess: u.Cli,
+    infra_subprocess: p.Cli.CommandRunner,
     infra_test_workspace: Path,
 ) -> str:
     """Capture successful public command output inside the test workspace.

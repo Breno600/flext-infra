@@ -55,6 +55,13 @@ write locks. The `.envrc` watches `.mise.toml` and `mise.lock` to reload after
 `make upg`. A missing pin requires `make upg`; a runtime that is not yet installed
 requires `make setup`, whose provisioning happens before activation.
 
+If `mise.lock` has no self-managed Mise entry, `make setup` fails without
+changing it. `make upg` uses the installed host Mise to resolve the declared
+manifest first, then provisions the newly recorded release from its verified
+asset and continues the normal lifecycle. The generated `.mise.toml` must match
+the current toolchain owner before that recovery; `mise-config` conformance
+repairs this single declaration without regenerating unrelated project files.
+
 When Beads tracking is configured, the generated `.envrc.local` carries its environment:
 `AGENTS_GAS_CITY_ROOT` selects the Gas City root, the Gas City runtime publication
 provides the port, and the rig metadata provides its database in `server` mode. The

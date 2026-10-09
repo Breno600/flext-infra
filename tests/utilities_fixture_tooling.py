@@ -190,7 +190,6 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         for relative in (
             c.Infra.MISE_TOML_FILENAME,
             c.Infra.MISE_LOCK_FILENAME,
-            *c.Infra.ARTIFACT_NAMES,
         ):
             source = source_root / relative
             destination = root / relative
@@ -234,17 +233,19 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         return u.Cli.run_raw(
             [c.Infra.MAKE, *args],
             cwd=cwd,
-            env={
-                "GH_CONFIG_DIR": os.devnull,
-                "DBUS_SESSION_BUS_ADDRESS": "disabled:",
-                **(env or {}),
-            },
-            capture=capture,
-            remove_env_keys=tuple(
-                key
-                for key in c.Tests.MAKE_ISOLATION_ENV_KEYS
-                if env is None or key not in env
+            options=m.Cli.ProcessOptions(
+                env={
+                    "GH_CONFIG_DIR": os.devnull,
+                    "DBUS_SESSION_BUS_ADDRESS": "disabled:",
+                    **(env or {}),
+                },
+                remove_env_keys=tuple(
+                    key
+                    for key in c.Tests.MAKE_ISOLATION_ENV_KEYS
+                    if env is None or key not in env
+                ),
             ),
+            capture=capture,
         )
 
     @staticmethod
@@ -259,7 +260,7 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def cli_shim(bin_dir: Path, name: str) -> Path:
-        """Provide an executable that records its arguments instead of reaching a service.
+        """Provide an executable that records arguments without reaching a service.
 
         ``gh`` and ``uv publish`` talk to GitHub and to a package index; a
         unit test proves the protocol's command contract against a recorded

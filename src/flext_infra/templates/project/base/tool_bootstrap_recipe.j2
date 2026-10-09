@@ -43,7 +43,16 @@ mise -C "{{ project_root }}" install --yes{% for tool in install_tools %} "{{ to
 		printf 'ERROR: mise is not installed; install it (https://mise.run) and retry\n' >&2; \
 		exit 2; \
 	fi; \
-	mise_pin="$$( {{ mise_lock_pin_reader(project_root, mise_selector) }} )"; \
+	mise_pin=; \
+	mise_lock_resolved=0; \
+	if [ -f "{{ project_root }}/mise.lock" ]; then \
+		mise_pin="$$( {{ mise_lock_pin_reader(project_root, mise_selector) }} )"; \
+	fi; \
+	if [ -z "$$mise_pin" ] && [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
+		mise -C "{{ project_root }}" lock --upgrade --bump; \
+		mise_lock_resolved=1; \
+		mise_pin="$$( {{ mise_lock_pin_reader(project_root, mise_selector) }} )"; \
+	fi; \
 	if [ -z "$$mise_pin" ]; then \
 		printf 'ERROR: mise.lock pins no {{ mise_selector }} release; run make upg\n' >&2; \
 		exit 2; \
@@ -90,7 +99,7 @@ mise -C "{{ project_root }}" install --yes{% for tool in install_tools %} "{{ to
 		printf 'ERROR: recovered Mise %s differs from the mise.lock pin %s; delete %s and run make setup\n' "$$mise_receipt" "$$mise_pin" "$$mise_bootstrap_bin" >&2; \
 		exit 2; \
 	fi; \
-	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
+	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ] && [ "$$mise_lock_resolved" = "0" ]; then \
 		"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" lock --upgrade --bump; \
 	fi; \
 	"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" install --yes{% for tool in install_tools %} "{{ tool }}"{% endfor %}; \
