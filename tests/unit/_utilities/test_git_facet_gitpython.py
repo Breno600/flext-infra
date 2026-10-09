@@ -315,15 +315,23 @@ class TestsFlextInfraGitFacet:
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """A missing typed integration owner is a visible, effect-free refusal."""
+        """A standalone remote that declares no default branch is refused.
+
+        A standalone checkout declares its integration line through its forge
+        default branch (the remote ``HEAD``); an empty remote declares none,
+        and admission refuses visibly without guessing a branch or effects.
+        """
         repository = u.Tests.git_repository(tmp_path)
+        empty_remote = tmp_path / "empty-remote.git"
+        u.Tests.git_run(tmp_path, "init", "--bare", str(empty_remote))
+        u.Tests.git_run(repository, "remote", "set-url", "origin", str(empty_remote))
         before = self._lane_bytes(repository)
         tm.that(
             main(["workspace", "verify-lane", "--repo-root", str(repository)]),
             eq=1,
         )
         output = capsys.readouterr()
-        tm.that(output.out + output.err, has="has no superproject")
+        tm.that(output.out + output.err, has="declares no default branch")
         tm.that(self._lane_bytes(repository), eq=before)
 
     @staticmethod
@@ -804,9 +812,11 @@ class TestsFlextInfraGitFacet:
             ),
         )
 
+        u.Tests.git_run(repository, "fetch", "--quiet", "origin")
+
         tm.fail(
             u.Infra.git_remove_clean_worktree(repository, lane),
-            has="has no superproject",
+            has="retirement refused",
         )
 
         assert lane.is_dir()
