@@ -154,7 +154,21 @@ class FlextInfraMypyGate(FlextInfraGate):
                 report_json=True,
                 verbose=True,
                 profile_output=destination,
+                report_file=self._machine_report_path(project_dir, ctx),
             ),
+        )
+
+    @staticmethod
+    def _machine_report_path(project_dir: Path, ctx: m.Infra.GateContext) -> Path:
+        """Name the owned file receiving the machine-channel JSON diagnostics.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
+        return (
+            ctx.reports_dir
+            / f"{project_dir.name}-{c.Infra.MYPY}-machine-report.jsonl"
         )
 
     @override
@@ -257,6 +271,12 @@ class FlextInfraMypyGate(FlextInfraGate):
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Validate Mypy's one-JSON-object-per-line report into findings.
 
+        The machine channel is the owned report file the report runner wrote:
+        every diagnostic line is a JSON object there, whatever the checker
+        release shares its standard-output stream with. Without the file the
+        standard output remains the channel, and its verbose progress lines
+        stay the tool's own human stream, never diagnostics.
+
         Returns:
             The run's verdict and its diagnostics, stderr failures or limit hit.
 
@@ -277,10 +297,16 @@ class FlextInfraMypyGate(FlextInfraGate):
                     ),
                 ),
             )
-        for raw_line in result.stdout.splitlines():
+        machine_report = self._machine_report_path(project_dir, ctx)
+        report_lines: t.StrSequence = (
+            machine_report.read_text(encoding=c.Cli.ENCODING_DEFAULT).splitlines()
+            if machine_report.is_file()
+            else result.stdout.splitlines()
+        )
+        for raw_line in report_lines:
             if not raw_line.strip():
                 continue
-            if raw_line.startswith("LOG:"):
+            if not machine_report.is_file() and raw_line.startswith("LOG:"):
                 # Mypy verbose progress channel (--verbose runs). LOG lines are
                 # the tool's own human stream, never diagnostics; the machine
                 # contract of this gate is one JSON object per line.

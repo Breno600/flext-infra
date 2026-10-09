@@ -289,6 +289,14 @@ class TestsFlextInfraWorkspaceFleetGaps:
         member = u.Tests.WorktreeFixture.governed_workspace_with_member(
             root, member=self.MEMBER
         )
+        pyproject = member / c.PYPROJECT_FILENAME
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                pyproject,
+                pyproject.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+                + "\n[tool.pyrefly]\n",
+            )
+        )
         selected, project = self._quality_receipt(
             member, tmp_path / "quality", (c.Infra.LINT, c.Infra.PYREFLY)
         )
@@ -382,6 +390,39 @@ class TestsFlextInfraWorkspaceFleetGaps:
         row = next(row for row in self._receipt(root).repos if row.name == self.MEMBER)
         tm.that(row.lint_findings, eq=None)
         tm.that(row.pyrefly_findings, eq=None)
+
+    def test_failed_native_verdict_is_not_a_quality_count(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Corrupting a real receipt's native verdict must fail, not publish zero."""
+        root = tmp_path / "workspace"
+        member = u.Tests.WorktreeFixture.governed_workspace_with_member(
+            root, member=self.MEMBER
+        )
+        selected, project = self._quality_receipt(
+            member, tmp_path / "quality", (c.Infra.LINT,)
+        )
+        report = m.Infra.SarifReport.model_validate_json(selected.read_bytes())
+        summary = report.properties
+        assert summary is not None
+        execution = project.gates[c.Infra.LINT].model_copy(
+            update={"outcome": c.Infra.ToolOutcome.ERROR}
+        )
+        invalid_project = project.model_copy(update={"gates": {c.Infra.LINT: execution}})
+        invalid_report = report.model_copy(
+            update={
+                "properties": summary.model_copy(update={"results": (invalid_project,)})
+            }
+        )
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                selected, invalid_report.model_dump_json(round_trip=True)
+            )
+        )
+        with self._gh_on_path(tmp_path, "exit 0\n"):
+            tm.that(self._fleet_gaps(root, selected), ne=0)
+        tm.that((root / c.Infra.FLEET_GAPS_REPORT_RELATIVE_PATH).exists(), eq=False)
 
     def test_file_scoped_receipt_never_claims_full_project_quality(
         self,

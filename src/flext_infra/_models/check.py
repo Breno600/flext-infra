@@ -180,6 +180,15 @@ class FlextInfraModelsCheck:
             Path | None,
             m.Field(description="Optional cProfile output destination"),
         ] = None
+        report_file: Annotated[
+            Path | None,
+            m.Field(
+                description=(
+                    "Owned file receiving one JSON diagnostic per line through "
+                    "the machine-channel report runner"
+                ),
+            ),
+        ] = None
 
     class FixPyreflyConfigCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-pyrefly-settings``."""
