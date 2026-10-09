@@ -204,14 +204,16 @@ class FlextInfraExtraPathsSyncMixin:
                 # report breakage and silently skip writing the derived paths.
                 if not pyproject.exists():
                     continue
-                synced = self._sync_target(
+                sync_result = self.sync_one(
                     pyproject,
                     dry_run=dry_run,
                     is_root=project_dir == self.root,
                 )
-                if synced.failure:
-                    return r[int].from_failure(synced)
-                updated_selected += int(synced.value)
+                if sync_result.failure:
+                    return r[int].from_failure(sync_result)
+                if sync_result.value and (not dry_run):
+                    updated_selected += 1
+                    u.Cli.info(f"Updated {pyproject}")
             return r[int].ok(updated_selected)
         # The selector-free operation owns the root AND
         # every managed member. Syncing only the root left each member's
@@ -229,35 +231,17 @@ class FlextInfraExtraPathsSyncMixin:
                 if target == self.root:
                     return r[int].fail(f"Missing {pyproject}")
                 continue
-            synced = self._sync_target(
+            sync_result = self.sync_one(
                 pyproject,
                 dry_run=dry_run,
                 is_root=target == self.root,
             )
-            if synced.failure:
-                return r[int].from_failure(synced)
-            updated += int(synced.value)
+            if sync_result.failure:
+                return r[int].from_failure(sync_result)
+            if sync_result.value and (not dry_run):
+                updated += 1
+                u.Cli.info(f"Updated {pyproject}")
         return r[int].ok(updated)
-
-    def _sync_target(
-        self,
-        pyproject: Path,
-        *,
-        dry_run: bool,
-        is_root: bool,
-    ) -> p.Result[bool]:
-        """Sync one project's pyproject and report whether it changed.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        sync_result = self.sync_one(pyproject, dry_run=dry_run, is_root=is_root)
-        if sync_result.failure:
-            return r[bool].from_failure(sync_result)
-        if sync_result.value and not dry_run:
-            u.Cli.info(f"Updated {pyproject}")
-        return r[bool].ok(value=sync_result.value)
 
 
 __all__: list[str] = ["FlextInfraExtraPathsSyncMixin"]

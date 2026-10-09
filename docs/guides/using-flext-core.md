@@ -59,25 +59,14 @@ from flext_core import p, r
 
 
 def safe_divide(a: float, b: float) -> p.Result[float]:
-    """Divide ``a`` by ``b`` and fail explicitly on a zero divisor.
-
-    Returns:
-        The quotient, or a ``division_by_zero`` failure.
-
-    """
     if b == 0:
         return r[float].fail("division_by_zero")
     return r[float].ok(a / b)
 
 
-expected_quotient = 5.0
-quotient = safe_divide(10, 2)
-if not quotient.success or not isclose(quotient.value, expected_quotient):
-    message = "Expected a successful quotient"
-    raise RuntimeError(message)
-if not safe_divide(10, 0).failure:
-    message = "Expected division by zero to fail"
-    raise RuntimeError(message)
+assert safe_divide(10, 2).success
+assert isclose(safe_divide(10, 2).value, 5.0)
+assert safe_divide(10, 0).failure
 ```
 
 ## Settings
@@ -86,9 +75,7 @@ if not safe_divide(10, 0).failure:
 from flext_core import FlextSettings
 
 settings = FlextSettings.fetch_global()
-if not isinstance(settings.model_dump(), dict):
-    message = "Expected settings to dump to a mapping"
-    raise TypeError(message)
+assert isinstance(settings.model_dump(), dict)
 ```
 
 Subprojects extend `FlextSettings` with their own `env_prefix`:
@@ -98,8 +85,6 @@ from flext_core import FlextSettings, m
 
 
 class GreetingSettings(FlextSettings):
-    """Greeting settings read from ``GREETING_*`` environment variables."""
-
     model_config = m.SettingsConfigDict(env_prefix="GREETING_", extra="forbid")
 ```
 
@@ -112,10 +97,8 @@ container = FlextContainer()
 container.bind("service", "ready")
 resolved: p.Result[str] = container.resolve("service", type_cls=str)
 
-expected_service = "ready"
-if not resolved.success or resolved.value != expected_service:
-    message = "Expected the bound service to resolve"
-    raise RuntimeError(message)
+assert resolved.success
+assert resolved.value == "ready"
 ```
 
 ## Logging
@@ -136,20 +119,15 @@ from flext_core import p, r, s
 
 
 class GreetingService(s[str]):
-    """Service returning a fixed greeting."""
-
     @override
     def execute(self) -> p.Result[str]:
-        """Return the greeting as a successful result."""
         return r[str].ok("Hello!")
 
 
-expected_greeting = "Hello!"
 runtime = GreetingService.fetch_global()
 result = runtime.execute()
-if not result.success or result.value != expected_greeting:
-    message = "Expected the greeting service to succeed"
-    raise RuntimeError(message)
+assert result.success
+assert result.value == "Hello!"
 ```
 
 ## Good practices

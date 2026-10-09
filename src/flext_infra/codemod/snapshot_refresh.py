@@ -10,9 +10,8 @@ from typing import override
 
 from flext_cli import cli
 
-from flext_infra import p, r, t, u
-from flext_infra.base import FlextInfraServiceBase
-from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+from flext_infra import FlextInfraServiceBase, p, r, t, u
+from flext_infra.codemod import FlextInfraModGateEngine
 
 
 class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue]):

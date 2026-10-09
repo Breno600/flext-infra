@@ -10,7 +10,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, config, m, r, u
+from flext_infra import c, m, r, u
 from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
 
 if TYPE_CHECKING:
@@ -86,66 +86,14 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             for entry in index.packages_by_dir.values()
             if entry.package_dir in selected_dirs
         }
-        generated_dirs = tuple(
-            generated_dir
-            for package_dir in selected_dirs
-            for generated_dir in cls._generated_source_dirs(package_dir)
-        )
-        generated_modules = {
-            module
-            for generated_dir in generated_dirs
-            for module in cls._generated_source_modules(generated_dir)
-        }
-        generated_inits = {
-            generated_dir / c.Infra.INIT_PY for generated_dir in generated_dirs
-        }
         return cls._snapshot_paths(
-            module_paths | template_paths | generated_modules,
-            init_paths | project_metadata_paths | generated_inits,
-        )
-
-    @staticmethod
-    def _generated_source_dirs(package_dir: Path) -> t.VariadicTuple[Path]:
-        """Return the generated source trees directly inside one package.
-
-        The names come from the codegen artifact SSOT (``generated_source``).
-        Rope never indexes these trees, so their package initializer is
-        planned from the indexed parent that contains them.
-
-        Returns:
-            The resolved generated source directories, sorted.
-
-        """
-        names = frozenset(config.Infra.codegen.generated_sources)
-        if not names or not package_dir.is_dir():
-            return ()
-        return tuple(
-            sorted(
-                child.resolve()
-                for child in package_dir.iterdir()
-                if child.name in names and child.is_dir() and not child.is_symlink()
-            ),
-        )
-
-    @staticmethod
-    def _generated_source_modules(generated_dir: Path) -> t.VariadicTuple[Path]:
-        """Return the generator-owned Python modules of one generated tree.
-
-        Returns:
-            Every module other than the package initializer, sorted.
-
-        """
-        return tuple(
-            sorted(
-                module.resolve()
-                for module in generated_dir.glob(f"*{c.Infra.EXT_PYTHON}")
-                if module.name != c.Infra.INIT_PY and module.is_file()
-            ),
+            module_paths | template_paths,
+            init_paths | project_metadata_paths,
         )
 
     @staticmethod
     def _verify_snapshots(
-        snapshots: t.MappingKV[Path, m.Cli.AtomicFileState],
+        snapshots: MutableMapping[Path, m.Cli.AtomicFileState],
     ) -> p.Result[bool]:
         """Verify the captured source identities through the atomic file owner.
 
@@ -239,63 +187,6 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             ),
         ))
 
-    def _generated_source_file_plans(
-        self,
-        plan: m.Infra.LazyInitPlan,
-        *,
-        project: Path,
-        snapshots: t.MappingKV[Path, m.Cli.AtomicFileState],
-    ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
-        """Plan the static initializer of each generated source tree.
-
-        A tree that holds generator modules is a regular package with a
-        generated static initializer; a tree left without modules loses the
-        initializer generation wrote for it. A foreign initializer in an
-        empty tree is not generation's to remove.
-
-        Returns:
-            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
-
-        """
-        plans: list[m.Infra.CodegenFilePlan] = []
-        for generated_dir in self._generated_source_dirs(plan.context.pkg_dir):
-            init_path = generated_dir / c.Infra.INIT_PY
-            init_before = snapshots.get(init_path)
-            if init_before is None:
-                return r[tuple[m.Infra.CodegenFilePlan, ...]].fail(
-                    f"lazy-init target was not snapshotted: {init_path}",
-                )
-            if self._generated_source_modules(generated_dir):
-                generated_plan = m.Infra.LazyInitPlan(
-                    context=m.Infra.LazyInitPackageContext(
-                        pkg_dir=generated_dir,
-                        init_path=init_path,
-                        current_pkg=f"{plan.context.current_pkg}.{generated_dir.name}",
-                        surface=plan.context.surface,
-                        generated_init=self._is_generated(init_before.content),
-                        importable=True,
-                    ),
-                    action=c.Infra.LazyInitAction.WRITE,
-                    lazy_map={},
-                    eager_dunders={},
-                    inline_constants={},
-                )
-                desired: bytes | None = FlextInfraCodegenGeneration.render_init(
-                    generated_plan,
-                ).encode(c.Cli.ENCODING_DEFAULT)
-            elif self._is_generated(init_before.content):
-                desired = None
-            else:
-                continue
-            plans.append(
-                self._file_plan(
-                    project=project,
-                    before=init_before,
-                    desired_content=desired,
-                ),
-            )
-        return r[tuple[m.Infra.CodegenFilePlan, ...]].ok(tuple(plans))
-
     def _build_file_plans(
         self,
         plans: t.SequenceOf[m.Infra.LazyInitPlan],
@@ -332,16 +223,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
                 return r[tuple[m.Infra.CodegenFilePlan, ...]].from_failure(
                     artifact_plans,
                 )
-            generated_plans = self._generated_source_file_plans(
-                plan,
-                project=package_entry.project_root.resolve(),
-                snapshots=snapshots,
-            )
-            if generated_plans.failure:
-                return r[tuple[m.Infra.CodegenFilePlan, ...]].from_failure(
-                    generated_plans,
-                )
-            for artifact_plan in (*artifact_plans.value, *generated_plans.value):
+            for artifact_plan in artifact_plans.value:
                 existing = by_path.get(artifact_plan.path)
                 if existing is not None and existing != artifact_plan:
                     return r[tuple[m.Infra.CodegenFilePlan, ...]].fail(

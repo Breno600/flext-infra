@@ -16,15 +16,7 @@
 
 Infra:
   codegen:
-    checkout_submodules_overrides:
-      # The flext workspace gates render member-derived surfaces (uv-workspace
-      # members, per-member docs sections) from DISK STATE: with the submodules
-      # absent, the generator's render diverges from any submodule-initialized
-      # commit and the conform drift gate can never pass (merge-admin
-      # 2026-10-07, root CI evidence; the root CI cure 40a06e4dbe #459). The
-      # CI checkout materializes the members so the render matches the
-      # canonical committed state.
-      flext: recursive
+    checkout_submodules_overrides: {}
 
     make:
       # Per-profile overrides of the custom handler policy.
@@ -38,28 +30,14 @@ Infra:
     layout:
       # Consumer ecosystem root keep-lists.
       project_overrides:
-        # ai-hub provider discovery requires the workspace root sgconfig.yml.
-        flext:
-          keep_root_files:
-            - sgconfig.yml
-          archive_names:
-            - CHANGELOG.md
         flext-cli:
           archive_names:
             - settings.json
-            - CHANGELOG.md
           gitignore_additions:
             - settings.json
         flext-core:
           archive_names:
             - config.json
-            - CHANGELOG.md
-        flext-infra:
-          archive_names:
-            - CHANGELOG.md
-        flext-tests:
-          archive_names:
-            - CHANGELOG.md
         flext-tap-oracle-wms:
           archive_names:
             - config.json

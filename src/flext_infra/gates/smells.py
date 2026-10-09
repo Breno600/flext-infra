@@ -268,14 +268,6 @@ class FlextInfraSmellsGate(FlextInfraGate):
             code=code,
             message=cls._enriched_message(code, sarif_text),
             severity=str(c.Infra.GateSeverity.ERROR.value),
-            locations=tuple(
-                m.Infra.SarifLocation.model_validate(location)
-                for location in u.Cli.json_deep_mapping_list(result, "locations")
-            ),
-            related_locations=tuple(
-                m.Infra.SarifLocation.model_validate(location)
-                for location in u.Cli.json_deep_mapping_list(result, "relatedLocations")
-            ),
         )
 
     @classmethod

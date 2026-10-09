@@ -219,6 +219,9 @@ if TYPE_CHECKING:
     from flext_infra._utilities._rope_source_bases_inventory_collector import (
         FlextInfraUtilitiesRopeSourceBindingCollector,
     )
+    from flext_infra._utilities._rope_source_bases_runtime import (
+        FlextInfraUtilitiesRopeSourceBasesRuntime,
+    )
     from flext_infra._utilities._semantic_cutover.alias_cst import (
         FlextInfraUtilitiesSemanticCutoverAliasCst,
     )
@@ -476,7 +479,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraMypyDarwinSupervisor",
     "FlextInfraMypyProfiler",
     "FlextInfraRopeProject",
-    "FlextInfraRopeRuleLoaderService",
     "FlextInfraUtilitiesBase",
     "FlextInfraUtilitiesCodegen",
     "FlextInfraUtilitiesCodegenFacades",
@@ -624,6 +626,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesRopeRuntimeTypes",
     "FlextInfraUtilitiesRopeSource",
     "FlextInfraUtilitiesRopeSourceBases",
+    "FlextInfraUtilitiesRopeSourceBasesRuntime",
     "FlextInfraUtilitiesRopeSourceBindingCollector",
     "FlextInfraUtilitiesRopeStructure",
     "FlextInfraUtilitiesSemanticCutover",
@@ -833,8 +836,7 @@ install_lazy_exports(
         "FlextInfraUtilitiesRopeRuntimeTypes": ".rope_runtime_types",
         "FlextInfraUtilitiesRopeSource": ".rope_source",
         "FlextInfraUtilitiesRopeSourceBases": ".rope_source_bases",
-        "FlextInfraUtilitiesRopeSourceBasesAliases": "._rope_source_bases_aliases",
-        "FlextInfraUtilitiesRopeSourceBasesInventory": "._rope_source_bases_inventory",
+        "FlextInfraUtilitiesRopeSourceBasesRuntime": "._rope_source_bases_runtime",
         "FlextInfraUtilitiesRopeSourceBindingCollector": (
             "._rope_source_bases_inventory_collector"
         ),

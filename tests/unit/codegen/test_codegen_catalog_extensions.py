@@ -278,9 +278,9 @@ class TestsFlextInfraCodegenCatalogExtensions:
         toolchain = config.Infra.codegen.toolchain
         mise = tm.not_none(u.Tests.planned_text(plan, c.Infra.MISE_TOML_FILENAME))
         tm.that(mise, has=f'python = "{toolchain.python_version}"')
-        tm.that(mise, has=f'direnv = "{toolchain.tool_versions["direnv"]}"')
-        tm.that(mise, has=f'go = "{toolchain.tool_versions["go"]}"')
-        tm.that(mise, has=f'make = "{toolchain.tool_versions["make"]}"')
+        tm.that(mise, has=f'direnv = "{toolchain.direnv_version}"')
+        tm.that(mise, has=f'go = "{toolchain.go_version}"')
+        tm.that(mise, has=f'make = "{toolchain.make_version}"')
         tm.that(mise, lacks="credential_command")
         tm.that(
             mise,
@@ -306,8 +306,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         config_dir = tmp_path / "config"
         config_dir.mkdir()
         (config_dir / "tooling.yaml").write_text(
-            "ManagedArtifacts:\n  Mise:\n    tools:\n"
-            "      node:\n        version: '26'\n",
+            "ManagedArtifacts:\n  Mise:\n    tools:\n      node:\n        version: '26'\n",
             encoding="utf-8",
         )
         # The composer reads the committed catalog: the overlay must be in HEAD.
@@ -346,11 +345,9 @@ class TestsFlextInfraCodegenCatalogExtensions:
         u.Tests.WorktreeFixture.initialize_governed_project(
             member_source,
             member.distribution,
-            beads=u.Tests.BeadsIdentity(
-                workspace=member.name,
-                database=member.name,
-                issue_prefix=member.name,
-            ),
+            workspace=member.name,
+            database=member.name,
+            issue_prefix=member.name,
         )
         member_head = tm.ok(
             u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=member_source),
@@ -380,11 +377,9 @@ class TestsFlextInfraCodegenCatalogExtensions:
         u.Tests.WorktreeFixture.initialize_governed_project(
             repository_root,
             root.distribution,
-            beads=u.Tests.BeadsIdentity(
-                workspace=root.name,
-                database=root.name,
-                issue_prefix=root.name,
-            ),
+            workspace=root.name,
+            database=root.name,
+            issue_prefix=root.name,
         )
         tm.ok(
             u.Cli.run_checked(

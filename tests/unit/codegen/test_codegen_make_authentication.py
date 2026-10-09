@@ -11,7 +11,6 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
 from tests import c, p, t, u
 
 pytestmark = pytest.mark.slow
@@ -38,18 +37,18 @@ class TestsFlextInfraCodegenMakeAuthentication:
         )
         tm.ok(u.Tests.create_python_environment(project_root))
         (project_root / "auth_probe.py").write_text(
-            "import os\n"
-            "assert all(os.environ[name] == os.environ['EXPECTED_CREDENTIAL'] "
-            "for name in ('GITHUB_TOKEN', 'GH_TOKEN', 'MISE_GITHUB_TOKEN'))\n"
+            "import os, sys\n"
+            "assert all(os.environ[name] == sys.argv[1] for name in "
+            "('GITHUB_TOKEN', 'GH_TOKEN', 'MISE_GITHUB_TOKEN'))\n"
             "assert 'GITHUB_API_TOKEN' not in os.environ\n"
             "print('environment-authenticated')\n",
             encoding="utf-8",
         )
         (project_root / "custom.mk").write_text(
             "_custom-status:\n"
-            "\t@$(GITHUB_AUTH_DIAGNOSTICS)\n"
-            '\t@mise -C "$(PROJECT_ROOT)" exec -- '
-            '"$(RUNTIME_PYTHON)" "$(PROJECT_ROOT)/auth_probe.py"\n',
+            '\t@"$(SETUP_MISE)" -C "$(PROJECT_ROOT)" exec -- '
+            '"$(RUNTIME_PYTHON)" "$(PROJECT_ROOT)/auth_probe.py" '
+            '"$(EXPECTED_CREDENTIAL)"\n',
             encoding="utf-8",
         )
         process = tm.ok(
@@ -65,26 +64,6 @@ class TestsFlextInfraCodegenMakeAuthentication:
             msg=process.stdout + process.stderr,
         )
         tm.that(process.stdout, has="environment-authenticated")
-        source = next(
-            (
-                name
-                for name in ("GITHUB_TOKEN", "GH_TOKEN", "MISE_GITHUB_TOKEN")
-                if env.get(name)
-            ),
-            "gh",
-        )
-        extraction = "0" if source == "gh" else "not-selected"
-        tm.that(
-            process.stdout,
-            has=f"github-auth source={source} extraction-exit={extraction} present=yes",
-        )
-        tm.that(
-            process.stdout,
-            has=(
-                "github-auth source=GITHUB_TOKEN "
-                "extraction-exit=not-selected present=yes"
-            ),
-        )
         tm.that(process.stdout + process.stderr, lacks=expected)
         return process
 
@@ -132,14 +111,11 @@ class TestsFlextInfraCodegenMakeAuthentication:
             "    git_protocol: https\n",
             encoding="utf-8",
         )
-        process = TestsFlextInfraCodegenMakeAuthentication._probe_credential(
+        TestsFlextInfraCodegenMakeAuthentication._probe_credential(
             tmp_path / "project",
             selected,
             {"GH_CONFIG_DIR": str(gh_config)},
         )
-        tm.that(process.stdout, has="command-exit=0 command=")
-        tm.that(process.stdout, has="physical-command=")
-        tm.that(process.stdout, has="gh-config-override=yes")
 
     @staticmethod
     @pytest.mark.parametrize("verb", ["status", "help", "clean"])
@@ -162,65 +138,74 @@ class TestsFlextInfraCodegenMakeAuthentication:
             ),
         )
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
-        if verb == "status":
-            tm.that(process.stdout, has="github-auth source=gh extraction-exit=")
-            tm.that(process.stdout, has="present=no ci=unset")
         tm.that(
             u.Infra.runtime_environment_dir(project_root).exists(),
             eq=verb == "status",
         )
 
     @staticmethod
-    @pytest.mark.parametrize("verb", ["setup", "upg"])
-    @pytest.mark.parametrize("local_ci", [False, True])
-    def test_network_bootstrap_retains_credential_failure_before_first_lock(
+    @pytest.mark.remote
+    def test_setup_reuses_provisioned_tools_without_credential(
         tmp_path: Path,
-        verb: str,
-        *,
-        local_ci: bool,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> None:
-        """Real gh failure stops public provisioning before Mise can write locks."""
+        """A locked checkout provisions its own environment without authentication.
+
+        No GITHUB_TOKEN is set and the isolated harness leaves gh without a
+        stored credential, so the bootstrap runs with no credential at all.
+        """
         profile = c.Infra.MakeProfile.STANDALONE
-        project_root, _ = u.Tests.render_make_environment(
+        project_root = u.Tests.resolved_make_checkout(
+            resolved_make_templates[profile],
             tmp_path,
             profile,
         )
-        locks = {
-            path: path.read_bytes()
-            for path in (
-                project_root / c.Infra.MISE_LOCK_FILENAME,
-                project_root / "uv.lock",
-            )
-            if path.exists()
-        }
-        ci = config.Infra.codegen.make.ci
         process = tm.ok(
             u.Tests.run_isolated_make(
-                ["--no-print-directory", verb],
+                ["--no-print-directory", "setup"],
                 cwd=project_root,
-                env={ci.variable: ci.local_value} if local_ci else None,
             ),
         )
-        tm.that(u.Cli.process_succeeded(process.outcome), eq=False)
-        diagnostic = next(
-            line
-            for line in process.stdout.splitlines()
-            if line.startswith("github-auth ")
-        )
-        tm.that(diagnostic, has="source=gh")
-        tm.that(diagnostic, has="present=no")
         tm.that(
-            diagnostic,
-            has=f"ci={'local' if local_ci else 'unset'}",
+            u.Cli.process_succeeded(process.outcome),
+            eq=True,
+            msg=process.stdout + process.stderr,
         )
-        extraction_exit = diagnostic.split("extraction-exit=", 1)[1].split()[0]
-        tm.that(int(extraction_exit), ne=0)
-        tm.that(
-            process.stderr,
-            has=f"selected gh auth token failed (exit {extraction_exit})",
+        tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=True)
+
+    @staticmethod
+    @pytest.mark.remote
+    def test_invalid_explicit_token_fails_at_the_native_mise_backend(
+        tmp_path: Path,
+    ) -> None:
+        """A selected invalid credential fails at the backend without a retry."""
+        project_root, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
-        tm.that(process.stderr, has=f"Error {extraction_exit}")
-        tm.that(process.stdout + process.stderr, lacks="oauth_token")
-        tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=False)
-        for path, content in locks.items():
-            tm.that(path.read_bytes(), eq=content)
+        # The credential proves itself only where mise actually consults it:
+        # the GitHub artifact-attestation verification of a cold install. A
+        # warm storage skips installation entirely and would never reach the
+        # rejection, so the bootstrap runs on this fixture's own isolated
+        # Mise storage.
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "upg"],
+                cwd=project_root,
+                env={
+                    "GITHUB_TOKEN": "invalid-test-credential",
+                    u.Infra.mise_bootstrap_environment().storage_root_variable: str(
+                        u.Tests.isolated_mise_bootstrap_storage(project_root),
+                    ),
+                },
+            ),
+        )
+
+        tm.that(process.outcome.raw_return_code, ne=0)
+        # The loud failure must come from the mise backend stage itself. The
+        # exact GitHub response body is external evidence, not the contract:
+        # an invalid token measures `401 Unauthorized: Bad credentials`, and
+        # fleet-load rate limiting measures `403` with a rate-limit body — the
+        # run still dies loudly at the backend in both shapes.
+        tm.that(process.stdout + process.stderr, has="mise ERROR")
+        tm.that(process.stderr, lacks="GitHub credential is absent")

@@ -7,12 +7,16 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from flext_infra import c, t
-from flext_infra._utilities import FlextInfraUtilitiesGit
+from flext_infra import c
 from flext_infra._utilities._project_discovery_shape import (
     FlextInfraUtilitiesProjectDiscoveryShapeMixin,
 )
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesProjectDiscoveryCandidatesMixin(
@@ -38,10 +42,12 @@ class FlextInfraUtilitiesProjectDiscoveryCandidatesMixin(
         """
         roots: t.MutableSequenceOf[Path] = []
         effective_scan_dirs = scan_dirs or frozenset()
-        declared = FlextInfraUtilitiesGit.git_submodule_declarations(repository_root)
-        if declared.failure:
-            raise ValueError(declared.error or "invalid .gitmodules")
-        configured_projects = tuple(item.path.as_posix() for item in declared.value)
+        declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
+            repository_root,
+        )
+        if declared_paths.failure:
+            raise ValueError(declared_paths.error or "invalid .gitmodules")
+        configured_projects = tuple(path.as_posix() for path in declared_paths.value)
         configured_project_set = frozenset(configured_projects)
         resolved_repository_root = repository_root.resolve()
         configured_entries: set[Path] = set()

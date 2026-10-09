@@ -25,7 +25,6 @@ class FlextInfraPyrightGate(FlextInfraGate):
     gate_name: ClassVar[str] = "Pyright"
     can_fix: ClassVar[bool] = False
     requires_python_targets: ClassVar[bool] = True
-    check_timeout: ClassVar[int] = c.Infra.TIMEOUT_LONG
 
     @override
     def _get_check_dirs(
@@ -51,10 +50,10 @@ class FlextInfraPyrightGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Run Pyright on the workspace interpreter with its JSON report.
+        """Build check command.
 
         Returns:
-            The Pyright invocation bound to ``sys.executable``.
+            The resulting ``t.StrSequence``.
 
         """
         _ = project_dir
@@ -85,16 +84,28 @@ class FlextInfraPyrightGate(FlextInfraGate):
         )
 
     @override
+    def _check_timeout(self, project_dir: Path, ctx: m.Infra.GateContext) -> int:
+        """Check timeout.
+
+        Returns:
+            The resulting ``int``.
+
+        """
+        _ = project_dir, ctx
+        timeout: int = c.Infra.TIMEOUT_LONG
+        return timeout
+
+    @override
     def _parse_check_output(
         self,
         result: p.Cli.CommandOutput,
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Grade Pyright's JSON report together with its own summary counts.
+        """Parse check output.
 
         Returns:
-            The run's verdict and its diagnostics, stderr failures or lost scan.
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
 
         """
         _ = ctx
@@ -123,7 +134,7 @@ class FlextInfraPyrightGate(FlextInfraGate):
                 ),
             )
         report = validated.value
-        diagnostics = tuple(
+        issues: t.MutableSequenceOf[m.Infra.Issue] = [
             m.Infra.Issue(
                 file=diag.file,
                 line=diag.range.start.line + 1 if diag.range is not None else 0,
@@ -133,20 +144,37 @@ class FlextInfraPyrightGate(FlextInfraGate):
                 severity=diag.severity,
             )
             for diag in report.general_diagnostics
-        )
+        ]
         if report.summary.files_analyzed == 0:
             # The gate is selected only for projects with Python targets, so an
             # empty analysis is a lost scan, never a pass; the report's own
             # diagnostics travel with it because they carry the cause.
             return False, (
-                *diagnostics,
+                *issues,
                 self._malformed_report_issue(
                     "pyright analyzed no files for a project with Python targets",
                     tool=c.Infra.PYRIGHT,
                     file=str(project_dir),
                 ),
             )
-        issues = self._checker_issues(result, project_dir, diagnostics)
+        issues.extend(self._checker_stderr_issues(result, project_dir))
+        if (not issues) and not u.Cli.process_succeeded(result.outcome):
+            message = (result.stderr or result.stdout).strip()
+            if not message:
+                message = (
+                    f"pyright exited with code {result.outcome.raw_return_code} "
+                    "without JSON diagnostics"
+                )
+            issues.append(
+                m.Infra.Issue(
+                    file=c.PYPROJECT_FILENAME,
+                    line=1,
+                    column=1,
+                    code="pyright-exec",
+                    message=message,
+                    severity=c.Infra.ERROR,
+                ),
+            )
         return (
             u.Cli.process_succeeded(result.outcome)
             and not report.summary.error_count

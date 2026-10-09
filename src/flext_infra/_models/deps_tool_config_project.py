@@ -32,10 +32,6 @@ class FlextInfraModelsDepsToolConfigProject(
             | None,
             m.Field(description="Gitignore section declared by this source"),
         ] = None
-        Ruff: Annotated[
-            FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectRuffConfig | None,
-            m.Field(description="Ruff section declared by this source"),
-        ] = None
 
     class ProjectConfigDocument(m.ArbitraryTypesModel):
         """Relevant managed-artifact slice loaded from project config files."""

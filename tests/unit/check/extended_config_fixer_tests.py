@@ -226,14 +226,11 @@ class TestsFlextInfraExtendedConfigFixer:
                 "tool",
                 "pyrefly",
             )
-            # Declared tool globs plus the generated-source trees of the
-            # codegen artifact key: the one exclusion every analyzer shares.
             tm.that(
                 pyrefly["project-excludes"],
-                eq=sorted({
-                    *config.Infra.tooling.tools.pyrefly.project_exclude_globs,
-                    *config.Infra.codegen.generated_source_globs,
-                }),
+                eq=sorted(
+                    set(config.Infra.tooling.tools.pyrefly.project_exclude_globs),
+                ),
             )
 
     class TestConfigFixerRun:

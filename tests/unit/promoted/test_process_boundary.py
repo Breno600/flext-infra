@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import dataclasses
 import os
 import select
 import signal
@@ -16,21 +15,10 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 
+from tests import t
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
-
-    from tests import t
-
-
-@dataclasses.dataclass(frozen=True)
-class StreamingProbe:
-    """The live handles of one spawned streaming child."""
-
-    pid: int
-    ready_read: int
-    release_write: int
-    stdout_read: int
-    stderr_read: int
 
 
 class TestsFlextInfraPromotedProcessBoundary:
@@ -148,19 +136,17 @@ raise SystemExit(
             )
         return os.posix_spawn(cls.PYTHON, argv, env, file_actions=file_actions)
 
-    @classmethod
-    def _spawn_streaming_probe(cls, tmp_path: Path) -> StreamingProbe:
-        """Spawn the blocked child with live pipes and barrier fifos attached.
-
-        Returns:
-            The spawned streaming probe handles.
-
-        """
+    @pytest.mark.slow
+    def test_run_streams_stdout_and_stderr_before_child_completion(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Expose both streams while the child remains blocked before completion."""
         ready_fifo = tmp_path / "ready.fifo"
         release_fifo = tmp_path / "release.fifo"
         os.mkfifo(ready_fifo)
         os.mkfifo(release_fifo)
-        command = cls._write_command(
+        command = self._write_command(
             tmp_path,
             "import os, sys\n"
             "print('stdout-live', flush=True)\n"
@@ -169,14 +155,14 @@ raise SystemExit(
             "with op" + "en(os.environ['READY_FIFO'], 'w') as ready: ready.write('1')\n"
             "op" + "en(os.environ['RELEASE_FIFO']).read(1)\n",
         )
-        env = cls._probe_env()
+        env = self._probe_env()
         env["READY_FIFO"] = str(ready_fifo)
         env["RELEASE_FIFO"] = str(release_fifo)
         ready_read = os.open(ready_fifo, os.O_RDONLY | os.O_NONBLOCK)
         release_write = os.open(release_fifo, os.O_RDWR | os.O_NONBLOCK)
         stdout_read, stdout_write = os.pipe()
         stderr_read, stderr_write = os.pipe()
-        pid = cls._spawn_probe(
+        pid = self._spawn_probe(
             command,
             env=env,
             stdout=stdout_write,
@@ -184,55 +170,35 @@ raise SystemExit(
         )
         os.close(stdout_write)
         os.close(stderr_write)
-        return StreamingProbe(
-            pid=pid,
-            ready_read=ready_read,
-            release_write=release_write,
-            stdout_read=stdout_read,
-            stderr_read=stderr_read,
-        )
-
-    @pytest.mark.slow
-    def test_run_streams_stdout_and_stderr_before_child_completion(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """Expose both streams while the child remains blocked before completion."""
-        probe = self._spawn_streaming_probe(tmp_path)
         reaped = False
         try:
-            ready, _, _ = select.select(
-                (probe.ready_read,),
-                (),
-                (),
-                self.BARRIER_TIMEOUT,
-            )
+            ready, _, _ = select.select((ready_read,), (), (), self.BARRIER_TIMEOUT)
             if not ready:
                 pytest.fail("child did not reach the completion barrier")
-            if os.read(probe.ready_read, 1) != b"1":
+            if os.read(ready_read, 1) != b"1":
                 pytest.fail("child completion barrier emitted an invalid marker")
             stdout, stderr = self._read_ready({
-                probe.stdout_read: "stdout",
-                probe.stderr_read: "stderr",
+                stdout_read: "stdout",
+                stderr_read: "stderr",
             })
             if stdout != "stdout-live\n":
                 pytest.fail(f"stdout was not streamed live: {stdout!r}")
             if stderr != "stderr-live\n":
                 pytest.fail(f"stderr was not streamed live: {stderr!r}")
-            os.write(probe.release_write, b"1")
-            if self._wait_status(probe.pid) != 0:
+            os.write(release_write, b"1")
+            if self._wait_status(pid) != 0:
                 pytest.fail("successful child exit status was not preserved")
             reaped = True
         finally:
-            os.close(probe.ready_read)
-            os.close(probe.release_write)
-            os.close(probe.stdout_read)
-            os.close(probe.stderr_read)
+            os.close(ready_read)
+            os.close(release_write)
+            os.close(stdout_read)
+            os.close(stderr_read)
             if not reaped:
                 # Failure path: the child is provably still alive, so the kill
                 # and the reap must succeed; an OS contradiction escapes loud.
-                os.kill(probe.pid, signal.SIGKILL)
-                os.waitpid(probe.pid, 0)
+                os.kill(pid, signal.SIGKILL)
+                os.waitpid(pid, 0)
 
     @pytest.mark.slow
     def test_run_returns_exact_nonzero_exit_status(self, tmp_path: Path) -> None:

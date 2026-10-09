@@ -69,11 +69,9 @@ class TestsFlextInfraWorkflowCommentSpacing:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-project",
-            beads=u.Tests.BeadsIdentity(
-                workspace="fixture-workspace",
-                database="project_database",
-                issue_prefix="project-prefix",
-            ),
+            workspace="fixture-workspace",
+            database="project_database",
+            issue_prefix="project-prefix",
         )
 
         plan = u.Tests.governed_project_plan(root)

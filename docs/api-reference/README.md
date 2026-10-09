@@ -29,7 +29,7 @@ This section is generated from public exports and real docstrings.
 
 - Primary facades: `FlextInfra`, `FlextInfraAccessorMigrationOrchestrator`,
   `FlextInfraApplyRenames`, `FlextInfraBanditGate`, `FlextInfraCProfileReport`,
-  `FlextInfraCandidateBootstrapService` (+138 more)
+  `FlextInfraCandidateBootstrapService` (+134 more)
 - Generated module pages: `13`
 
 Back to [project docs](../index.md).

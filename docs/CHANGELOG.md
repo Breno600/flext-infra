@@ -8,12 +8,6 @@ Full notes: `docs/releases/v0.12.0.md`
 
 ## 0.12.0-dev (unreleased)
 
-- Removed the `APPLY` write-enable flag. Public Make verbs mutate by default;
-  read-only verification uses dedicated verbs and explicit CLI check modes.
-  The superseded apply configuration fields, workflow intents, templates, and
-  documentation command contract were removed or inverted accordingly.
-- Recorded the disposable E2E make-work proof from `flext-4gh1`.
-
 - Distribution data is declared by `project.packaged_data_paths` in
   `config/workspace.yaml`. Entries are repository-relative files or directories;
   for example, `config/deployment.yaml` ships that catalog without its governance

@@ -25,16 +25,6 @@ class FlextInfraModelsDepsToolConfigProjectArtifacts(
 ):
     """Managed-artifact models composed from project-owned slices."""
 
-    class ProjectRuffConfig(m.ArbitraryTypesModel):
-        """Project-owned Ruff exemptions for generated managed artifacts."""
-
-        per_file_ignores: Annotated[
-            t.Infra.PerFileIgnores,
-            m.Field(
-                description="Project-local per-file rules owned by this repository.",
-            ),
-        ]
-
     class ProjectManagedArtifactsConfig(m.ArbitraryTypesModel):
         """Project-owned configuration for generated artifacts."""
 
@@ -45,10 +35,6 @@ class FlextInfraModelsDepsToolConfigProjectArtifacts(
         Gitignore: Annotated[
             FlextInfraModelsDepsToolConfigProjectGitignore.ProjectGitignoreConfig,
             m.Field(description="Ignore patterns owned by the current project."),
-        ]
-        Ruff: Annotated[
-            FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectRuffConfig,
-            m.Field(description="Ruff additions owned by the current project."),
         ]
 
     class ProjectManagedArtifactsResolution(m.ArbitraryTypesModel):

@@ -10,7 +10,7 @@ from ast import Import, ImportFrom
 from collections.abc import Callable
 
 from flext_core import t
-from flext_infra._protocols import FlextInfraProtocolsRopeRuntime
+from flext_infra._protocols.rope_runtime import FlextInfraProtocolsRopeRuntime
 
 
 class FlextInfraTypesRope:
@@ -20,7 +20,6 @@ class FlextInfraTypesRope:
 
     type RopeProject = FlextInfraProtocolsRopeRuntime.RopeProject
     type RopeResource = FlextInfraProtocolsRopeRuntime.RopeResource
-    type RopeFile = FlextInfraProtocolsRopeRuntime.RopeFile
     type RopeLocation = FlextInfraProtocolsRopeRuntime.RopeLocation
     type RopePyModule = FlextInfraProtocolsRopeRuntime.RopePyModule
     type RopePyName = FlextInfraProtocolsRopeRuntime.RopePyName

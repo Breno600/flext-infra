@@ -97,7 +97,10 @@ class TestsFlextInfraLazyInitWorkspaceElection:
         generated = owner.joinpath(c.Infra.INIT_PY).read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        entries, _refs = u.Infra.lazy_import_mapping_source(generated)
+        entries, _refs = u.Infra.module_mapping_assignment_source(
+            generated,
+            u.Infra.lazy_imports_name_source(generated),
+        )
 
         tm.that(dict(entries).get(".constants", ()), has="c")
 

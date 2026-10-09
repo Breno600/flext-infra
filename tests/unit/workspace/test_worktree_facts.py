@@ -12,7 +12,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import m, u
+from flext_infra import m
+from tests import u
 
 
 class TestsFlextInfraWorktreeFacts(u.Tests.WorktreeFixture):

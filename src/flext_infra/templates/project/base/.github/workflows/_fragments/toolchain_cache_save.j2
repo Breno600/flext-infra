@@ -4,5 +4,7 @@
         uses: {{ github_actions["cache"].repository }}/save@{{ github_actions["cache"].version }}
         with:
           path: |
-{% include "_fragments/toolchain_cache_paths.j2" %}
+            {{ make.clean.cache_dirs | join("\n            ") }}
+            ~/.cache/uv
+            ~/.local/share/mise
           key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}{% raw %}-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}{% endraw %}

@@ -87,9 +87,13 @@ class TestsFlextInfraCodegenGenActivation:
             with initializer.open("a", encoding="utf-8") as stream:
                 _ = stream.write("\ndef (\n")
 
+        bootstrap = u.Infra.mise_bootstrap_environment()
+        sidecars = root / ".mise" / "locks"
         locks = (
             root / c.Infra.UV_LOCK_FILENAME,
-            root / c.Infra.MISE_LOCK_FILENAME,
+            root / bootstrap.version_pin_file,
+            root / bootstrap.lock_file,
+            *(path for path in sidecars.rglob("*") if path.is_file()),
         )
         before = {path: path.read_bytes() for path in locks}
         process = tm.ok(
@@ -101,6 +105,10 @@ class TestsFlextInfraCodegenGenActivation:
         )
 
         tm.that({path: path.read_bytes() for path in locks}, eq=before)
+        tm.that(
+            {path for path in sidecars.rglob("*") if path.is_file()},
+            eq={path for path in locks if path.is_relative_to(sidecars)},
+        )
         succeeded = scenario in {"builtin", "custom"}
         tm.that(
             u.Cli.process_succeeded(process.outcome),

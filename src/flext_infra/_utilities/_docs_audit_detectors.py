@@ -9,15 +9,17 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_infra import c, config, m, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDocs,
-    FlextInfraUtilitiesDocsApi,
-    FlextInfraUtilitiesDocsScope,
-)
+from flext_infra import c, config, m
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesDocsAuditDetectorsMixin:
@@ -132,13 +134,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     def docs_scope_boundary_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect references to excluded non-FLEXT roots in root docs.
-
-        A mention counts only when the excluded root appears as a path
-        reference: the token followed by a path separator. Bare prose uses
-        of the token (an English word, a brand name, an identifier suffix
-        like ``datacosmos-br``) are not directory references and never
-        were.
+        """Collect mentions of excluded non-FLEXT roots in root docs.
 
         Returns:
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
@@ -148,10 +144,6 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             return []
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         excluded = sorted(FlextInfraUtilitiesDocsScope.excluded_roots(scope.path))
-        patterns = [
-            re.compile(rf"(^|[^A-Za-z0-9_]){re.escape(token)}[/\\]", re.IGNORECASE)
-            for token in excluded
-        ]
         for md_file in [
             scope.path / "README.md",
             *FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope),
@@ -159,8 +151,8 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             if not md_file.exists():
                 continue
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            for token, pattern in zip(excluded, patterns, strict=True):
-                if pattern.search(text):
+            for token in excluded:
+                if token in text:
                     issues.append(
                         m.Infra.AuditIssue(
                             file=md_file.relative_to(scope.path).as_posix(),
@@ -182,15 +174,19 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
 
         """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
-        api_reference = scope.path / c.Infra.DIR_DOCS / "api-reference"
-        candidates: t.MutableSequenceOf[Path] = (
-            sorted(api_reference.rglob("*.md")) if api_reference.exists() else []
-        )
+        candidates: t.MutableSequenceOf[Path] = [scope.path / "docs/api-reference.md"]
+        for parent in (scope.path / "docs/api-reference", scope.path / "docs/api"):
+            if parent.exists():
+                candidates.extend(sorted(parent.rglob("*.md")))
         for path in candidates:
+            if not path.exists():
+                continue
             rel = path.relative_to(scope.path).as_posix()
-            if FlextInfraUtilitiesDocsScope.excluded_doc_path(
-                scope.path,
-                path.relative_to(scope.path / c.Infra.DIR_DOCS),
+            if path.is_relative_to(scope.path / c.Infra.DIR_DOCS) and (
+                FlextInfraUtilitiesDocsScope.excluded_doc_path(
+                    scope.path,
+                    path.relative_to(scope.path / c.Infra.DIR_DOCS),
+                )
             ):
                 continue
             if rel == "docs/api-reference/README.md" or rel.startswith(
@@ -278,9 +274,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                         f"{rel}#block{index}.py",
                         "-",
                     ],
-                    options=m.Cli.ProcessOptions(
-                        input_data=match.group("body").encode(),
-                    ),
+                    input_data=match.group("body").encode(),
                 )
                 if outcome.failure:
                     detail = outcome.error

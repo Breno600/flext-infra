@@ -11,18 +11,16 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import re
+from collections.abc import MutableMapping
 from pathlib import Path
 from urllib.parse import urlparse
 
-from flext_cli import u
-
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDependencies,
-    FlextInfraUtilitiesGitSemanticPublishMixin,
+from flext_infra._utilities._git.worktree_discovery import (
     FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
-    FlextInfraUtilitiesPyproject,
+)
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+from flext_infra._utilities.workspace_manifest import (
     FlextInfraUtilitiesWorkspaceManifest,
 )
 
@@ -166,6 +164,8 @@ class FlextInfraUtilitiesRepository:
             The resulting ``p.Result[m.Infra.WorkspaceIntegrationSpec]``.
 
         """
+        from flext_infra import u
+
         source = codegen.infra_repository
         distribution = source.distribution
         preference = codegen.branch_policy.integration_branch_preference
@@ -196,11 +196,7 @@ class FlextInfraUtilitiesRepository:
             return r[m.Infra.WorkspaceIntegrationSpec].fail(
                 f"infrastructure source must be the {distribution} repository: {url}",
             )
-        organization, separator, _ = (
-            FlextInfraUtilitiesGitWorktreeDiscoveryMixin.git_remote_identity(
-                url,
-            ).partition("/")
-        )
+        organization, separator, _ = u.Infra.git_remote_identity(url).partition("/")
         if not separator:
             return r[m.Infra.WorkspaceIntegrationSpec].fail(
                 f"infrastructure source must name an owner and repository: {url}",
@@ -258,20 +254,41 @@ class FlextInfraUtilitiesRepository:
             The resulting ``p.Result[t.Pair[str, str]]``.
 
         """
-        metadata = FlextInfraUtilitiesPyproject.read_project_metadata_result(
-            repository_root,
-        )
+        from flext_infra import u
+
+        metadata = u.Infra.read_project_metadata_result(repository_root)
         if metadata.success and metadata.value.project.name == distribution:
-            return cls._checkout_origin_source(repository_root, preference)
+            origin = u.Infra.git_remote_url(
+                m.Infra.GitRemoteUrlRequest(
+                    repo_root=repository_root,
+                    remote=c.Infra.GIT_DEFAULT_REMOTE,
+                ),
+            )
+            if origin.failure or not origin.value.text.strip():
+                return r[t.Pair[str, str]].fail(
+                    "the infrastructure checkout must publish a Git origin: "
+                    f"{repository_root}",
+                )
+            branch = cls.resolve_integration_branch(
+                repository_root,
+                preference=preference,
+            )
+            if branch.failure:
+                return r[t.Pair[str, str]].from_failure(branch)
+            canonical = cls._canonical_https_url(origin.value.text.strip())
+            if canonical.failure:
+                return r[t.Pair[str, str]].from_failure(canonical)
+            return r[t.Pair[str, str]].ok((canonical.value, branch.value))
         pyproject_path = repository_root / c.PYPROJECT_FILENAME
         if pyproject_path.is_file():
             declared = cls._declared_dependency_source(
                 pyproject_path=pyproject_path,
                 distribution=distribution,
                 prefix=f"{distribution.partition('-')[0]}-",
-                preference=preference,
             )
-            if declared.failure or declared.value[0]:
+            if declared.failure:
+                return r[t.Pair[str, str]].from_failure(declared)
+            if declared.value[0]:
                 return declared
         manifest = cls._manifest_declared_url(
             repository_root=repository_root,
@@ -280,10 +297,13 @@ class FlextInfraUtilitiesRepository:
         if manifest.failure:
             return r[t.Pair[str, str]].from_failure(manifest)
         if manifest.value:
-            return cls.resolve_integration_branch(
+            branch = cls.resolve_integration_branch(
                 repository_root,
                 preference=preference,
-            ).map(lambda branch: (manifest.value, branch))
+            )
+            if branch.failure:
+                return r[t.Pair[str, str]].from_failure(branch)
+            return r[t.Pair[str, str]].ok((manifest.value, branch.value))
         declared_line = cls._manifest_flext_source(repository_root)
         if declared_line.failure or declared_line.value[0]:
             return declared_line
@@ -292,38 +312,6 @@ class FlextInfraUtilitiesRepository:
             f"checkout: no project identity, no direct git dependency line, "
             f"no workspace manifest entry, and no manifest flext_source: "
             f"{repository_root}",
-        )
-
-    @classmethod
-    def _checkout_origin_source(
-        cls,
-        repository_root: Path,
-        preference: t.StrSequence,
-    ) -> p.Result[t.Pair[str, str]]:
-        """Resolve an infrastructure checkout's published origin and branch.
-
-        Returns:
-            The validated origin URL and integration branch.
-        """
-        origin = FlextInfraUtilitiesGitSemanticPublishMixin.git_remote_url(
-            m.Infra.GitRemoteUrlRequest(
-                repo_root=repository_root,
-                remote=c.Infra.GIT_DEFAULT_REMOTE,
-            ),
-        )
-        if origin.failure or not origin.value.text.strip():
-            return r[t.Pair[str, str]].fail(
-                "the infrastructure checkout must publish a Git origin: "
-                f"{repository_root}",
-            )
-        branch = cls.resolve_integration_branch(
-            repository_root,
-            preference=preference,
-        )
-        if branch.failure:
-            return r[t.Pair[str, str]].from_failure(branch)
-        return cls._canonical_https_url(origin.value.text.strip()).map(
-            lambda url: (url, branch.value),
         )
 
     @classmethod
@@ -403,111 +391,12 @@ class FlextInfraUtilitiesRepository:
         return r[str].ok(candidate)
 
     @classmethod
-    def _declared_dependency_payload(
-        cls,
-        pyproject_path: Path,
-    ) -> p.Result[t.JsonMapping]:
-        """Read and parse the owner-recovered pyproject declaration.
-
-        Returns:
-            The parsed pyproject mapping as one result payload.
-
-        """
-        # Identity detection consumes the same owner-recovered declaration as
-        # metadata and template composition. Raw projection bytes may still
-        # carry managed merge blocks while the transaction is only planning.
-
-        text = FlextInfraUtilitiesPyproject.live_pyproject_text(pyproject_path)
-        if text.failure:
-            return r[t.JsonMapping].from_failure(text)
-        payload = u.Cli.toml_mapping_from_text(text.value)
-        if payload is None:
-            return r[t.JsonMapping].fail(
-                f"pyproject is not valid TOML: {pyproject_path}",
-            )
-        return r[t.JsonMapping].ok(payload)
-
-    @classmethod
-    def _declared_dependency_lines(
-        cls,
-        payload: t.JsonMapping,
-        *,
-        pyproject_path: Path,
-        prefix: str,
-    ) -> p.Result[dict[t.Pair[str, str], str]]:
-        """Collect the declared ``<prefix>*`` line sources of one pyproject.
-
-        Returns:
-            The declared base-url/ref lines mapped to one witness requirement.
-
-        """
-        lines: dict[t.Pair[str, str], str] = {}
-        for requirement in cls._dependency_requirements(payload):
-            parsed = cls._declared_requirement_line(requirement, prefix)
-            if parsed.failure:
-                return r[dict[t.Pair[str, str], str]].from_failure(parsed)
-            if parsed.value[0]:
-                lines.setdefault(parsed.value, requirement)
-        if len(lines) > 1:
-            declared = "; ".join(sorted(lines.values()))
-            return r[dict[t.Pair[str, str], str]].fail(
-                f"{pyproject_path.name} declares conflicting {prefix}* line sources "
-                f"(one family, one provider and ref): {declared}",
-            )
-        return r[dict[t.Pair[str, str], str]].ok(lines)
-
-    @classmethod
-    def _declared_workspace_source(
-        cls,
-        payload: t.JsonMapping,
-        *,
-        pyproject_path: Path,
-        distribution: str,
-        preference: t.StrSequence,
-    ) -> p.Result[t.Pair[str, str]]:
-        """Resolve the workspace-membership source, or an empty payload.
-
-        uv workspace membership IS a declaration: a bare-name requirement of
-        the distribution backed by `[tool.uv.sources.<name>] workspace = true`
-        resolves through the workspace root's manifest, and the member's
-        checkout IS the provider. The superproject integration line (already
-        recovered from the workspace root's own manifest by the caller's
-        manifest pass) names the published source.
-
-        Returns:
-            The published source for one workspace member, or an EMPTY payload
-            (never None) when no declared source exists.
-
-        """
-        tool = payload.get("tool")
-        uv = tool.get("uv") if isinstance(tool, dict) else None
-        raw_sources = uv.get("sources") if isinstance(uv, dict) else None
-        sources: t.JsonMapping = raw_sources if isinstance(raw_sources, dict) else {}
-        entry = sources.get(distribution)
-        if isinstance(entry, dict) and entry.get("workspace") is True:
-            for requirement in cls._dependency_requirements(payload):
-                parsed = re.split(r"[\s;(\[]", requirement.strip(), maxsplit=1)[0]
-                if parsed == distribution:
-                    return cls.resolve_integration_branch(
-                        pyproject_path.parent,
-                        preference=preference,
-                    ).map(
-                        lambda branch: (
-                            f"https://github.com/flext-sh/{distribution}.git",
-                            branch,
-                        ),
-                    )
-        # No declared source: absence is an EMPTY payload, never None.
-        return r[t.Pair[str, str]].ok(("", ""))
-
-    @classmethod
     def _declared_dependency_source(
         cls,
         *,
         pyproject_path: Path,
         distribution: str,
         prefix: str,
-        preference: t.StrSequence,
     ) -> p.Result[t.Pair[str, str]]:
         """Return the family line the pyproject declares, as a source for one member.
 
@@ -522,85 +411,78 @@ class FlextInfraUtilitiesRepository:
             The family line the pyproject declares, as a source for one member.
 
         """
-        payload = cls._declared_dependency_payload(pyproject_path)
-        if payload.failure:
-            return r[t.Pair[str, str]].from_failure(payload)
-        lines = cls._declared_dependency_lines(
-            payload.value,
-            pyproject_path=pyproject_path,
-            prefix=prefix,
-        )
-        if lines.failure:
-            return r[t.Pair[str, str]].from_failure(lines)
-        if lines.value:
-            (base_url, ref), _ = next(iter(lines.value.items()))
-            return r[t.Pair[str, str]].ok((f"{base_url}/{distribution}.git", ref))
-        return cls._declared_workspace_source(
-            payload.value,
-            pyproject_path=pyproject_path,
-            distribution=distribution,
-            preference=preference,
+        from flext_infra import u
+        from flext_infra._utilities.pyproject_conform import (
+            FlextInfraUtilitiesPyprojectConform,
         )
 
-    @staticmethod
-    def _dependency_requirements(payload: t.JsonMapping) -> list[str]:
-        """Read the declared dependency groups through the shared parser.
-
-        Returns:
-            Requirement strings from all declared dependency groups.
-        """
+        # Identity detection consumes the same owner-recovered declaration as
+        # metadata and template composition. Raw projection bytes may still
+        # carry managed merge blocks while the transaction is only planning.
+        text = u.Infra.live_pyproject_text(pyproject_path)
+        if text.failure:
+            return r[t.Pair[str, str]].from_failure(text)
+        payload = u.Cli.toml_mapping_from_text(text.value)
+        if payload is None:
+            return r[t.Pair[str, str]].fail(
+                f"pyproject is not valid TOML: {pyproject_path}",
+            )
         requirements: list[str] = []
         project = payload.get(c.Infra.PROJECT)
         if isinstance(project, dict):
             for key in (c.Infra.DEPENDENCIES, c.Infra.OPTIONAL_DEPENDENCIES):
                 requirements.extend(
-                    FlextInfraUtilitiesDependencies.raw_requirement_values(
+                    FlextInfraUtilitiesPyprojectConform.raw_requirement_values(
                         project.get(key),
                     ),
                 )
-        requirements.extend(
-            FlextInfraUtilitiesDependencies.raw_requirement_values(
-                payload.get(c.Infra.DEPENDENCY_GROUPS),
-            ),
-        )
-        return requirements
-
-    @classmethod
-    def _declared_requirement_line(
-        cls,
-        requirement: str,
-        prefix: str,
-    ) -> p.Result[t.Pair[str, str]]:
-        """Validate one family member's provenance before collecting its line.
-
-        Returns:
-            The provider URL and ref, or the empty pair for a non-line.
-        """
-        name = FlextInfraUtilitiesDependencies.dep_name(requirement)
-        if name is None or not name.startswith(prefix):
-            return r[t.Pair[str, str]].ok(("", ""))
-        parsed = cls.declared_git_source(requirement)
-        if parsed.failure:
-            return parsed
-        url, ref = parsed.value
-        if not url:
-            return parsed
-        if not url.startswith("https://"):
+        groups = payload.get(c.Infra.DEPENDENCY_GROUPS)
+        if isinstance(groups, dict):
+            for group in groups.values():
+                requirements.extend(
+                    FlextInfraUtilitiesPyprojectConform.raw_requirement_values(group),
+                )
+        lines: MutableMapping[t.Pair[str, str], str] = {}
+        for requirement in requirements:
+            name = FlextInfraUtilitiesDependencies.dep_name(requirement)
+            if name is None or not name.startswith(prefix):
+                continue
+            parsed = cls.declared_git_source(requirement)
+            if parsed.failure:
+                return r[t.Pair[str, str]].from_failure(parsed)
+            url, ref = parsed.value
+            if not url:
+                continue
+            if not url.startswith("https://"):
+                return r[t.Pair[str, str]].fail(
+                    "declared internal dependency provenance must be HTTPS: "
+                    f"{requirement}",
+                )
+            # ``dep_name`` normalizes PEP 503 (hyphens); repository slugs in
+            # URLs may spell the same distribution with underscores, so the
+            # ownership check compares normalized slugs, never raw spellings.
+            repo_slug = url.removesuffix(".git").rsplit("/", 1)[-1]
+            if repo_slug.replace("_", "-") != name:
+                return r[t.Pair[str, str]].fail(
+                    f"internal dependency source must be the {name} repository: "
+                    f"{requirement}",
+                )
+            if cls.ref_is_commit(ref):
+                # Projection residue of a retired pin: it names no line.
+                continue
+            family_base = url.removesuffix(".git").rsplit("/", 1)[0]
+            lines.setdefault((family_base, ref), requirement)
+        if len(lines) > 1:
+            declared = "; ".join(sorted(lines.values()))
             return r[t.Pair[str, str]].fail(
-                f"declared internal dependency provenance must be HTTPS: {requirement}",
+                f"{pyproject_path.name} declares conflicting {prefix}* line sources "
+                f"(one family, one provider and ref): {declared}",
             )
-        repo_slug = url.removesuffix(".git").rsplit("/", 1)[-1]
-        if repo_slug.replace("_", "-") != name:
-            return r[t.Pair[str, str]].fail(
-                f"internal dependency source must be the {name} repository: "
-                f"{requirement}",
-            )
-        line = (
-            ("", "")
-            if cls.ref_is_commit(ref)
-            else (url.removesuffix(".git").rsplit("/", 1)[0], ref)
-        )
-        return r[t.Pair[str, str]].ok(line)
+        if lines:
+            (base_url, ref), _ = next(iter(lines.items()))
+            return r[t.Pair[str, str]].ok((f"{base_url}/{distribution}.git", ref))
+        # No declared source: absence is an EMPTY payload, never None.
+        return r[t.Pair[str, str]].ok(("", ""))
 
     @staticmethod
     def _manifest_declared_url(
@@ -644,12 +526,10 @@ class FlextInfraUtilitiesRepository:
             The resulting ``p.Result[m.Infra.ProviderIdentitySpec]``.
 
         """
+        from flext_infra import u
+
         url = repository.url.strip()
-        organization, separator, _ = (
-            FlextInfraUtilitiesGitWorktreeDiscoveryMixin.git_remote_identity(
-                url,
-            ).partition("/")
-        )
+        organization, separator, _ = u.Infra.git_remote_identity(url).partition("/")
         if not separator:
             return r[m.Infra.ProviderIdentitySpec].fail(
                 f"repository url must name an owner and repository: {url}",
@@ -720,8 +600,6 @@ class FlextInfraUtilitiesRepository:
         manifest = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
             repository_root,
         )
-        if manifest.failure:
-            return r[str].from_failure(manifest)
         if manifest.success and manifest.value:
             integration = manifest.value[0].integration
             if integration is not None:
@@ -786,10 +664,12 @@ class FlextInfraUtilitiesRepository:
             The integration baseline the repository actually publishes.
 
         """
+        from flext_infra import u
+
         candidates = preference or c.Infra.INTEGRATION_BRANCH_PREFERENCE
         for candidate in candidates:
             reference = f"refs/remotes/origin/{candidate}"
-            resolved = FlextInfraUtilitiesGitSemanticPublishMixin.git_ref_exists(
+            resolved = u.Infra.git_ref_exists(
                 m.Infra.GitRefRequest(repo_root=repository_root, reference=reference),
             )
             if resolved.success and resolved.value.value:

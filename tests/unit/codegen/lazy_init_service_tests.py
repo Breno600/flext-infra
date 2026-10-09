@@ -13,15 +13,14 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
+from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from tests import c, u
 
 if TYPE_CHECKING:
-    from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
     from tests import p, t
 
 
-# NOTE (multi-agent, flext-wkii.17.15): prove scoped writes and read-only drift
-# publicly.
+# NOTE (multi-agent, flext-wkii.17.15): prove scoped writes and read-only drift publicly.
 class TestsFlextInfraCodegenLazyInitService:
     """Validate real service execution without mocks or internal branching asserts."""
 

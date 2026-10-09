@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, infra, m
-from tests import u
+from flext_infra import c, infra, m, u
+from tests import u as tests_u
 
 
 class TestsFlextInfraCodegenCandidateBootstrap:
@@ -21,21 +21,21 @@ class TestsFlextInfraCodegenCandidateBootstrap:
 
     @staticmethod
     def _campaign(tmp_path: Path) -> tuple[Path, Path, Path]:
-        source, _ = u.Tests.render_make_environment(
+        source, _ = tests_u.Tests.render_make_environment(
             tmp_path / "source",
             c.Infra.MakeProfile.STANDALONE,
         )
-        first, _ = u.Tests.render_make_environment(
+        first, _ = tests_u.Tests.render_make_environment(
             tmp_path / "first",
             c.Infra.MakeProfile.STANDALONE,
         )
-        second, _ = u.Tests.render_make_environment(
+        second, _ = tests_u.Tests.render_make_environment(
             tmp_path / "second",
             c.Infra.MakeProfile.STANDALONE,
         )
         for root in (first, second):
-            u.Tests.write_workspace_manifest(root, root.name)
-        manifest = u.Tests.write_workspace_manifest(source, source.name)
+            tests_u.Tests.write_workspace_manifest(root, root.name)
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
         declaration = "candidate_bootstrap_targets:\n" + "".join(
             f"  - path: {Path(os.path.relpath(root, source)).as_posix()}\n"
             "    what: makefile\n"
@@ -50,11 +50,11 @@ class TestsFlextInfraCodegenCandidateBootstrap:
     @staticmethod
     def test_empty_campaign_fails_loud(tmp_path: Path) -> None:
         """An empty typed list cannot produce a green no-op bootstrap."""
-        project_root, _ = u.Tests.render_make_environment(
+        project_root, _ = tests_u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
         )
-        manifest = u.Tests.write_workspace_manifest(
+        manifest = tests_u.Tests.write_workspace_manifest(
             project_root,
             "fixture-project",
         )
@@ -98,7 +98,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             tm.ok(u.Cli.atomic_read_binary_file_state(first_makefile, required=True)),
             eq=before,
         )
-        u.Tests.write_workspace_manifest(second, second.name)
+        tests_u.Tests.write_workspace_manifest(second, second.name)
         tm.ok(
             infra.bootstrap_candidate(
                 m.Infra.CandidateBootstrapCommand(repository_root=source),
@@ -143,35 +143,6 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         )
 
     @pytest.mark.slow
-    def test_makefile_bootstrap_does_not_parse_corrupt_tooling(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """Declared topology repairs Make even when a tooling projection is corrupt."""
-        source, first, _ = self._campaign(tmp_path)
-        pyproject = first / c.PYPROJECT_FILENAME
-        content = pyproject.read_text(encoding="utf-8")
-        pyproject.write_text(
-            content + '\n[tool.mypy]\nplugins = ["pydantic.mypy"]\n',
-            encoding="utf-8",
-        )
-        before = tm.ok(u.Cli.atomic_read_binary_file_state(pyproject, required=True))
-        makefile = first / c.Infra.MAKEFILE_FILENAME
-        makefile.write_text("ifdef broken\n", encoding="utf-8")
-
-        tm.ok(
-            infra.bootstrap_candidate(
-                m.Infra.CandidateBootstrapCommand(repository_root=source),
-            ),
-        )
-
-        tm.that(makefile.read_text(encoding="utf-8"), lacks="ifdef broken")
-        tm.that(
-            tm.ok(u.Cli.atomic_read_binary_file_state(pyproject, required=True)),
-            eq=before,
-        )
-
-    @pytest.mark.slow
     def test_check_only_reports_drift_without_publication(self, tmp_path: Path) -> None:
         """A check does not enter the recoverable writer or change a target."""
         source, first, _ = self._campaign(tmp_path)
@@ -192,26 +163,20 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         )
 
     @staticmethod
-    @pytest.mark.slow
     def test_docs_config_conflict_recovers_from_declared_template(
         tmp_path: Path,
     ) -> None:
-        """A conflicted docs projection is repaired before generation parses.
-
-        Renders two real Make environments and runs two real bootstraps,
-        like its slow-phase sibling below: alone it takes ~9s of the 10s
-        bounded-phase item budget, so it belongs to the declared slow phase.
-        """
-        source, _ = u.Tests.render_make_environment(
+        """A conflicted docs projection is repaired before normal generation parses it."""
+        source, _ = tests_u.Tests.render_make_environment(
             tmp_path / "source",
             c.Infra.MakeProfile.STANDALONE,
         )
-        candidate, _ = u.Tests.render_make_environment(
+        candidate, _ = tests_u.Tests.render_make_environment(
             tmp_path / "candidate",
             c.Infra.MakeProfile.STANDALONE,
         )
-        manifest = u.Tests.write_workspace_manifest(source, source.name)
-        u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
         manifest.write_text(
             manifest.read_text(encoding="utf-8")
             + "\ncandidate_bootstrap_targets:\n"
@@ -239,16 +204,16 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         tmp_path: Path,
     ) -> None:
         """A healthy provider restores a candidate before its own Make can import."""
-        source, _ = u.Tests.render_make_environment(
+        source, _ = tests_u.Tests.render_make_environment(
             tmp_path / "source",
             c.Infra.MakeProfile.STANDALONE,
         )
-        candidate, _ = u.Tests.render_make_environment(
+        candidate, _ = tests_u.Tests.render_make_environment(
             tmp_path / "candidate",
             c.Infra.MakeProfile.STANDALONE,
         )
-        manifest = u.Tests.write_workspace_manifest(source, source.name)
-        u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
         manifest.write_text(
             manifest.read_text(encoding="utf-8")
             + "\ncandidate_bootstrap_targets:\n"
@@ -278,3 +243,75 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             tm.ok(u.Cli.atomic_read_binary_file_state(projection, required=True)),
             eq=first,
         )
+
+    @staticmethod
+    def test_mise_triple_recovery_is_complete_and_idempotent(
+        tmp_path: Path,
+    ) -> None:
+        """One declared recovery publishes all upg-owned launch artifacts."""
+        source, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "source",
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        candidate, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "candidate",
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + "\ncandidate_bootstrap_targets:\n"
+            + f"  - path: {Path(os.path.relpath(candidate, source)).as_posix()}\n"
+            + "    what: mise-triple\n",
+            encoding="utf-8",
+        )
+        for name, _mode in c.Infra.ARTIFACT_SPECS:
+            (candidate / name).write_text("<<<<<<< HEAD\n", encoding="utf-8")
+        command = m.Infra.CandidateBootstrapCommand(repository_root=source)
+
+        tm.ok(infra.bootstrap_candidate(command))
+        first = tuple(
+            tm.ok(u.Cli.atomic_read_binary_file_state(candidate / name, required=True))
+            for name, _mode in c.Infra.ARTIFACT_SPECS
+        )
+        tm.that(all(state.content != b"<<<<<<< HEAD\n" for state in first), eq=True)
+        tm.ok(infra.bootstrap_candidate(command))
+        repeated = tuple(
+            tm.ok(u.Cli.atomic_read_binary_file_state(candidate / name, required=True))
+            for name, _mode in c.Infra.ARTIFACT_SPECS
+        )
+        tm.that(repeated, eq=first)
+
+    @staticmethod
+    def test_mise_triple_fails_before_partial_publication(tmp_path: Path) -> None:
+        """An invalid destination prevents any member of the triple from writing."""
+        source, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "source",
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        candidate, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "candidate",
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + "\ncandidate_bootstrap_targets:\n"
+            + f"  - path: {Path(os.path.relpath(candidate, source)).as_posix()}\n"
+            + "    what: mise-triple\n",
+            encoding="utf-8",
+        )
+        first = candidate / c.Infra.ARTIFACT_SPECS[0][0]
+        first.write_text("<<<<<<< HEAD\n", encoding="utf-8")
+        last = candidate / c.Infra.ARTIFACT_SPECS[-1][0]
+        last.unlink()
+        last.mkdir()
+
+        result = infra.bootstrap_candidate(
+            m.Infra.CandidateBootstrapCommand(repository_root=source),
+        )
+
+        tm.that(result.failure, eq=True)
+        tm.that(first.read_text(encoding="utf-8"), eq="<<<<<<< HEAD\n")

@@ -14,17 +14,15 @@ from flext_cli import cli
 
 from flext_infra import c, m, p, r, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-from flext_infra.refactor import (
-    FlextInfraRefactorCensusFiltersMixin,
-    FlextInfraRefactorCensusObjectsMixin,
-    FlextInfraRefactorCensusProjectMixin,
-    FlextInfraRefactorCensusRemovalMixin,
-    FlextInfraRefactorCensusRenderMixin,
-)
 from flext_infra.refactor._census_collect import FlextInfraRefactorCensusCollectMixin
 from flext_infra.refactor._census_collect_helpers import (
     FlextInfraRefactorCensusCollectHelpersMixin,
 )
+from flext_infra.refactor._census_filters import FlextInfraRefactorCensusFiltersMixin
+from flext_infra.refactor._census_objects import FlextInfraRefactorCensusObjectsMixin
+from flext_infra.refactor._census_project import FlextInfraRefactorCensusProjectMixin
+from flext_infra.refactor._census_removal import FlextInfraRefactorCensusRemovalMixin
+from flext_infra.refactor._census_render import FlextInfraRefactorCensusRenderMixin
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 

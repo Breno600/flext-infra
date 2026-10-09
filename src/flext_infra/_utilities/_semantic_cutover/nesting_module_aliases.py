@@ -7,13 +7,16 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import override
+from typing import TYPE_CHECKING, override
 
 import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider
 
-from flext_infra import m, t
-from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+from flext_infra import m
+from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
@@ -198,7 +201,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
         return aliases, frozenset(owner_imports)
 
     @classmethod
-    def _nested_import_bindings(
+    def _import_bindings(
         cls,
         node: cst.Import,
         bindings_by_module: t.MappingKV[str, t.StrMapping],
@@ -264,7 +267,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             bindings_by_module=bindings_by_module,
             classifiers=(
                 cls._from_import_bindings,
-                cls._nested_import_bindings,
+                cls._import_bindings,
                 cls._reads_moved_member,
             ),
         )

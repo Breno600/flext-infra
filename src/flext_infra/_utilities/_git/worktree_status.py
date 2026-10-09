@@ -7,11 +7,15 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from git import GitCommandError, Repo
 
-from flext_infra import c, m, p, r, t
+from flext_infra import c, m, r, t
 from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
@@ -60,12 +64,11 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         repo_path = request.repo_root.expanduser().resolve()
         try:
             repo = cls._repo(repo_path)
-            with repo.git.custom_environment(GIT_OPTIONAL_LOCKS="0"):
-                lifecycle = cls._lifecycle_porcelain(
-                    repo,
-                    repo_path,
-                    repo.git.status("--porcelain", "--untracked-files=all"),
-                )
+            lifecycle = cls._lifecycle_porcelain(
+                repo,
+                repo_path,
+                repo.git.status("--porcelain", "--untracked-files=all"),
+            )
         except GitCommandError as exc:
             return r[m.Infra.GitStatusReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:

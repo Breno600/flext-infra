@@ -48,7 +48,7 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
                 path=path,
                 before=before.value,
                 desired_content=rendered.encode(c.Cli.ENCODING_DEFAULT),
-                desired_mode=(0o644 if mode is None else mode),
+                desired_mode=mode,
                 source_states=source_states,
             ),
         )
@@ -94,16 +94,22 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             The resulting ``m.Infra.UvEnvironmentPlan``.
 
         """
-        # The native uv workspace provisions the members (`uv sync
-        # --all-packages`); no extra dependency group and no editable overlay
-        # plan exist any more.
-        _ = workspace
+        workspace_environment = target.make_profile is c.Infra.MakeProfile.WORKSPACE
         groups: t.VariadicTuple[str] = ("dev", "codegen")
+        editable_repositories: t.VariadicTuple[m.Infra.RepositoryRef] = ()
+        if workspace_environment:
+            groups = (*groups, "workspace")
+            editable_repositories = tuple(
+                item
+                for item in (workspace.repository, *workspace.subprojects)
+                if item.package and item.editable and not item.read_only
+            )
         return m.Infra.UvEnvironmentPlan(
             project_root=root,
             environment_root=target.root,
             python_version=config.toolchain.python_version,
             groups=groups,
+            editable_repositories=editable_repositories,
         )
 
     @staticmethod
@@ -128,35 +134,6 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             ),
         )
 
-    @staticmethod
-    def _retired_destinations() -> p.Result[
-        t.Pair[t.SequenceOf[str], t.MappingKV[str, str]]
-    ]:
-        """Collect declared retired projections with their removal evidence.
-
-        Returns:
-            The resulting ``p.Result[t.Pair[t.SequenceOf[str],
-                t.MappingKV[str, str]]]``.
-
-        """
-        result_type = r[t.Pair[t.SequenceOf[str], t.MappingKV[str, str]]]
-        extra: list[str] = []
-        evidence_by_path: dict[str, str] = {}
-        for retired in config.Infra.codegen.retired_projections:
-            declared = retired if isinstance(retired, str) else retired.path
-            relative = Path(declared)
-            if relative.is_absolute() or ".." in relative.parts:
-                return result_type.fail(
-                    "retired projection must be a normalized relative path: "
-                    f"{declared}",
-                )
-            if isinstance(retired, str):
-                extra.append(retired)
-                continue
-            evidence_by_path[retired.path] = retired.evidence
-            extra.append(retired.path)
-        return result_type.ok((extra, evidence_by_path))
-
     @classmethod
     def retired_projection_plans(
         cls,
@@ -180,11 +157,13 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             for entry in config.Infra.codegen.templates.entries
             if profile not in entry.profiles and "{" not in entry.destination
         ]
-        collected = cls._retired_destinations()
-        if collected.failure:
-            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(collected)
-        extra_destinations, evidence_by_path = collected.value
-        destinations.extend(extra_destinations)
+        for retired in config.Infra.codegen.retired_projections:
+            relative = Path(retired)
+            if relative.is_absolute() or ".." in relative.parts:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                    f"retired projection must be a normalized relative path: {retired}",
+                )
+            destinations.append(retired)
         for destination in destinations:
             path = root / Path(destination)
             if not path.is_file():
@@ -192,11 +171,7 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             current = u.Cli.files_read_text(path)
             if current.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(current)
-            evidence = evidence_by_path.get(destination)
-            if evidence is not None:
-                if evidence not in current.value:
-                    continue
-            elif not any(
+            if not any(
                 marker in current.value for marker in c.Infra.TEMPLATE_GENERATED_MARKERS
             ):
                 continue

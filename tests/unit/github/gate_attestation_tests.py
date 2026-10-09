@@ -13,8 +13,8 @@ import pytest
 from flext_cli import u as cli_u
 from flext_tests import tm
 
-from flext_infra import c, m, p
-from tests import u
+from flext_infra import c, m, p, u
+from tests import u as test_u
 
 
 class TestsFlextInfraGithubGateAttestation:
@@ -22,15 +22,15 @@ class TestsFlextInfraGithubGateAttestation:
 
     @staticmethod
     def _signed_repository(root: Path) -> Path:
-        u.Tests.git_bootstrap(root, ("init", "-b", c.Infra.GIT_MAIN))
+        test_u.Tests.git_bootstrap(root, ("init", "-b", c.Infra.GIT_MAIN))
         for key, value in (
             ("user.name", "Attestation Test"),
             ("user.email", "attestation@example.test"),
             ("gpg.format", "ssh"),
             ("commit.gpgsign", "false"),
         ):
-            u.Tests.git_bootstrap(root, ("config", key, value))
-        u.Tests.git_bootstrap(
+            test_u.Tests.git_bootstrap(root, ("config", key, value))
+        test_u.Tests.git_bootstrap(
             root,
             (
                 "remote",
@@ -46,7 +46,7 @@ class TestsFlextInfraGithubGateAttestation:
                 cwd=root,
             ),
         )
-        u.Tests.git_bootstrap(root, ("config", "user.signingkey", str(key_path)))
+        test_u.Tests.git_bootstrap(root, ("config", "user.signingkey", str(key_path)))
         (root / "tracked.txt").write_text("attested\n", encoding="utf-8")
         (root / "Makefile").write_text(
             ".PHONY: gen check test\n"
@@ -161,7 +161,7 @@ class TestsFlextInfraGithubGateAttestation:
         remote = tm.ok(
             u.Infra.git_remote_url(m.Infra.GitRemoteUrlRequest(repo_root=tmp_path)),
         ).text
-        u.Tests.git_bootstrap(
+        test_u.Tests.git_bootstrap(
             tmp_path,
             ("remote", "set-url", c.Infra.GIT_ORIGIN, remote.removesuffix(".git")),
         )

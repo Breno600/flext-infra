@@ -307,7 +307,12 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         if followed.failure:
             return r[m.Infra.TypingsReport].from_failure(followed)
         limits = self.load_dependency_limits(limits_path)
-        exclude_set = self._typing_excludes(limits)
+        exclude_set: t.Infra.StrSet = set()
+        typing_libraries = limits.get(c.Infra.TYPING_LIBRARIES)
+        if isinstance(typing_libraries, Mapping):
+            excluded = typing_libraries.get(c.Infra.EXCLUDE)
+            if isinstance(excluded, list):
+                exclude_set = {str(e) for e in excluded}
         hinted: t.StrSequence = []
         missing_modules: t.StrSequence = []
         if not followed.value:
@@ -316,7 +321,12 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
                 return r[m.Infra.TypingsReport].from_failure(hints_result)
             typed_hints: t.Pair[t.StrSequence, t.StrSequence] = hints_result.value
             hinted, missing_modules = typed_hints
-        required_set = self._required_set(hinted, missing_modules, limits) - exclude_set
+        required_set: t.Infra.StrSet = set(hinted)
+        for module_name in missing_modules:
+            package = self.module_to_types_package(module_name, limits)
+            if package:
+                required_set.add(package)
+        required_set -= exclude_set
         current = self.read_current_typings_from_pyproject(project_path)
         current_set = set(current)
         python_cfg = limits.get(c.Infra.PYTHON)
@@ -348,40 +358,6 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
             untyped_imports_followed=followed.value,
         )
         return r[m.Infra.TypingsReport].ok(report)
-
-    @staticmethod
-    def _typing_excludes(limits: t.MappingKV[str, t.JsonValue]) -> t.Infra.StrSet:
-        """Read the typing-library exclusion set from the limits document.
-
-        Returns:
-            The declared typing-library exclusions.
-
-        """
-        typing_libraries = limits.get(c.Infra.TYPING_LIBRARIES)
-        if isinstance(typing_libraries, Mapping):
-            excluded = typing_libraries.get(c.Infra.EXCLUDE)
-            if isinstance(excluded, list):
-                return {str(e) for e in excluded}
-        return set()
-
-    def _required_set(
-        self,
-        hinted: t.StrSequence,
-        missing_modules: t.StrSequence,
-        limits: t.MappingKV[str, t.JsonValue],
-    ) -> t.Infra.StrSet:
-        """Derive the required typing packages from the stub hints.
-
-        Returns:
-            The required packages set.
-
-        """
-        required: t.Infra.StrSet = set(hinted)
-        for module_name in missing_modules:
-            package = self.module_to_types_package(module_name, limits)
-            if package:
-                required.add(package)
-        return required
 
     def load_dependency_limits(
         self,

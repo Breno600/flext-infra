@@ -37,25 +37,10 @@ class TestsFlextInfraGateRegistry:
 
     @staticmethod
     def test_default_and_fixable_are_subsets_of_check_vocabulary() -> None:
-        """Default gates stay in the vocabulary; informative gates run locally only.
-
-        Informative gates never block and never execute under the CI token
-        (merge-admin mandate 2026-10-05), so they belong to the local-only
-        partition the CI token's strict complement excludes.
-        """
-        make = config.Infra.codegen.make
-        allowed = frozenset(make.check_gates_allowed)
-        default = frozenset(make.check_gates_default)
-        informational = frozenset(make.ci.informative_check_gates)
-        local_only = frozenset(make.ci.local_check_gates)
-        tm.that(default <= allowed, eq=True)
-        tm.that(informational <= allowed, eq=True)
-        tm.that(informational <= local_only, eq=True)
-        tm.that(
-            frozenset(c.Infra.CANONICAL_FIXABLE_GATE_IDS)
-            <= frozenset(c.Infra.CANONICAL_GATE_IDS),
-            eq=True,
-        )
+        """Test default and fixable are subsets of check vocabulary."""
+        allowed = frozenset(c.Infra.CANONICAL_GATE_IDS)
+        tm.that(frozenset(c.Infra.CANONICAL_DEFAULT_GATE_IDS) <= allowed, eq=True)
+        tm.that(frozenset(c.Infra.CANONICAL_FIXABLE_GATE_IDS) <= allowed, eq=True)
 
     @staticmethod
     def test_every_allowed_gate_resolves_in_the_registry() -> None:

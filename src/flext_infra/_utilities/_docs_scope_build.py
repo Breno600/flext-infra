@@ -9,14 +9,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesBase,
-    FlextInfraUtilitiesDocsScope,
-    FlextInfraUtilitiesPyproject,
-    FlextInfraUtilitiesWorkspaceManifest,
-)
 from flext_infra._utilities._docs_scope_selection import (
     FlextInfraUtilitiesDocsScopeSelectionMixin,
+)
+from flext_infra._utilities.base import FlextInfraUtilitiesBase
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.workspace_manifest import (
+    FlextInfraUtilitiesWorkspaceManifest,
 )
 
 if TYPE_CHECKING:

@@ -19,7 +19,6 @@
     "**/__pyrefly_virtual__": true,
     "**/.beads": true,
     "**/.benchmarks": true,
-    "**/.archive": true,
     "**/.bkp": true,
     "**/.cache": true,
     "**/.dolt": true,
@@ -51,7 +50,6 @@
     "**/build": true,
     "**/dist": true,
     "**/node_modules": true,
-    "**/protos": true,
     "**/site": true,
     "**/target": true
   },
@@ -60,7 +58,6 @@
     "**/__pyrefly_virtual__/**": true,
     "**/.beads/**": true,
     "**/.benchmarks/**": true,
-    "**/.archive/**": true,
     "**/.bkp/**": true,
     "**/.cache/**": true,
     "**/.dolt/**": true,
@@ -94,7 +91,6 @@
     "**/build/**": true,
     "**/dist/**": true,
     "**/node_modules/**": true,
-    "**/protos/**": true,
     "**/target/**": true
   },
   "search.exclude": {
@@ -102,7 +98,6 @@
     "**/__pyrefly_virtual__": true,
     "**/.beads": true,
     "**/.benchmarks": true,
-    "**/.archive": true,
     "**/.bkp": true,
     "**/.cache": true,
     "**/.dolt": true,
@@ -134,7 +129,6 @@
     "**/build": true,
     "**/dist": true,
     "**/node_modules": true,
-    "**/protos": true,
     "**/site": true,
     "**/target": true
   },
@@ -208,7 +202,7 @@
     "**/.forgejo/workflows/*.yaml"
   ],
   "[markdown]": {
-    "editor.defaultFormatter": "rvben.rumdl",
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": false
   }
 }

@@ -25,4 +25,4 @@ class TestsFlextInfraToolchainMake:
         """Keep Make policy explicit while Mise resolves its newest release."""
         toolchain = config.Infra.codegen.toolchain
 
-        tm.that(toolchain.tool_versions["make"], eq="latest")
+        tm.that(toolchain.make_version, eq="latest")

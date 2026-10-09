@@ -28,7 +28,7 @@ and a test runtime that binds the canonical aliases.
 Import the aliases each test consumes from the public `flext_tests` package root.
 
 `flext_tests` reexports `d`, `e`, `h`, `r`, `x` from `flext_infra` and exposes domain
-helpers (`tk`, `td`, `tf`, `tv`, `tm`).
+helpers (`tk`, `td`, `tf`, `tm`).
 
 | Alias | Purpose                                          |
 | ----- | ------------------------------------------------ |
@@ -64,16 +64,15 @@ above are not declared with `autouse=True`.
 ```python
 from __future__ import annotations
 
-from flext_tests import FlextTestsSettings, tm
+from flext_tests import FlextTestsSettings
 
 from flext_core import FlextSettings
 
 
 def test_settings_isolation(settings: FlextTestsSettings) -> None:
-    """The fixture settings stay distinct from the global singleton."""
     settings.debug = True
     # The settings plugin resets runtime singletons between test functions.
-    tm.that(FlextSettings.fetch_global() is settings, eq=False)
+    assert FlextSettings.fetch_global() is not settings
 ```
 
 ## Resetting singletons manually
@@ -97,26 +96,22 @@ Use the `r` alias instead of importing from `returns` directly:
 ```python
 from math import isclose
 
-from flext_tests import p, r, tm
+from flext_tests import p, r
 
 
 def safe_divide(a: float, b: float) -> p.Result[float]:
-    """Divide ``a`` by ``b`` and fail explicitly on a zero divisor.
-
-    Returns:
-        The quotient, or a ``division_by_zero`` failure.
-
-    """
     if b == 0:
         return r[float].fail("division_by_zero")
     return r[float].ok(a / b)
 
 
 def test_safe_divide() -> None:
-    """Division succeeds for a nonzero divisor and fails for zero."""
-    quotient = tm.ok(safe_divide(10, 2))
-    tm.that(isclose(quotient, 5.0), eq=True)
-    tm.fail(safe_divide(10, 0))
+    result = safe_divide(10, 2)
+    assert result.success
+    assert isclose(result.unwrap(), 5.0)
+
+    failure = safe_divide(10, 0)
+    assert failure.failure
 ```
 
 ## Good practices
@@ -138,8 +133,7 @@ not add a `WHAT` selector or duplicate the dispatcher in a test helper.
 
 Tests for this contract exercise the generated public commands and observable artifacts.
 They do not reproduce command metadata or assert private routing implementation. See
-ADR-004 for the
-canonical decision.
+ADR-004 for the canonical decision.
 
 ## Bad practices
 
@@ -151,18 +145,15 @@ For a standalone test without the settings plugin, keep the reset on both sides 
 mutation, including assertion failure:
 
 ```python
-from flext_tests import tm
-
 from flext_core import FlextSettings
 
 
 def test_settings_override() -> None:
-    """A debug override is visible and reset on both sides of the test."""
     FlextSettings.reset_for_testing()
     try:
         settings = FlextSettings.fetch_global()
         settings.debug = True
-        tm.that(settings.debug, eq=True)
+        assert settings.debug
     finally:
         FlextSettings.reset_for_testing()
 ```

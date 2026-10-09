@@ -9,7 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config
-from flext_infra._utilities import FlextInfraUtilitiesGit, FlextInfraUtilitiesPyproject
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -96,28 +97,21 @@ class FlextInfraUtilitiesNamespaceConfig:
         meta = FlextInfraUtilitiesNamespaceConfig.namespace_meta(project_root)
         if "scan_dirs" in meta:
             configured = meta["scan_dirs"]
-            scan_dirs: list[str] = []
-            if not isinstance(configured, list):
+            if not isinstance(configured, list) or not all(
+                isinstance(item, str) and item.strip() for item in configured
+            ):
                 msg = (
                     "[tool.flext.namespace] scan_dirs must be a list of "
                     f"non-empty strings in {project_root}"
                 )
                 raise TypeError(msg)
-            for item in configured:
-                if not isinstance(item, str) or not item.strip():
-                    msg = (
-                        "[tool.flext.namespace] scan_dirs must be a list of "
-                        f"non-empty strings in {project_root}"
-                    )
-                    raise TypeError(msg)
-                scan_dirs.append(item)
-            if not scan_dirs:
+            if not configured:
                 msg = f"[tool.flext.namespace] scan_dirs is empty in {project_root}"
                 raise ValueError(msg)
-            return frozenset(item.strip() for item in scan_dirs)
+            return frozenset(item.strip() for item in configured)
         tracked = FlextInfraUtilitiesGit.git_tracked_top_level_dir_names(project_root)
         if tracked is not None:
-            declared = FlextInfraUtilitiesGit.git_submodule_declarations(project_root)
+            declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(project_root)
             if declared.failure:
                 raise ValueError(declared.error)
             # A declared submodule is another repository, consumed as an
@@ -125,11 +119,7 @@ class FlextInfraUtilitiesNamespaceConfig:
             excluded = (
                 c.Infra.COMMON_EXCLUDED_DIRS
                 | {name for name in tracked if name.startswith(".")}
-                | {
-                    item.path.as_posix()
-                    for item in declared.value
-                    if len(item.path.parts) == 1
-                }
+                | {path.as_posix() for path in declared.value if len(path.parts) == 1}
             )
             dynamic = frozenset(
                 name

@@ -11,7 +11,7 @@ from typing import Annotated, ClassVar
 
 from flext_core import m
 from flext_infra import c, t
-from flext_infra._models.mixins import FlextInfraModelsMixins
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCensus:
@@ -20,8 +20,8 @@ class FlextInfraModelsCensus:
     """Namespace for unified census pipeline data contracts."""
 
     class ReferenceSite(
-        FlextInfraModelsMixins.AbsoluteFilePathTextMixin,
-        FlextInfraModelsMixins.RequiredNonNegativeLineMixin,
+        mm.AbsoluteFilePathTextMixin,
+        mm.RequiredNonNegativeLineMixin,
         m.ArbitraryTypesModel,
     ):
         """Single reference site supporting a census classification."""
@@ -32,16 +32,12 @@ class FlextInfraModelsCensus:
             str,
             m.Field(description="Reference surface (src/tests/examples/scripts)"),
         ] = c.Infra.DEFAULT_SRC_DIR
-        offset: Annotated[
-            t.NonNegativeInt | None,
-            m.Field(description="Rope character offset for exact occurrence evidence"),
-        ] = None
 
     class Object(
-        FlextInfraModelsMixins.AbsoluteFilePathTextMixin,
-        FlextInfraModelsMixins.RequiredNonNegativeLineMixin,
-        FlextInfraModelsMixins.ProjectNameMixin,
-        FlextInfraModelsMixins.NestedClassPathMixin,
+        mm.AbsoluteFilePathTextMixin,
+        mm.RequiredNonNegativeLineMixin,
+        mm.ProjectNameMixin,
+        mm.NestedClassPathMixin,
         m.ArbitraryTypesModel,
     ):
         """Single discovered Python object with tier and classification metadata."""
@@ -93,31 +89,15 @@ class FlextInfraModelsCensus:
         script_reference_sites: t.VariadicTuple[
             FlextInfraModelsCensus.ReferenceSite
         ] = m.Field(default_factory=tuple, description="Script reference sites")
-        all_reference_sites: t.VariadicTuple[FlextInfraModelsCensus.ReferenceSite] = (
-            m.Field(
-                default_factory=tuple,
-                description=(
-                    "Qualified indexed occurrences on all surfaces, "
-                    "including reexports; "
-                    "not reachability"
-                ),
-            )
-        )
-        reference_evidence_collected: Annotated[
-            bool,
-            m.Field(
-                description="Whether the indexed Rope occurrence search was performed",
-            ),
-        ] = False
         fingerprint: Annotated[
             str,
             m.Field(description="Normalized Rope-derived semantic fingerprint"),
         ] = ""
 
     class RemovalCandidate(
-        FlextInfraModelsMixins.AbsoluteFilePathTextMixin,
-        FlextInfraModelsMixins.RequiredNonNegativeLineMixin,
-        FlextInfraModelsMixins.ProjectNameMixin,
+        mm.AbsoluteFilePathTextMixin,
+        mm.RequiredNonNegativeLineMixin,
+        mm.ProjectNameMixin,
         m.ArbitraryTypesModel,
     ):
         """Explicit aggressive-removal candidate derived from census results."""
@@ -151,7 +131,7 @@ class FlextInfraModelsCensus:
             description="Script references supporting this candidate",
         )
 
-    class Violation(FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel):
+    class Violation(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """One census analysis finding over the object inventory."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
@@ -252,7 +232,7 @@ class FlextInfraModelsCensus:
             m.Field(description="Whether all definitions have identical values"),
         ] = False
 
-    class ProjectReport(FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel):
+    class ProjectReport(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """Per-project census summary."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)

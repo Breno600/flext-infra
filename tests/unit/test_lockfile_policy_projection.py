@@ -24,6 +24,11 @@ class TestsFlextInfraLockfilePolicyProjection:
         [
             c.Infra.UV_LOCK_FILENAME,
             c.Infra.MISE_LOCK_FILENAME,
+            c.Infra.MISE_VERSION_PIN_FILENAME,
+            ".mise/locks/npm-fixture/1.0.0/package.json",
+            ".mise/locks/npm-fixture/1.0.0/aube-lock.yaml",
+            ".mise/locks/pypi-fixture/1.0.0/pyproject.toml",
+            ".mise/locks/pypi-fixture/1.0.0/uv.lock",
         ],
     )
     def test_rendered_gitignore_tracks_dependency_locks(
@@ -50,6 +55,8 @@ class TestsFlextInfraLockfilePolicyProjection:
             ".mise/installs/tool/bin/tool",
             "mise.local.lock",
             "mise.test.local.lock",
+            ".mise/locks/mise.local/npm-fixture/1.0.0/aube-lock.yaml",
+            ".mise/locks/mise.test.local/npm-fixture/1.0.0/aube-lock.yaml",
         ],
     )
     def test_rendered_gitignore_keeps_local_mise_state_untracked(

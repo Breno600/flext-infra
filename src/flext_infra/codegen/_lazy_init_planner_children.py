@@ -98,15 +98,46 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         is_facade_root = self._is_facade_root(parent_context)
         direct: list[str] = []
         for child_dir in package_entry.descendant_child_dirs:
-            merged = self._merge_child(
-                resolved_pkg_dir,
-                dir_exports,
-                parent_pkg,
-                child_dir,
-            )
-            if merged is None:
+            # Do not merge retired root registries into the
+            # inline map that replaces them.
+            if child_dir.name in c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES:
                 continue
-            child_pkg_name, child_exports = merged
+            if not self.context(child_dir).importable:
+                continue
+            resolved_child_dir = child_dir.resolve()
+            # Children are planned before their parent (depth
+            # descending), so the parent inventory follows the child's plan in
+            # the same pass — a planned WRITE counts as a package even before
+            # its initializer exists on disk, and a planned REMOVE/SKIP (for
+            # example a stdlib-shadowing name) never does. Without a plan the
+            # on-disk initializer decides. This keeps check and apply at a
+            # fixed point after one run.
+            child_plan = self._source_plan_cache.get(str(resolved_child_dir))
+            planned_action = child_plan.action if child_plan is not None else None
+            if planned_action is c.Infra.LazyInitAction.REMOVE:
+                continue
+            planned_write = planned_action is c.Infra.LazyInitAction.WRITE
+            child_init = child_dir / c.Infra.INIT_PY
+            if not planned_write and not child_init.is_file():
+                continue
+            child_entry = self._package_entry(child_dir)
+            child_exports = dir_exports.get(str(resolved_child_dir), {})
+            child_pkg_name = (
+                child_entry.package_name
+                if child_entry is not None and child_entry.package_name
+                else (f"{parent_pkg}.{child_dir.name}" if planned_write else "")
+            )
+            if not child_pkg_name:
+                continue
+            if (
+                not child_exports
+                and not planned_write
+                and child_entry is not None
+                and not self._has_live_package_content(child_entry)
+            ):
+                continue
+            if resolved_child_dir.parent != resolved_pkg_dir:
+                continue
             direct.append(child_pkg_name)
             self._add(
                 lazy_map,
@@ -118,84 +149,21 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
                 and self._is_private_owner(child_pkg_name, root_pkg=parent_pkg)
             ):
                 continue
-            self._publish_child_exports(lazy_map, child_exports)
-        return tuple(sorted(direct))
-
-    def _merge_child(
-        self,
-        resolved_pkg_dir: Path,
-        dir_exports: t.MappingKV[str, t.LazyAliasMap],
-        parent_pkg: str,
-        child_dir: Path,
-    ) -> t.Pair[str, t.LazyAliasMap] | None:
-        """Decide whether one child package merges into its parent's map.
-
-        Returns:
-            The resulting ``t.Pair[str, t.LazyAliasMap] | None`` where None
-            marks a child that does not merge.
-
-        """
-        # Do not merge retired root registries into the
-        # inline map that replaces them.
-        retired = child_dir.name in c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES
-        if retired or not self.context(child_dir).importable:
-            return None
-        resolved_child_dir = child_dir.resolve()
-        # Children are planned before their parent (depth
-        # descending), so the parent inventory follows the child's plan in
-        # the same pass — a planned WRITE counts as a package even before
-        # its initializer exists on disk, and a planned REMOVE/SKIP (for
-        # example a stdlib-shadowing name) never does. Without a plan the
-        # on-disk initializer decides. This keeps check and apply at a
-        # fixed point after one run.
-        child_plan = self._source_plan_cache.get(str(resolved_child_dir))
-        planned_action = child_plan.action if child_plan is not None else None
-        planned_write = planned_action is c.Infra.LazyInitAction.WRITE
-        unmergeable = planned_action is c.Infra.LazyInitAction.REMOVE or (
-            not planned_write and not (child_dir / c.Infra.INIT_PY).is_file()
-        )
-        if unmergeable:
-            return None
-        child_entry = self._package_entry(child_dir)
-        child_exports = dir_exports.get(str(resolved_child_dir), {})
-        child_pkg_name = (
-            child_entry.package_name
-            if child_entry is not None and child_entry.package_name
-            else (f"{parent_pkg}.{child_dir.name}" if planned_write else "")
-        )
-        if not child_pkg_name:
-            return None
-        if (
-            not child_exports
-            and not planned_write
-            and child_entry is not None
-            and not self._has_live_package_content(child_entry)
-        ):
-            return None
-        if resolved_child_dir.parent != resolved_pkg_dir:
-            return None
-        return (child_pkg_name, child_exports)
-
-    def _publish_child_exports(
-        self,
-        lazy_map: t.MutableLazyAliasMap,
-        child_exports: t.LazyAliasMap,
-    ) -> None:
-        """Publish one child's publishable exports into the parent map."""
-        for name, (module_name, attr) in child_exports.items():
-            source_module_name = module_name.rsplit(".", maxsplit=1)[-1]
-            test_only_source_module = (
-                c.Infra.TEST_ONLY_SOURCE_MODULE_RE.fullmatch(
-                    f"{source_module_name}.py",
+            for name, (module_name, attr) in child_exports.items():
+                source_module_name = module_name.rsplit(".", maxsplit=1)[-1]
+                test_only_source_module = (
+                    c.Infra.TEST_ONLY_SOURCE_MODULE_RE.fullmatch(
+                        f"{source_module_name}.py",
+                    )
+                    is not None
                 )
-                is not None
-            )
-            if (
-                attr
-                and not test_only_source_module
-                and self._publish(name, allow_main=True)
-            ):
-                self._add(lazy_map, name, (module_name, attr))
+                if (
+                    attr
+                    and not test_only_source_module
+                    and self._publish(name, allow_main=True)
+                ):
+                    self._add(lazy_map, name, (module_name, attr))
+        return tuple(sorted(direct))
 
     def _shadows_stdlib_module(self, pkg_dir: Path) -> bool:
         """Return True when the package's importable name shadows a stdlib module.

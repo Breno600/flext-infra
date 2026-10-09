@@ -11,8 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import main, u
-from tests import u as test_u
+from flext_infra import c, main as infra_main, u
 
 
 @pytest.mark.slow
@@ -26,10 +25,19 @@ class TestsFlextInfraModRuleExpectedReceipt:
     @staticmethod
     def _declare(workspace: Path, *, expected: str) -> None:
         """Point the workspace at one local rule carrying the receipt clause."""
-        test_u.Tests.declare_codemod_rules(
-            workspace,
-            {
-                "receipt-probe": (
+        config_path = workspace / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
+        tm.ok(u.Cli.ensure_dir(rules_root))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                config_path,
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+            ),
+        )
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                rules_root / "receipt-probe.yml",
+                (
                     "id: receipt-probe\n"
                     "language: Python\n"
                     "severity: warning\n"
@@ -39,7 +47,7 @@ class TestsFlextInfraModRuleExpectedReceipt:
                     "message: probe the declared receipt\n"
                     f"{expected}"
                 ),
-            },
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -65,7 +73,7 @@ class TestsFlextInfraModRuleExpectedReceipt:
             RuntimeError,
             match=r"receipt-probe declares 2 finding\(s\), scan produced 1",
         ):
-            main(["refactor", "mod", "--repository-root", str(mod_workspace)])
+            infra_main(["refactor", "mod", "--repository-root", str(mod_workspace)])
 
     def test_a_matching_receipt_does_not_block_the_scan(
         self,
@@ -75,7 +83,7 @@ class TestsFlextInfraModRuleExpectedReceipt:
         """A receipt that matches the occurrence count raises no receipt failure."""
         self._declare(mod_workspace, expected="metadata:\n  expected: 1\n")
 
-        main(["refactor", "mod", "--repository-root", str(mod_workspace)])
+        infra_main(["refactor", "mod", "--repository-root", str(mod_workspace)])
         capture = capsys.readouterr()
 
         tm.that(capture.out + capture.err, lacks="receipt-probe declares")
