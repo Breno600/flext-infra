@@ -544,15 +544,18 @@ class FlextInfraModelsCheck:
     class CheckReportSummary(m.ContractModel):
         """Invocation-owned execution facts retained by the published SARIF."""
 
-        targets: t.VariadicTuple[FlextInfraModelsCheck.CheckProjectTarget] = m.Field(
-            description="Canonical project roots selected for this invocation",
-        )
-        results: t.VariadicTuple[FlextInfraModelsCheck.ProjectResult] = m.Field(
-            description="Only executions reached by this invocation",
-        )
-        selected_files: t.VariadicTuple[Path] = m.Field(
-            description="File selection; empty means full-project execution",
-        )
+        targets: Annotated[
+            t.VariadicTuple[FlextInfraModelsCheck.CheckProjectTarget],
+            m.Field(description="Canonical project roots selected for this invocation"),
+        ]
+        results: Annotated[
+            t.VariadicTuple[FlextInfraModelsCheck.ProjectResult],
+            m.Field(description="Only executions reached by this invocation"),
+        ]
+        selected_files: Annotated[
+            t.VariadicTuple[Path],
+            m.Field(description="File selection; empty means full-project execution"),
+        ]
 
     class SarifReport(m.ArbitraryTypesModel):
         """Complete SARIF 2.1.0 report; serializes and validates the same JSON."""

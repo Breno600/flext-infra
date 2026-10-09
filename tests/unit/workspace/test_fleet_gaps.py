@@ -369,10 +369,15 @@ class TestsFlextInfraWorkspaceFleetGaps:
         self,
         tmp_path: Path,
     ) -> None:
-        """A project without Python targets publishes no lint/Pyrefly executions."""
+        """Real lint findings stop the serial invocation before Pyrefly executes."""
         root = tmp_path / "workspace"
         member = u.Tests.WorktreeFixture.governed_workspace_with_member(
             root, member=self.MEMBER
+        )
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                member / "src" / "sample.py", "import os\nimport os\n"
+            )
         )
         reports = tmp_path / "quality"
         results = tm.ok(
@@ -380,15 +385,22 @@ class TestsFlextInfraWorkspaceFleetGaps:
                 (m.Infra.CheckProjectTarget(name=member.name, path=member),),
                 (c.Infra.LINT, c.Infra.PYREFLY),
                 reports_dir=reports,
+                fail_fast=True,
             )
         )
         (project,) = results
-        tm.that(tuple(project.gates), eq=())
-        (selected,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_SARIF_FILENAME}")
+        tm.that(tuple(project.gates), eq=(c.Infra.LINT,))
+        lint = project.gates[c.Infra.LINT]
+        tm.that(lint.result.passed, eq=False)
+        tm.that(lint.outcome, eq=c.Infra.ToolOutcome.FINDINGS)
+        tm.that(lint.issues, empty=False)
+        native = lint.raw_receipt
+        assert native is not None
+        selected = native.parent.parent / c.Infra.CHECK_REPORT_SARIF_FILENAME
         with self._gh_on_path(tmp_path, "exit 0\n"):
             tm.that(self._fleet_gaps(root, selected), eq=0)
         row = next(row for row in self._receipt(root).repos if row.name == self.MEMBER)
-        tm.that(row.lint_findings, eq=None)
+        tm.that(row.lint_findings, eq=lint.finding_count)
         tm.that(row.pyrefly_findings, eq=None)
 
     def test_failed_native_verdict_is_not_a_quality_count(

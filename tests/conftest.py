@@ -183,11 +183,11 @@ def infra_subprocess() -> p.Cli.CommandRunner:
 
 
 @pytest.fixture
-def infra_toml() -> u.Cli:
+def infra_toml() -> p.Cli.CommandRunner:
     """Provide the public CLI utility facade for TOML tests.
 
     Returns:
-        The declaring CLI utility class exposed through ``u.Cli``.
+        The public command runner implemented by ``u.Cli``.
 
     """
     return u.Cli()

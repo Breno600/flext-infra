@@ -383,5 +383,7 @@ class TestsFlextInfraSmellsGate:
         for observed, emitted in zip(native_results, report_results, strict=True):
             self._assert_native_result(observed, emitted)
         report = m.Infra.SarifReport.model_validate_json(report_text)
-        round_trip = m.Infra.SarifReport.model_validate_json(report.model_dump_json())
+        round_trip = m.Infra.SarifReport.model_validate_json(
+            report.model_dump_json(round_trip=True),
+        )
         tm.that(round_trip, eq=report)

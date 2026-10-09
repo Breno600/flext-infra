@@ -69,7 +69,6 @@ class FlextInfraMypyReportRunner:
     def run(
         cls,
         invocation: m.Infra.MypyInvocation,
-        report_path: Path,
     ) -> int:
         """Run the checker and route its output through the machine boundary.
 
@@ -102,17 +101,15 @@ class FlextInfraMypyReportRunner:
         cls._write_report(
             outcome.stdout,
             outcome.stderr,
-            report_path,
+            destination,
         )
         return outcome.outcome.raw_return_code
 
 
 if __name__ == "__main__":
-    request, destination = sys.argv[1:]
     raise SystemExit(
         FlextInfraMypyReportRunner.run(
-            m.Infra.MypyInvocation.model_validate_json(request),
-            Path(destination),
+            m.Infra.MypyInvocation.model_validate_json(sys.argv[1]),
         ),
     )
 
