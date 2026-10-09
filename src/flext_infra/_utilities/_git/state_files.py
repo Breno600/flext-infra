@@ -127,7 +127,8 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         published = False
         try:
             descriptor = os.open(
-                directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                directory,
+                os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
             )
             opened = os.fstat(descriptor)
             if (opened.st_dev, opened.st_ino) != (
@@ -153,7 +154,9 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                     and descriptor is not None
                 ):
                     current = os.stat(
-                        staged.name, dir_fd=descriptor, follow_symlinks=False,
+                        staged.name,
+                        dir_fd=descriptor,
+                        follow_symlinks=False,
                     )
                     if (current.st_dev, current.st_ino) != (
                         staged_identity.st_dev,
