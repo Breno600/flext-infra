@@ -332,7 +332,7 @@ class FlextInfraWorkspaceChecker(
         fail_fast: bool = c.Infra.CHECK_FAIL_FAST_DEFAULT,
         ctx: m.Infra.GateContext | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
-        """Run selected gates for multiple projects.
+        """Run selected gates in one exclusively owned invocation report directory.
 
         Returns:
             The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectResult]]``.
@@ -359,10 +359,12 @@ class FlextInfraWorkspaceChecker(
                 "quality check selected projects without a pyproject: "
                 + ", ".join(unrunnable),
             )
-        report_base = reports_dir or self._default_reports_dir
-        dir_ensure = u.Cli.ensure_dir(report_base)
+        reports_root = reports_dir or self._default_reports_dir
+        dir_ensure = u.Cli.ensure_dir(reports_root)
         if dir_ensure.failure:
             return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(dir_ensure)
+        report_base = reports_root / u.generate_id()
+        report_base.mkdir(exist_ok=False)
         effective_ctx = ctx or m.Infra.GateContext(
             repository_root=self._repository_root,
             reports_dir=report_base,
@@ -372,13 +374,29 @@ class FlextInfraWorkspaceChecker(
             return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
                 "gate context fail_fast disagrees with the requested project policy",
             )
+        effective_ctx = effective_ctx.model_copy(update={"reports_dir": report_base})
         outcome = self._run_project_loop(
             targets,
             resolved_gates,
             effective_ctx,
             fail_fast=fail_fast,
         )
-        return self._write_reports_and_summary(resolved_gates, report_base, outcome)
+        return self._write_reports_and_summary(
+            resolved_gates,
+            report_base,
+            outcome,
+            m.Infra.CheckReportSummary(
+                targets=tuple(
+                    m.Infra.CheckProjectTarget(
+                        name=target.path.name,
+                        path=target.path.resolve(),
+                    )
+                    for target in targets
+                ),
+                results=tuple(outcome.results),
+                selected_files=(),
+            ),
+        )
 
     def _project_targets(
         self,

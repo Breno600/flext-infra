@@ -70,7 +70,9 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
                 request.source,
             )
         )
-        if references and not request.module.startswith(("tests.", "tests.")):
+        if references and not (
+            request.module == "tests" or request.module.startswith("tests.")
+        ):
             # Test and benchmark modules build installer maps at runtime from
             # the constants they exercise; the declared-mapping invariant
             # gates the production lazy-init modules only.

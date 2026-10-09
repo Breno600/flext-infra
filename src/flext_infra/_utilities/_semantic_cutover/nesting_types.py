@@ -16,7 +16,7 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesRopeRuntimeModules,
     FlextInfraUtilitiesRopeRuntimeRefactors,
 )
-from flext_infra._utilities._semantic_cutover.family_type_references import (
+from flext_infra._utilities._semantic_cutover import (
     FlextInfraUtilitiesSemanticFamilyTypeReferences,
 )
 
@@ -80,7 +80,6 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         *,
         protected: t.Pair[int, int] | None = None,
     ) -> str:
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
 
         return FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
             resource,
@@ -114,7 +113,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
                 and protected[0] <= annotation.lineno <= protected[1]
             ):
                 continue
-            start, _ = cls._expression_range(source, annotation)
+            start, _ = cls.expression_range(source, annotation)
             scope = runtime.scope_at(module, start, declaration_line=declaration_line)
             for node in cls._type_nodes(annotation, project, scope):
                 if not isinstance(node, ast.Constant) or not isinstance(
@@ -130,7 +129,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
                     replacement,
                 )
                 if updated != node.value:
-                    start, end = cls._expression_range(source, node)
+                    start, end = cls.expression_range(source, node)
                     edits.append(
                         m.Infra.SourceRewrite(start=start, end=end, text=repr(updated)),
                     )
@@ -152,7 +151,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
             project,
             scope,
         ):
-            start, end = cls._expression_range(source, node)
+            start, end = cls.expression_range(source, node)
             if any(edit.start <= start and end <= edit.end for edit in edits):
                 continue
             text = replacement(scope, node)

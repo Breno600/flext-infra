@@ -46,24 +46,15 @@ class FlextInfraSemanticPublication:
             return r[tuple[Path, ...]].from_failure(files)
         if not files.value:
             return r[tuple[Path, ...]].ok(())
-        inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
-        for plan in plans:
-            for state in (plan.before, *plan.source_states):
-                if inputs.setdefault(state.path, state) != state:
-                    return r[tuple[Path, ...]].fail(
-                        f"semantic input snapshots disagree: {state.path}",
-                    )
+        inputs = cls._semantic_input_snapshots(plans)
+        if inputs.failure:
+            return r[tuple[Path, ...]].from_failure(inputs)
         analysis = m.Infra.CodegenPhaseAnalysis(
             phase=c.Infra.CodegenStagedFilePhase.SEMANTIC,
             files=tuple(files.value),
-            inputs=tuple(inputs.values()),
+            inputs=inputs.value,
         )
-        roots = {
-            f"@semantic-{index}": project
-            for index, project in enumerate(
-                sorted({plan.project for plan in files.value}),
-            )
-        }
+        roots = cls._semantic_phase_roots(files.value)
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=repository_root),
         )
@@ -94,6 +85,45 @@ class FlextInfraSemanticPublication:
             return transaction.publish_prepared_locked(started.value, apply)
 
         return transaction.run_files_locked(roots, publish)
+
+    @classmethod
+    def _semantic_input_snapshots(
+        cls,
+        plans: t.SequenceOf[m.Infra.SemanticFilePlan],
+    ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
+        """Authenticate one snapshot per semantic input path.
+
+        Returns:
+            The ordered first snapshots of every semantic input.
+
+        """
+        snapshots: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
+        for plan in plans:
+            for state in (plan.before, *plan.source_states):
+                if snapshots.setdefault(state.path, state) != state:
+                    return r[t.VariadicTuple[m.Cli.AtomicFileState]].fail(
+                        f"semantic input snapshots disagree: {state.path}",
+                    )
+        return r[t.VariadicTuple[m.Cli.AtomicFileState]].ok(
+            tuple(snapshots.values()),
+        )
+
+    @staticmethod
+    def _semantic_phase_roots(
+        files: t.SequenceOf[m.Infra.CodegenFilePlan],
+    ) -> t.MappingKV[str, Path]:
+        """Namespace the touched projects under stable semantic pseudo-roots.
+
+        Returns:
+            The deterministic pseudo-root mapping of the publication.
+
+        """
+        return {
+            f"@semantic-{index}": project
+            for index, project in enumerate(
+                sorted({plan.project for plan in files}),
+            )
+        }
 
     @staticmethod
     def _concrete_file_plans(

@@ -520,11 +520,17 @@ class FlextInfraUtilitiesRopeInventory:
         """
         if definition_path is None:
             return None
+        if all_surfaces:
+            return FlextInfraUtilitiesRopeImports.indexed_surface_search_resources(
+                options.rope_workspace,
+                resource=options.resource,
+                name=name,
+                definition_path=definition_path,
+            )
         module_name = options.module_name
         dependent_import_targets = (
             (module_name, f"{module_name}.{name}")
             if module_name
-            and not all_surfaces
             and FlextInfraUtilitiesRopeInventory._reference_surface(definition_path)
             != c.Infra.DEFAULT_SRC_DIR
             else ()
@@ -535,7 +541,6 @@ class FlextInfraUtilitiesRopeInventory:
             name=name,
             definition_path=definition_path,
             dependent_import_targets=dependent_import_targets,
-            include_reexports=all_surfaces,
         )
 
     @staticmethod
