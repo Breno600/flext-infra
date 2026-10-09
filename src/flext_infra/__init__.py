@@ -67,6 +67,9 @@ if TYPE_CHECKING:
     from flext_infra.codegen.mise_artifacts_workspace import (
         FlextInfraMiseWorkspacePlanner,
     )
+    from flext_infra.codegen.mise_toolchain_proof import (
+        FlextInfraCodegenMiseToolchainProof,
+    )
     from flext_infra.codegen.pipeline import (
         FlextInfraCodegenLazyInitGenerationMixin,
         FlextInfraCodegenPipeline,
@@ -219,6 +222,7 @@ if TYPE_CHECKING:
     )
     from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
     from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+    from flext_infra.workspace.lifecycle import FlextInfraWorkspaceLifecycle
     from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
     from flext_infra.workspace.rope import FlextInfraRopeWorkspace
     from flext_infra.worktree import FlextInfraWorktreeService
@@ -251,6 +255,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenLazyInitPlanner",
     "FlextInfraCodegenMakeBootstrap",
     "FlextInfraCodegenMiseArtifacts",
+    "FlextInfraCodegenMiseToolchainProof",
     "FlextInfraCodegenPipeline",
     "FlextInfraCodegenPipelineStagesMixin",
     "FlextInfraCodegenProjectNew",
@@ -370,6 +375,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspaceEnvironmentMixin",
     "FlextInfraWorkspaceEnvironmentProvenance",
     "FlextInfraWorkspaceFleetGaps",
+    "FlextInfraWorkspaceLifecycle",
     "FlextInfraWorkspacePropagation",
     "FlextInfraWorkspaceRoutes",
     "FlextInfraWorktreeService",
@@ -442,6 +448,7 @@ install_lazy_exports(
         "FlextInfraCodegenLazyInitPlanner": ".codegen.lazy_init_planner",
         "FlextInfraCodegenMakeBootstrap": ".codegen.make_bootstrap",
         "FlextInfraCodegenMiseArtifacts": ".codegen.mise_artifacts",
+        "FlextInfraCodegenMiseToolchainProof": ".codegen.mise_toolchain_proof",
         "FlextInfraCodegenPipeline": ".codegen.pipeline",
         "FlextInfraCodegenPipelineStagesMixin": ".codegen.pipeline",
         "FlextInfraCodegenProjectNew": ".codegen.project_new",
@@ -561,6 +568,7 @@ install_lazy_exports(
         "FlextInfraWorkspaceEnvironmentMixin": ".workspace.environment",
         "FlextInfraWorkspaceEnvironmentProvenance": ".workspace.environment_provenance",
         "FlextInfraWorkspaceFleetGaps": ".workspace.fleet_gaps",
+        "FlextInfraWorkspaceLifecycle": ".workspace.lifecycle",
         "FlextInfraWorkspacePropagation": ".workspace.propagation",
         "FlextInfraWorkspaceRoutes": ".services.cli_routes_workspace",
         "FlextInfraWorktreeService": ".worktree",

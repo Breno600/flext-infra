@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import errno
 import os
 from pathlib import Path
 
@@ -95,7 +96,11 @@ class TestsFlextInfraGitStateBoundaries:
         oid = u.Tests.git_capture(source, "hash-object", "-w", str(oversized)).strip()
         oversized.unlink()
         u.Tests.git_run(
-            source, "update-index", "--add", "--cacheinfo", f"120000,{oid},shape",
+            source,
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            f"120000,{oid},shape",
         )
         u.Tests.git_run(source, "commit", "-m", "unmaterializable symlink baseline")
         destination = source / "shape"
@@ -113,7 +118,12 @@ class TestsFlextInfraGitStateBoundaries:
         )
         lane = tmp_path / "lane"
         u.Tests.git_run(
-            source, "worktree", "add", "--detach", str(lane), checkpoint.worktree_commit,
+            source,
+            "worktree",
+            "add",
+            "--detach",
+            str(lane),
+            checkpoint.worktree_commit,
         )
         remote = tmp_path / "retained.git"
         u.Tests.git_run(source, "init", "--bare", str(remote))
@@ -128,10 +138,14 @@ class TestsFlextInfraGitStateBoundaries:
         refs = u.Tests.git_capture(source, "show-ref")
 
         result = u.Infra.git_cleanup_worktree_state(
-            checkpoint, lane, checkpoint.worktree_commit, publication=publication,
+            checkpoint,
+            lane,
+            checkpoint.worktree_commit,
+            publication=publication,
         )
 
         tm.that(result.failure, eq=True)
+        tm.that(result.error, has=f"[Errno {errno.ENAMETOOLONG}]")
         tm.that(str(destination.readlink()), eq="captured missing target")
         tm.that(scratch.read_bytes(), eq=b"unrelated scratch")
         tm.that(set(source.iterdir()), eq=entries)

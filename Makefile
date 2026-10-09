@@ -309,7 +309,7 @@ RUNTIME_LINKED_WORKTREE := Y
 endif
 endif
 ifeq ($(RUNTIME_LINKED_WORKTREE),Y)
-override RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../.venv
+override RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../.venv)
 else
 override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
 endif

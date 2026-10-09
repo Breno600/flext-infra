@@ -94,7 +94,7 @@ class TestsFlextInfraSymbolicTextCutover:
         )
         start = source.index("Public", source.index("value ="))
         start_byte = len(source[:start].encode("utf-8"))
-        positive = {
+        positive: t.JsonMapping = {
             "OWNER": {
                 "text": "Public",
                 "range": {
