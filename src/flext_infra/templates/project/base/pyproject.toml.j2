@@ -489,6 +489,13 @@ split-on-trailing-comma = {{ tooling.tools.ruff.lint.isort.split_on_trailing_com
 [tool.ruff.lint.pydocstyle]
 convention = {{ tooling.tools.ruff.lint.pydocstyle.convention | tojson }}
 
+[tool.ruff.lint.pylint]
+allow-dunder-method-names = [
+{% for item in tooling.tools.ruff.lint.pylint.allow_dunder_method_names | sort %}
+  {{ item | tojson }},
+{% endfor %}
+]
+
 [tool.tomlsort]
 all = {{ tooling.tools.tomlsort.all | lower }}
 in_place = {{ tooling.tools.tomlsort.in_place | lower }}

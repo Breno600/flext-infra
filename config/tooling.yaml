@@ -321,17 +321,21 @@ Infra:
           # (D203/D211, multi-line-summary-first-line/D213) included, so no run warns about them.
           pydocstyle:
             convention: google
+          # Operator approval 2026-10-09: "Parametrizar Dois Descritores".
+          # Native read-only type descriptors retain their Python names.
+          # PLW3201 remains enabled for every other unrecognized dunder name.
+          # https://docs.python.org/3.13/reference/datamodel.html#type.__base__
+          # https://docs.python.org/3.13/reference/datamodel.html#type.__bases__
+          # https://docs.astral.sh/ruff/rules/bad-dunder-method-name/
+          pylint:
+            allow-dunder-method-names: [__base__, __bases__]
           # Each exception exists only with the operator ruling that authorized
           # it and its reason; Ruff receives the unscoped entries as `ignore`
           # and the scoped ones as `per-file-ignores`. Repositories declare no
-          # exception of their own. Operator order 2026-10-05 (latest, direct,
-          # merge-admin mandate): TC001-TC004 are ALL BLOCKED — enforced by
-          # rule name on every file (the four names live in the select
-          # surface, never in an ignore table; the same-day
-          # tc001-tc004-off-pydantic disable is superseded), and the scoped
-          # lazy-root dunder-init exception below stays the only relief.
-          # Pydantic runtime-evaluation is protected by the
-          # runtime-evaluated-roots projection, not by disabling the rules.
+          # exception of their own. The 2026-10-08 TC004-never ruling
+          # reinforces the global TC001-TC004 prohibition recorded below.
+          # Runtime-evaluated bases remain a derived declaration contract;
+          # they do not authorize re-enabling the prohibited rules.
           authorized-exceptions:
             - rules: [missing-trailing-comma]
               authority: operator-file-gate-verdict-mandate-2026-10-08
