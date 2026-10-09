@@ -86,12 +86,16 @@ class TestsFlextInfraRopeAnalysis:
         with u.Infra.open_project(project) as rope_project:
             resource = tm.not_none(u.Infra.fetch_python_resource(rope_project, source))
             namespaces = u.Infra.inherited_facade_namespaces(
-                rope_project, resource, class_name="Consumer"
+                rope_project,
+                resource,
+                class_name="Consumer",
             )
             tm.that(namespaces, eq=expected)
             tm.that(
                 u.Infra.inherited_facade_namespaces(
-                    rope_project, resource, class_name="Consumer"
+                    rope_project,
+                    resource,
+                    class_name="Consumer",
                 ),
                 eq=namespaces,
             )
@@ -112,7 +116,9 @@ class TestsFlextInfraRopeAnalysis:
             resource = tm.not_none(u.Infra.fetch_python_resource(rope_project, source))
             with pytest.raises(ValueError, match="cyclic facade namespace inheritance"):
                 u.Infra.inherited_facade_namespaces(
-                    rope_project, resource, class_name="Consumer"
+                    rope_project,
+                    resource,
+                    class_name="Consumer",
                 )
 
     @staticmethod
@@ -194,7 +200,8 @@ class TestsFlextInfraRopeAnalysis:
         """Real builtin, local, imported and inferred classes use public SDK APIs."""
         project, package = u.Tests.demo_project(tmp_path)
         (package / "provider.py").write_text(
-            "class Parent:\n    pass\n", encoding="utf-8"
+            "class Parent:\n    pass\n",
+            encoding="utf-8",
         )
         source = package / "consumer.py"
         source.write_text(declaration + "\n", encoding="utf-8")

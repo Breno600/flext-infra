@@ -657,7 +657,8 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
                 not isinstance(
                     base,
                     FlextInfraUtilitiesRopeRuntime.runtime_type(
-                        "rope.base.pyobjectsdef", "PyClass"
+                        "rope.base.pyobjectsdef",
+                        "PyClass",
                     ),
                 )
                 or base.get_module() is None

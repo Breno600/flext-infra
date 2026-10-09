@@ -167,7 +167,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
         )
         if sarif_write_result.failure:
             return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(
-                sarif_write_result
+                sarif_write_result,
             )
         total_findings = sum(project.total_findings for project in results)
         success = len(results) - outcome.failed

@@ -57,7 +57,8 @@ class FlextInfraModelsTransformers:
             ),
         ]
         changes: Annotated[
-            t.VariadicTuple[str], m.Field(description="Recorded migration operations")
+            t.VariadicTuple[str],
+            m.Field(description="Recorded migration operations"),
         ] = m.Field(default_factory=tuple)
         source_states: Annotated[
             tuple[m.Cli.AtomicFileState, ...],
@@ -259,7 +260,8 @@ class FlextInfraModelsTransformers:
             m.Field(description="Body indent width stripped per line"),
         ]
         docstring_span: Annotated[
-            tuple[int, int] | None, m.Field(description="Wrapper docstring line span")
+            tuple[int, int] | None,
+            m.Field(description="Wrapper docstring line span"),
         ] = None
 
     class HeaderInfo(m.ArbitraryTypesModel):

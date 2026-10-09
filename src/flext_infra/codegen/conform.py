@@ -25,7 +25,8 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
 
     @staticmethod
     def _link_mode(
-        repository: m.Infra.RepositoryRef, toolchain: m.Infra.ToolchainSpec
+        repository: m.Infra.RepositoryRef,
+        toolchain: m.Infra.ToolchainSpec,
     ) -> str:
         """Resolve the repository override through one codegen authority."""
         link_mode = repository.uv_link_mode or toolchain.uv_link_mode
@@ -36,7 +37,8 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
 
     @staticmethod
     def _dependency_cooldown_policy(
-        repository: m.Infra.RepositoryRef, toolchain: m.Infra.ToolchainSpec
+        repository: m.Infra.RepositoryRef,
+        toolchain: m.Infra.ToolchainSpec,
     ) -> tuple[tuple[str, ...], dict[str, str]]:
         """Compose fleet defaults with the repository's narrower policy."""
         exclusions = dict.fromkeys(toolchain.dependency_cooldown_exclusions)
@@ -74,7 +76,8 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
 
     @classmethod
     def _surface_contract(
-        cls, surface: c.Infra.CodegenConformSurface
+        cls,
+        surface: c.Infra.CodegenConformSurface,
     ) -> m.Infra.CodegenConformSurfaceContract:
         match surface:
             case c.Infra.CodegenConformSurface.ALL:
