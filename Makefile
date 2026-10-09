@@ -417,7 +417,7 @@ _bootstrap_setup_tools:
 		exit 2; \
 	fi; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" lock --upgrade --bump; \
+		"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" lock --bump; \
 	fi; \
 	"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" install --yes "python" "github:jdx/mise" "uv" "kubectl" "helm" "kind" "direnv" "taplo" "aqua:ast-grep/ast-grep" "gitleaks" "aqua:boyter/scc" "kubeconform" "node" "go" "github:qltysh/qlty" "github:kucherenko/jscpd" "github:microsoft/waza"; \
 	"$$mise_bootstrap_bin" reshim; \

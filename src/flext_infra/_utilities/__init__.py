@@ -148,6 +148,7 @@ if TYPE_CHECKING:
         FlextInfraUtilitiesGitWorktreeStatusMixin,
     )
     from flext_infra._utilities._mypy_profile import FlextInfraMypyProfiler
+    from flext_infra._utilities._mypy_report import FlextInfraMypyReportRunner
     from flext_infra._utilities._mypy_supervisor import FlextInfraMypyDarwinSupervisor
     from flext_infra._utilities._project_discovery_candidates import (
         FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
@@ -481,6 +482,7 @@ if TYPE_CHECKING:
 __all__: tuple[str, ...] = (
     "FlextInfraMypyDarwinSupervisor",
     "FlextInfraMypyProfiler",
+    "FlextInfraMypyReportRunner",
     "FlextInfraRopeProject",
     "FlextInfraUtilitiesBase",
     "FlextInfraUtilitiesCodegen",
@@ -682,6 +684,7 @@ install_lazy_exports(
     MappingProxyType({
         "FlextInfraMypyDarwinSupervisor": "._mypy_supervisor",
         "FlextInfraMypyProfiler": "._mypy_profile",
+        "FlextInfraMypyReportRunner": "._mypy_report",
         "FlextInfraRopeProject": "._rope.project",
         "FlextInfraUtilitiesBase": ".base",
         "FlextInfraUtilitiesCodegen": ".codegen",
