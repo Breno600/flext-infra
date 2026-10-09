@@ -65,7 +65,11 @@ class TestsFlextInfraRopeAnalysis:
             encoding="utf-8",
         )
         source = package / "consumer.py"
-        content = "from external_provider.first import Base\nclass Consumer(Base):\n    pass\n"
+        content = (
+            "from external_provider.first import Base\n"
+            "class Consumer(Base):\n"
+            "    pass\n"
+        )
         source.write_text(content, encoding="utf-8")
 
         with pytest.raises(ValueError, match="Cyclic provider reexport"):
@@ -90,10 +94,14 @@ class TestsFlextInfraRopeAnalysis:
             )
             (provider / f"layer_{index}.py").write_text(content, encoding="utf-8")
         source = package / "consumer.py"
-        content = "from external_provider.layer_0 import Base\nclass Consumer(Base):\n    pass\n"
+        content = (
+            "from external_provider.layer_0 import Base\n"
+            "class Consumer(Base):\n"
+            "    pass\n"
+        )
         source.write_text(content, encoding="utf-8")
 
-        with pytest.raises(ValueError, match="Unresolved external base.*at depth"):
+        with pytest.raises(ValueError, match=r"Unresolved external base.*at depth"):
             u.Infra.runtime_evaluated_base_classes(project, {source: content}, ())
 
     @staticmethod

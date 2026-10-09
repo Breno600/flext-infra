@@ -97,7 +97,8 @@ class FlextInfraModelsCensus:
             m.Field(
                 default_factory=tuple,
                 description=(
-                    "Qualified indexed occurrences on all surfaces, including reexports; "
+                    "Qualified indexed occurrences on all surfaces, "
+                    "including reexports; "
                     "not reachability"
                 ),
             )
