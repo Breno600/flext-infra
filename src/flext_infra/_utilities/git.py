@@ -26,6 +26,9 @@ from flext_infra._utilities._git.state_capture import (
     FlextInfraUtilitiesGitStateCaptureMixin,
 )
 from flext_infra._utilities._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
+from flext_infra._utilities._git.worktree_discovery import (
+    FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
+)
 
 
 class FlextInfraUtilitiesGit(
@@ -36,6 +39,7 @@ class FlextInfraUtilitiesGit(
     FlextInfraUtilitiesGitSemanticSubmoduleMixin,
     FlextInfraUtilitiesGitLaneHygieneMixin,
     FlextInfraUtilitiesGitStateCaptureMixin,
+    FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
 ):
     """Canonical Git owner for flext-infra: scope + worktree + checkpoint/patch.
 
