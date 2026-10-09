@@ -139,3 +139,6 @@ class FlextInfraConformWiring:
             docs_planner=self.docs_artifact_planner,
             participant_policy=self.generation_participant_policy,
         )
+
+
+__all__: list[str] = ["FlextInfraConformWiring"]

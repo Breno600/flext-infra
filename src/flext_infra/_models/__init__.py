@@ -178,7 +178,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsRelease",
     "FlextInfraModelsRope",
     "FlextInfraModelsRopeMove",
-    "FlextInfraModelsRopeRules",
     "FlextInfraModelsScan",
     "FlextInfraModelsSonarcloud",
     "FlextInfraModelsTestmon",

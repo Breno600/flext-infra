@@ -134,3 +134,6 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
             message = f"Rope returned a non-module AST for {request.path}"
             raise TypeError(message)
         return parsed
+
+
+__all__: list[str] = ["FlextInfraUtilitiesRopeSourceBasesInventory"]
