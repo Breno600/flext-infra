@@ -805,21 +805,15 @@ class FlextInfraUtilitiesPyproject:
             Governed project paths declared by this directory's ``.gitmodules``.
 
         Raises:
-            ValueError: If ``declared.failure``; or if ``unmanaged.failure``.
+            ValueError: If ``declared.failure``.
 
         """
         declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(repository_root)
         if declared.failure:
             msg = declared.error or f"invalid workspace topology: {repository_root}"
             raise ValueError(msg)
-        unmanaged = FlextInfraUtilitiesGit.git_unmanaged_submodule_paths(
-            m.Infra.GitRepoRequest(repo_root=repository_root),
-        )
-        if unmanaged.failure:
-            msg = unmanaged.error or f"invalid workspace topology: {repository_root}"
-            raise ValueError(msg)
         return tuple(
-            path.as_posix() for path in declared.value if path not in unmanaged.value
+            item.path.as_posix() for item in declared.value if item.managed is not False
         )
 
 
