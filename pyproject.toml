@@ -230,7 +230,7 @@ project-excludes = [
   "typings/**",
   "vendor/**",
 ]
-project-includes = ["scripts/**/*.py*", "src/**/*.py*", "tests/**/*.py*"]
+project-includes = ["src/**/*.py*", "tests/**/*.py*"]
 python-version = "3.13"
 search-path = ["src", "."]
 use-ignore-files = false
@@ -444,7 +444,7 @@ namespace-packages = ["tests", "examples", "scripts"]
 preview = true
 respect-gitignore = true
 show-fixes = true
-src = ["scripts", "src", "tests"]
+src = ["src", "tests"]
 target-version = "py313"
 
 [tool.ruff.format]
@@ -514,7 +514,6 @@ runtime-evaluated-base-classes = [
   "flext_core.m.ArbitraryTypesModel",
   "flext_core.m.ContractModel",
   "flext_core.m.FlexibleModel",
-  "flext_core.m.ImmutableValueModel",
   "flext_core.m.RootModel",
   "flext_core.m.StrictBoundaryModel",
   "flext_infra._models._codegen.fix.BulkFixItem",
@@ -615,6 +614,10 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
+"**/.agents/skills/webapp-testing/scripts/with_server.py" = [
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
+]
 "**/__init__.py" = ["line-too-long", "non-empty-init-module", "unused-import"]
 "**/_config.py" = ["invalid-function-name"]
 "**/bin/**" = [
@@ -708,6 +711,14 @@ split-on-trailing-comma = false
   "commented-out-code",
   "line-too-long",
   "typing-only-first-party-import",
+]
+"src/flext_cli/_utilities/processes.py" = [
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
+]
+"src/flext_cli/_utilities/runtime.py" = [
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
 ]
 "tests/**/*.py" = ["assert"]
 "tests/test_snapshot_drill.py" = ["import-private-name"]

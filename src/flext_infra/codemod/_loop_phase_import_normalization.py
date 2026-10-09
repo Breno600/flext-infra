@@ -53,3 +53,6 @@ class FlextInfraImportNormalizationPhase:
             if FlextInfraImportNormalization.apply_files(project_root, scoped):
                 changed = True
         return r[bool].ok(value=changed)
+
+
+__all__: list[str] = ["FlextInfraImportNormalizationPhase"]

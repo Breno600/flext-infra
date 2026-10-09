@@ -57,3 +57,6 @@ class FlextInfraNamespaceRelocationPhase:
             )
             changed = True
         return r[bool].ok(value=changed)
+
+
+__all__: list[str] = ["FlextInfraNamespaceRelocationPhase"]
