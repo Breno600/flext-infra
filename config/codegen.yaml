@@ -399,16 +399,8 @@ Infra:
         dependencies: [flext-cli]
       - project: flext-cli
         package:
-          name: flext-core
-        dependencies: [flext-cli]
-      - project: flext-cli
-        package:
           name: flext-tests
         dependencies: [flext-cli]
-      - project: flext-tests
-        package:
-          name: flext-infra
-        dependencies: [flext-tests]
 
     # No provider registry exists: a repository's provider identity is
     # detected from its own config/workspace.yaml (provider key plus canonical
