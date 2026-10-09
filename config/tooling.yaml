@@ -308,7 +308,7 @@ Infra:
                 - typing-only-third-party-import
                 - typing-only-standard-library-import
                 - runtime-import-in-type-checking-block
-              authority: operator-ruling-2026-10-08-tc001-tc004-off-global
+              authority: operator-ruling-2026-10-08-tc004-never
               reason: >-
                 The operator disabled TC001 through TC004 globally. TC001
                 is covered by the first-party import exception above.
