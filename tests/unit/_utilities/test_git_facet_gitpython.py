@@ -21,36 +21,31 @@ class TestsFlextInfraGitFacet:
 
     @staticmethod
     def _lane_repository(tmp_path: Path) -> t.Triple[Path, Path, str]:
-        """Publish a real fixture with a typed, config-derived integration line.
+        """Publish a real member whose superproject declares its integration line.
+
+        The member keeps its own ``.git`` directory inside the superproject, so
+        its index, refs and reflogs stay observable as member bytes.
 
         Returns:
-            Checkout, local bare remote, and the declared integration branch.
+            Member checkout, local bare remote, and the declared integration branch.
 
         """
-        repository = u.Tests.git_repository(tmp_path)
+        superproject = u.Tests.git_repository(tmp_path, "superproject")
+        repository = u.Tests.git_repository(superproject, "member")
         branch = u.Tests.integration_branch(repository)
-        manifest = tm.ok(
-            u.Infra.load_workspace_manifest(Path(__file__).resolve().parents[3]),
-        )[0]
-        declared = manifest.model_copy(
-            update={
-                "integration": m.Infra.WorkspaceIntegrationSpec(
-                    provider=manifest.repository.provider,
-                    branch=branch,
-                ),
-            },
-        )
-        directory = repository / c.CONFIG_DIR_NAME
-        directory.mkdir(exist_ok=True)
-        tm.ok(
-            u.Cli.yaml_dump(
-                u.Infra.workspace_manifest_path(repository),
-                declared.model_dump(mode="json"),
-            ),
-        )
-        u.Tests.git_run(repository, "add", "--", directory.name)
-        u.Tests.git_run(repository, "commit", "-m", "test: declare lane integration")
         remote = u.Tests.configure_local_origin(repository, tmp_path / "remote")
+        u.Tests.git_run(
+            superproject,
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "-b",
+            branch,
+            str(remote),
+            repository.name,
+        )
+        u.Tests.git_run(superproject, "commit", "-m", "test: declare member line")
         return repository, remote, branch
 
     @staticmethod
@@ -328,7 +323,7 @@ class TestsFlextInfraGitFacet:
             eq=1,
         )
         output = capsys.readouterr()
-        tm.that(output.out + output.err, has="typed config/workspace.yaml integration")
+        tm.that(output.out + output.err, has="has no superproject")
         tm.that(self._lane_bytes(repository), eq=before)
 
     @staticmethod
@@ -614,7 +609,7 @@ class TestsFlextInfraGitFacet:
             "-m",
             "recovery index",
         )
-        oids = []
+        oids: list[str] = []
         for entry in range(entries):
             oid = u.Tests.git_capture(
                 real_git_repo,
@@ -811,7 +806,7 @@ class TestsFlextInfraGitFacet:
 
         tm.fail(
             u.Infra.git_remove_clean_worktree(repository, lane),
-            has="integration declaration",
+            has="has no superproject",
         )
 
         assert lane.is_dir()

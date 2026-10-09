@@ -78,11 +78,13 @@ class TestsFlextInfraSymbolicTextCutover:
             for _ in range(2):
                 tm.that(
                     u.Infra.codemod_context_admits(
-                        mod_workspace,
-                        rule,
-                        consumer,
-                        capture,
-                        facts,
+                        m.Infra.CodemodAdmission(
+                            root=mod_workspace,
+                            rule=rule,
+                            file_path=consumer,
+                            captures=capture,
+                            facts=facts,
+                        ),
                     ),
                     eq=expected,
                 )
@@ -111,22 +113,26 @@ class TestsFlextInfraSymbolicTextCutover:
         )
         tm.that(
             u.Infra.codemod_context_admits(
-                mod_workspace,
-                rule,
-                consumer,
-                positive,
-                facts,
-                closed,
+                m.Infra.CodemodAdmission(
+                    root=mod_workspace,
+                    rule=rule,
+                    file_path=consumer,
+                    captures=positive,
+                    facts=facts,
+                    snapshot=closed,
+                ),
             ),
             eq=True,
         )
         tm.that(
             u.Infra.codemod_context_admits(
-                mod_workspace,
-                rule,
-                consumer,
-                positive,
-                facts,
+                m.Infra.CodemodAdmission(
+                    root=mod_workspace,
+                    rule=rule,
+                    file_path=consumer,
+                    captures=positive,
+                    facts=facts,
+                ),
             ),
             eq=False,
         )
@@ -156,16 +162,18 @@ class TestsFlextInfraSymbolicTextCutover:
         )
         with pytest.raises(ValueError, match="binding capture differs from source"):
             u.Infra.codemod_context_admits(
-                mod_workspace,
-                rule,
-                consumer,
-                {
-                    "OWNER": {
-                        "text": "other",
-                        "range": {"byteOffset": {"start": 0, "end": 5}},
-                    }
-                },
-                u.Infra.codemod_project_facts(mod_workspace, (rule,)),
+                m.Infra.CodemodAdmission(
+                    root=mod_workspace,
+                    rule=rule,
+                    file_path=consumer,
+                    captures={
+                        "OWNER": {
+                            "text": "other",
+                            "range": {"byteOffset": {"start": 0, "end": 5}},
+                        }
+                    },
+                    facts=u.Infra.codemod_project_facts(mod_workspace, (rule,)),
+                ),
             )
         tm.that(consumer.read_text(encoding="utf-8"), eq="value = 1\n")
 
