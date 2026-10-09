@@ -6,12 +6,17 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from git import GitCommandError
 
-from flext_infra import c, m, p, r
+from flext_infra import c, m, r
 from flext_infra._utilities._git.semantic_refs import (
     FlextInfraUtilitiesGitSemanticRefsMixin,
 )
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitSemanticPublishMixin(
@@ -53,16 +58,6 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
             The resulting ``p.Result[m.Infra.GitBoolReport]``.
 
         """
-        if request.reference.startswith(c.Infra.GIT_REFS_HEADS):
-            admitted = cls.git_verify_lane(
-                m.Infra.GitLaneVerificationRequest(
-                    repo_root=request.repo_root,
-                    operation="retire",
-                    candidate=request.expected_oid,
-                ),
-            )
-            if admitted.failure:
-                return r[m.Infra.GitBoolReport].from_failure(admitted)
         try:
             repo = cls._repo(request.repo_root)
             repo.git.update_ref("-d", request.reference, request.expected_oid)
@@ -111,15 +106,6 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
             The resulting ``p.Result[m.Infra.GitTextReport]``.
 
         """
-        admitted = cls.git_verify_lane(
-            m.Infra.GitLaneVerificationRequest(
-                repo_root=request.repo_root,
-                remote=request.remote,
-                candidate=request.source,
-            ),
-        )
-        if admitted.failure:
-            return r[m.Infra.GitTextReport].from_failure(admitted)
         try:
             repo = cls._repo(request.repo_root)
             text = repo.git.push(
@@ -196,20 +182,6 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
             The resulting ``p.Result[m.Infra.GitBoolReport]``.
 
         """
-        if request.expected_oid is None:
-            return r[m.Infra.GitBoolReport].fail(
-                "remote branch retirement requires its observed object identity",
-            )
-        admitted = cls.git_verify_lane(
-            m.Infra.GitLaneVerificationRequest(
-                repo_root=request.repo_root,
-                remote=request.remote,
-                operation="retire",
-                candidate=request.expected_oid,
-            ),
-        )
-        if admitted.failure:
-            return r[m.Infra.GitBoolReport].from_failure(admitted)
         ref = f"refs/heads/{request.branch}"
         lease = (
             (f"--force-with-lease={ref}:{request.expected_oid}",)
@@ -265,15 +237,6 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
             The resulting ``p.Result[m.Infra.GitBoolReport]``.
 
         """
-        admitted = cls.git_verify_lane(
-            m.Infra.GitLaneVerificationRequest(
-                repo_root=request.repo_root,
-                operation="create",
-                candidate=request.start,
-            ),
-        )
-        if admitted.failure:
-            return r[m.Infra.GitBoolReport].from_failure(admitted)
         try:
             repo = cls._repo(request.repo_root)
             if request.switch:

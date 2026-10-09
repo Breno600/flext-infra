@@ -12,7 +12,6 @@ name: CI
 # workflow_call changes no direct-run behavior and declares the optional
 # cross-repo dependency-credential secret contract in workflow scope.
 "on":
-  workflow_dispatch:
   push:
     branches:
 {%- for branch in ci_trigger_branches %}
@@ -62,44 +61,15 @@ jobs:
     timeout-minutes: 60
     env:
       {{ make.ci.variable }}: {{ make.ci.value }}
-{%- if not owns_workspace_manifest %}
-    # The member manifest is the uv workspace contract (bare sibling
-    # requirements + `workspace = true` sources): it only parses inside the
-    # workspace root. Standalone member CI therefore checks out the fleet
-    # superproject at its integration branch with submodules, overlays this
-    # repository's head onto the member directory, and runs every step from
-    # that member directory — the member Makefile resolves the superproject
-    # runtime and provisions the REAL workspace environment at the root.
-    defaults:
-      run:
-        working-directory: fleet/{{ dist }}
-{%- endif %}
+      GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
-{%- if not owns_workspace_manifest %}
-      - name: Checkout fleet workspace
-        uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
-        with:
-          repository: {{ fleet_root_repository }}
-          ref: {{ fleet_root_branch }}
-          submodules: recursive
-          path: fleet
-          persist-credentials: false
-          fetch-depth: 1
-      - name: Overlay member head
-        uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
-        with:
-          path: fleet/{{ dist }}
-          persist-credentials: false
-          fetch-depth: 0
-{%- else %}
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
         with:
           submodules: {{ checkout_submodules }}
-          persist-credentials: false
           fetch-depth: 0
-{%- endif %}
-{%- include "_fragments/private_dependency_auth.j2" %}
+{%- include "_fragments/private_submodules_init.j2" %}
+{%- include "_fragments/cross_repo_dependency_credential.j2" %}
       # Why: GitHub runners expose umask 002, so git checkout materializes
       # group-writable modes (0664) for tracked files. Canonical Mise
       # artifacts demand exact modes (0o644) and the conform gate fails loud
@@ -116,6 +86,14 @@ jobs:
       # a cold runner never re-downloads the pinned tarballs, where a network
       # blip failed setup.
 {%- include "_fragments/toolchain_cache_restore.j2" %}
+{%- if custom_steps %}
+
+      # Project-owned steps, the CI counterpart of custom.mk: the generator
+      # injects this block verbatim from the project's own custom-steps file
+      # and never interprets it, so a project extends its pipeline without the
+      # generator carrying that project's concerns.
+{{ custom_steps }}
+{%- endif %}
       # make setup is the frozen installer. It bootstraps the committed Mise
       # release and installs the fleet toolchain from the committed
       # mise.lock and the dependencies frozen from the committed uv.lock,
@@ -139,11 +117,44 @@ jobs:
 {%- include "_fragments/testmon_cache_restore.j2" %}
 {%- endif %}
 
-{%- include "_fragments/mise_install.j2" %}
-      - name: Approval (blocking)
-        id: approval
-        # One owner for {{ make.approval_verbs | join(" -> ") }} in both profiles.
-        run: {{ make.ci.variable }}={{ make.ci.value }} make pre-commit
+{%- for step in make.workflow if "ci" in step.contexts %}
+      - name: {{ step.verb }} (blocking)
+        # Why: explicit CI=Y on every make invocation (job env is not enough for matrix/docker parity).
+        run: {{ make.ci.variable }}={{ make.ci.value }} make {{ step.verb }}
+{%- if step.verb == "setup" %}
+      - name: gen fixed point (blocking)
+        # Why (docs-gen private sources): the docs generation resolves the
+        # governed workspaces' documentation state, which fetches private
+        # sibling repos — unauthenticated fetches fail with "docs generation
+        # source state is absent or unauthenticated". The job token
+        # authenticates those reads without changing the toolchain contract.
+        run: |
+          set -eu
+          {{ make.ci.variable }}={{ make.ci.value }} make gen
+          git status --short
+          candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
+          test -z "$candidate_status"
+
+      # Setup installs the committed uv.lock and never rewrites it (only
+      # `make upg` does); the deps audit proves that locked graph.
+      - name: deps check (blocking)
+        run: {{ make.ci.variable }}={{ make.ci.value }} make audit
+{%- endif %}
+{%- if step.verb == "check" %}
+        # Fast partition only, derived from the gate registry kind:
+        # {{ make.check_gates_ci | join(" ") }}.
+        # Type checkers and flext-infra validators block locally and at
+        # pre-push ({{ make.ci.variable }}={{ make.ci.local_value }} runs {{ make.check_gates_local | join(" ") }}).
+{%- endif %}
+{% endfor %}
+      # Mutating gates and tests must validate the committed candidate.
+      # Repairs left in the runner checkout require a new commit and CI run.
+      - name: Candidate cleanliness (blocking)
+        run: |
+          set -eu
+          git status --short
+          candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
+          test -z "$candidate_status"
 {%- if ci_tests.selected %}
 
       - name: Dump reports on failure
@@ -176,10 +187,9 @@ jobs:
             .reports/**/junit.xml
             .reports/**/coverage.xml
             .reports/**/coverage.json
-            .reports/check/**/*.sarif
-            .reports/check/**/*.md
-            .reports/tests/**/run-accounting.json
-            .reports/tests/**/cache-after.json
+            apps/*/.reports/**/junit.xml
+            apps/*/.reports/**/coverage.xml
+            apps/*/.reports/**/coverage.json
           if-no-files-found: ignore
           retention-days: 7
 {%- include "_fragments/testmon_cache_save.j2" %}
@@ -204,15 +214,23 @@ jobs:
     timeout-minutes: 30
     env:
       {{ make.ci.variable }}: {{ make.ci.value }}
+      GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
         with:
           fetch-depth: 0
           submodules: {{ checkout_submodules }}
-          persist-credentials: false
-{%- include "_fragments/private_dependency_auth.j2" %}
-{%- include "_fragments/mise_install.j2" %}
+{%- include "_fragments/private_submodules_init.j2" %}
+{%- include "_fragments/cross_repo_dependency_credential.j2" %}
+{%- if custom_steps %}
+
+      # Project-owned steps, the CI counterpart of custom.mk: the generator
+      # injects this block verbatim from the project's own custom-steps file
+      # and never interprets it, so a project extends its pipeline without the
+      # generator carrying that project's concerns.
+{{ custom_steps }}
+{%- endif %}
       - name: Boot
         run: {{ make.ci.variable }}={{ make.ci.value }} make setup
       - name: Release plan and guard

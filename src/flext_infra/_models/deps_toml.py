@@ -24,8 +24,8 @@ class FlextInfraModelsDepsToml:
         class SetOp(m.ContractModel):
             """Set one TOML key to one JSON-compatible value."""
 
-            kind: Literal["set"] = m.Field(
-                "set",
+            kind: Literal[c.Infra.TomlOperationKind.SET] = m.Field(
+                c.Infra.TomlOperationKind.SET,
                 description="Operation kind",
                 validate_default=True,
             )
@@ -35,8 +35,8 @@ class FlextInfraModelsDepsToml:
         class ListOp(m.ContractModel):
             """Set or merge one TOML string list."""
 
-            kind: Literal["list"] = m.Field(
-                "list",
+            kind: Literal[c.Infra.TomlOperationKind.LIST] = m.Field(
+                c.Infra.TomlOperationKind.LIST,
                 description="Operation kind",
                 validate_default=True,
             )
@@ -54,8 +54,8 @@ class FlextInfraModelsDepsToml:
         class RemoveOp(m.ContractModel):
             """Remove one TOML key, optionally from a nested relative table."""
 
-            kind: Literal["remove"] = m.Field(
-                "remove",
+            kind: Literal[c.Infra.TomlOperationKind.REMOVE] = m.Field(
+                c.Infra.TomlOperationKind.REMOVE,
                 description="Operation kind",
                 validate_default=True,
             )

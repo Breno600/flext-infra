@@ -9,15 +9,13 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import c, m
-from flext_infra.api import infra
+from flext_infra import c, infra, m
 from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_infra.codegen.constants_quality_gate import FlextInfraCodegenQualityGate
 from flext_infra.codegen.layout import FlextInfraCodegenLayout
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from flext_infra.codegen.make_bootstrap import FlextInfraCodegenMakeBootstrap
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from flext_infra.codegen.mise_toolchain_proof import FlextInfraCodegenMiseToolchainProof
 from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
 from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
 from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
@@ -71,12 +69,6 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                 model_cls=m.Infra.CodegenConformRequest,
                 handler=infra.codegen_conform,
                 success_message="project conformance complete",
-            ),
-            m.Cli.ResultCommandRoute(
-                name="footprint",
-                help_text="Read the actual generation journal and plan without effects",
-                model_cls=m.Infra.CodegenConformRequest,
-                handler=FlextInfraCliRouteBase.result_handler(infra.codegen_footprint),
             ),
             *(
                 m.Cli.ResultCommandRoute(
@@ -191,15 +183,6 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                             FlextInfraCodegenMiseArtifacts.execute,
                         ),
                         "Mise artifact validation complete",
-                    ),
-                    (
-                        "mise-proof",
-                        "Prove each declared tool is the self-contained locked release",
-                        FlextInfraCodegenMiseToolchainProof,
-                        FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenMiseToolchainProof.execute,
-                        ),
-                        "Mise toolchain reality proof complete",
                     ),
                     (
                         "version-file",

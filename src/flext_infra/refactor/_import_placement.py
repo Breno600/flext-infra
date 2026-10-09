@@ -227,7 +227,9 @@ class FlextInfraImportNormalizationPlacementMixin(
             case ast.Import(names=names), ast.Import():
                 pass
             case ast.ImportFrom(
-                names=names, module=module, level=level
+                names=names,
+                module=module,
+                level=level,
             ), ast.ImportFrom(
                 module=node_module,
                 level=node_level,

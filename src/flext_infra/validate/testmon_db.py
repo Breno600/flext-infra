@@ -27,7 +27,7 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
         m.Field(default=None, description="Hex digest of DB bytes before pytest."),
     ] = None
 
-    @m.model_validator(mode="after")
+    @u.model_validator(mode="after")
     def _validate_absolute_db(self) -> Self:
         """Reject relative or in-checkout database paths.
 

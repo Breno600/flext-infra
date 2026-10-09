@@ -5,9 +5,9 @@ The tooling owner maps each Ruff rule code to one recipe
 then these recipes to the findings left. Every repair is derived from the
 source itself: a docstring section from the signature, the summary and the
 raise statement, a summary from the declared name, the notice from the
-project's declared author, copyright year and module path, and a static
-method from a method Ruff reports as never reading its instance: only its
-receiver parameter and its decorator list change, its body keeps every byte. A
+project's declared author and copyright year, and a static method from a
+method Ruff reports as never reading its instance: only its receiver
+parameter and its decorator list change, its body keeps every byte. A
 finding the recipe cannot place raises; nothing is skipped.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
@@ -18,73 +18,35 @@ from __future__ import annotations
 
 import ast
 import io
+import operator
 import re
 import textwrap
 import tokenize
-from collections.abc import Iterable, MutableMapping
+from collections.abc import MutableMapping
 from itertools import pairwise
-from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, config, m, t
-from flext_infra._utilities import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesLintRecipes:
-    """Lint-gate policy and repair utilities behind the ``u.Infra`` facade."""
+    """Apply the declared recipe of each lint finding to one module source."""
 
     @staticmethod
-    def ruff_finding_severity(code: str, advisory: Iterable[str]) -> str:
-        """Severity one Ruff finding reports at.
-
-        Rules declared advisory (operator ruling 2026-10-05) report as
-        warnings: they keep flowing to every report surface while the gate
-        verdict ignores them.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        return (
-            c.Infra.GateSeverity.WARNING.value
-            if code in frozenset(advisory)
-            else c.Infra.GateSeverity.ERROR.value
-        )
-
-    @staticmethod
-    def blocking_gate_findings(
-        issues: t.SequenceOf[m.Infra.Issue],
-    ) -> tuple[m.Infra.Issue, ...]:
-        """Findings whose severity still fails a gate verdict.
-
-        Warnings never block (operator ruling 2026-10-05); a tool error
-        arrives as an ``error``-severity issue and keeps blocking.
-
-        Returns:
-            The resulting ``tuple[m.Infra.Issue, ...]``.
-
-        """
-        return tuple(issue for issue in issues if issue.severity.lower() != "warning")
-
-    @staticmethod
-    def copyright_notice(pkg_dir: Path, *, module: Path | None = None) -> str:
+    def copyright_notice(pkg_dir: Path) -> str:
         """Render the copyright notice of the project that owns ``pkg_dir``.
 
         The author is the manifest's first declared author and the year is the
         scaffold copyright year, the same owners the scaffold templates
-        render. ``module`` names the file that carries the notice. Its
-        project-relative path, without the suffix every module shares, is the
-        line between the copyright sentence and the SPDX line: the sentence
-        and the license stay legal, and the notice is not one stamp.
+        render.
 
         Returns:
-            The copyright sentence, that module identity when ``module`` is
-            given, and the SPDX line.
+            The two-line notice: the copyright line and the SPDX line.
 
         Raises:
-            ValueError: If the path is outside any project manifest, the
-                manifest declares no author name, or ``module`` has no
-                identity.
+            ValueError: If the path is outside any project manifest or the
+                manifest declares no author name.
 
         """
         for candidate in (pkg_dir, *pkg_dir.parents):
@@ -101,28 +63,11 @@ class FlextInfraUtilitiesLintRecipes:
                 msg = f"project manifest declares no author name: {candidate}"
                 raise ValueError(msg)
             scaffold = config.Infra.codegen.scaffold.project
-            copyright_line = (
+            return (
                 f"Copyright (c) {scaffold.copyright_year} {author}. "
-                "All rights reserved."
+                "All rights reserved.\n"
+                f"SPDX-License-Identifier: {scaffold.supported_licenses[0]}"
             )
-            spdx = f"SPDX-License-Identifier: {scaffold.supported_licenses[0]}"
-            if module is None:
-                return f"{copyright_line}\n{spdx}"
-            try:
-                identity = module.resolve().relative_to(candidate.resolve())
-            except ValueError:
-                identity = module
-            marker = identity.with_suffix("").as_posix()
-            if (
-                not marker
-                or marker == "."
-                or len(marker) > config.Infra.tooling.tools.ruff.line_length
-            ):
-                marker = identity.stem
-            if not marker:
-                msg = f"module has no notice identity: {module}"
-                raise ValueError(msg)
-            return f"{copyright_line}\n{marker}\n{spdx}"
         msg = f"package is outside any project manifest: {pkg_dir}"
         raise ValueError(msg)
 
@@ -137,57 +82,24 @@ class FlextInfraUtilitiesLintRecipes:
     ) -> str:
         """Return ``source`` with the declared recipe of every issue applied.
 
-        A static-method finding on an override chain or on a method that reads
-        its receiver is filtered out by the caller (``overridden_findings``)
-        and never reaches here.
+        A static-method finding on a hook a subclass overrides is filtered
+        out by the caller (``overridden_findings``) and never reaches here.
 
         ``path`` names the module in every refusal and locates the project
         whose declared author signs the notice; the notice is derived only
-        when a copyright finding asks for it.
+        when a copyright finding asks for it. A module without a docstring
+        receives one, summarized from its name, to carry the notice.
 
         Returns:
             The repaired module source.
 
+        Raises:
+            ValueError: If an issue's code has no recipe or its recipe cannot
+                be placed in the module.
+
         """
         tree = ast.parse(source)
         lines = source.splitlines(keepends=True)
-        sections, summaries, wants_notice = cls._collected_sections(
-            tree,
-            issues,
-            path,
-            recipes,
-        )
-        edits = list(cls._static_method_plan(source, tree, issues, path, recipes))
-        edits.extend(cls._docstring_section_edits(lines, sections, path))
-        edits.extend(
-            cls._summary_edit(lines, definition, text)
-            for definition, text in summaries.items()
-        )
-        if wants_notice:
-            edits.append(cls._notice_edit(lines, tree, path))
-        return cls._applied_edits(source, edits)
-
-    @classmethod
-    def _collected_sections(
-        cls,
-        tree: ast.Module,
-        issues: t.SequenceOf[m.Infra.Issue],
-        path: Path,
-        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
-    ) -> t.Triple[
-        MutableMapping[
-            ast.FunctionDef | ast.AsyncFunctionDef,
-            MutableMapping[str, list[str]],
-        ],
-        MutableMapping[ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef, str],
-        bool,
-    ]:
-        """Dispatch every issue's recipe into section, summary, or notice plans.
-
-        Returns:
-            The resulting ``(sections, summaries, wants notice)`` triple.
-
-        """
         sections: MutableMapping[
             ast.FunctionDef | ast.AsyncFunctionDef,
             MutableMapping[str, list[str]],
@@ -222,28 +134,7 @@ class FlextInfraUtilitiesLintRecipes:
                 case c.Infra.LintFixRecipe.STATIC_METHOD:
                     # Planned per method below, after duplicates collapse.
                     continue
-        return sections, summaries, wants_notice
-
-    @classmethod
-    def _docstring_section_edits(
-        cls,
-        lines: t.SequenceOf[str],
-        sections: t.MappingKV[
-            ast.FunctionDef | ast.AsyncFunctionDef,
-            t.MappingKV[str, list[str]],
-        ],
-        path: Path,
-    ) -> list[t.Triple[int, int, str]]:
-        """Build the section-insertion edits for every documented function.
-
-        Returns:
-            The resulting ``list[t.Triple[int, int, str]]``.
-
-        Raises:
-            ValueError: If a function at line has no docstring.
-
-        """
-        edits: list[t.Triple[int, int, str]] = []
+        edits = list(cls._static_method_plan(source, tree, issues, path, recipes))
         for function, wanted in sections.items():
             docstring = cls._docstring_expr(function)
             if docstring is None:
@@ -255,51 +146,36 @@ class FlextInfraUtilitiesLintRecipes:
                 end,
                 cls._with_sections(raw, " " * docstring.col_offset, wanted),
             ))
-        return edits
-
-    @classmethod
-    def _notice_edit(
-        cls,
-        lines: t.SequenceOf[str],
-        tree: ast.Module,
-        path: Path,
-    ) -> t.Triple[int, int, str]:
-        """Build the copyright-notice edit for the module docstring.
-
-        A module without a docstring receives one, summarized from its name,
-        to carry the notice.
-
-        Returns:
-            The resulting ``(start, end, text)`` edit triple.
-
-        """
-        notice = cls.copyright_notice(path.parent, module=path)
-        module_docstring = cls._docstring_expr(tree)
-        if module_docstring is None:
-            offset = len(lines[0]) if lines and lines[0].startswith("#!") else 0
-            stem = path.parent.name if path.stem == "__init__" else path.stem
-            summary = stem.strip("_").replace("_", " ").capitalize()
-            return (offset, offset, f'"""{summary} module.\n\n{notice}\n"""\n\n')
-        start, end, raw = cls._literal(lines, module_docstring, path)
-        return (start, end, cls._with_notice(raw, notice))
-
-    @staticmethod
-    def _applied_edits(
-        source: str,
-        edits: t.SequenceOf[t.Triple[int, int, str]],
-    ) -> str:
-        """Apply every edit back-to-front over the source text.
-
-        Returns:
-            The repaired module source.
-
-        """
+        for definition, text in summaries.items():
+            first = definition.body[0]
+            decorators = (
+                first.decorator_list
+                if isinstance(
+                    first,
+                    ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+                )
+                else []
+            )
+            first_line = min((first.lineno, *(item.lineno for item in decorators)))
+            offset = cls._offset(lines, first_line, 0)
+            edits.append((offset, offset, f'{" " * first.col_offset}"""{text}"""\n'))
+        if wants_notice:
+            notice = cls.copyright_notice(path.parent)
+            module_docstring = cls._docstring_expr(tree)
+            if module_docstring is None:
+                offset = len(lines[0]) if lines and lines[0].startswith("#!") else 0
+                stem = path.parent.name if path.stem == "__init__" else path.stem
+                summary = stem.strip("_").replace("_", " ").capitalize()
+                edits.append((
+                    offset,
+                    offset,
+                    f'"""{summary} module.\n\n{notice}\n"""\n\n',
+                ))
+            else:
+                start, end, raw = cls._literal(lines, module_docstring, path)
+                edits.append((start, end, cls._with_notice(raw, notice)))
         rewritten = source
-        for start, end, text in sorted(
-            edits,
-            key=itemgetter(0, 1),
-            reverse=True,
-        ):
+        for start, end, text in sorted(edits, key=operator.itemgetter(0), reverse=True):
             rewritten = f"{rewritten[:start]}{text}{rewritten[end:]}"
         return rewritten
 
@@ -372,66 +248,6 @@ class FlextInfraUtilitiesLintRecipes:
             raise ValueError(msg)
         return max(enclosing, key=lambda node: node.lineno)
 
-    @classmethod
-    def _summary_edit(
-        cls,
-        lines: t.StrSequence,
-        definition: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-        text: str,
-    ) -> t.Triple[int, int, str]:
-        """Return the edit that places ``text`` as ``definition``'s summary.
-
-        A body on its own line receives the summary before that line. A body
-        that shares the suite colon's line is legal Python, including a
-        protocol stub on a wrapped signature: that line expands so the summary
-        and the same suite occupy the following lines.
-
-        Returns:
-            The span to replace and the summary text that replaces it.
-
-        """
-        first = definition.body[0]
-        line = lines[first.lineno - 1]
-        body_at = cls._utf8_chars(line, first.col_offset)
-        colon = body_at
-        while colon > 0 and line[colon - 1] in " \t":
-            colon -= 1
-        if colon == 0 or line[colon - 1] != ":":
-            decorators = (
-                first.decorator_list
-                if isinstance(
-                    first,
-                    ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-                )
-                else ()
-            )
-            first_line = min((first.lineno, *(item.lineno for item in decorators)))
-            offset = cls._offset(lines, first_line, 0)
-            return (offset, offset, f'{" " * first.col_offset}"""{text}"""\n')
-        suite = line[body_at:].removesuffix("\n").removesuffix("\r")
-        header = lines[definition.lineno - 1]
-        block = " " * (cls._utf8_chars(header, definition.col_offset) + 4)
-        start = cls._offset(lines, first.lineno, 0)
-        return (
-            start,
-            start + len(line),
-            f'{line[:colon]}\n{block}"""{text}"""\n{block}{suite}\n',
-        )
-
-    @staticmethod
-    def _utf8_chars(line: str, col_offset: int) -> int:
-        """Return the character index of a UTF-8 AST column on ``line``.
-
-        Returns:
-            The character index of a UTF-8 AST column on ``line``.
-
-        """
-        return len(
-            line.encode(c.Cli.ENCODING_DEFAULT)[:col_offset].decode(
-                c.Cli.ENCODING_DEFAULT,
-            ),
-        )
-
     @staticmethod
     def _defined_at(
         tree: ast.Module,
@@ -440,13 +256,11 @@ class FlextInfraUtilitiesLintRecipes:
     ) -> ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the class or function defined at ``line``.
 
-        An inline body is a legal definition. The summary edit expands it.
-
         Returns:
             The class or function defined at ``line``.
 
         Raises:
-            ValueError: If no class or function is defined at ``line``.
+            ValueError: Always; or if ``node.body[0].lineno == node.lineno``.
 
         """
         for node in ast.walk(tree):
@@ -454,6 +268,9 @@ class FlextInfraUtilitiesLintRecipes:
                 isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
                 and node.lineno == line
             ):
+                if node.body[0].lineno == node.lineno:
+                    msg = f"{path}: definition at line {line} has its body inline"
+                    raise ValueError(msg)
                 return node
         msg = f"{path}: no class or function is defined at line {line}"
         raise ValueError(msg)
@@ -510,17 +327,15 @@ class FlextInfraUtilitiesLintRecipes:
     def overridden_methods(
         sources: t.SequenceOf[str],
     ) -> frozenset[t.Pair[str, str]]:
-        """Return each ``(class, method)`` on an override chain in ``sources``.
+        """Return each ``(class, method)`` a subclass in ``sources`` redefines.
 
-        Ruff judges a method alone and cannot see its override chain: both the
-        base method a subclass redefines and the redefinition itself stay
-        instance methods, since declaring either static breaks the chain's
-        shared signature. Bases are matched by their declared name,
-        transitively, so an ambiguous name only keeps more methods with their
-        owner.
+        Ruff judges a method alone and cannot see that a subclass overrides
+        it; declaring such a hook static would break every override. Bases
+        are matched by their declared name, transitively, so an ambiguous
+        name only keeps more methods with their owner.
 
         Returns:
-            The ``(class name, method name)`` pairs on an override chain.
+            The overridden ``(class name, method name)`` pairs.
 
         """
         bases: MutableMapping[str, set[str]] = {}
@@ -548,11 +363,10 @@ class FlextInfraUtilitiesLintRecipes:
                     pending.extend(bases.get(base, ()))
             ancestors[name] = seen
         return frozenset(
-            pair
+            (ancestor, method)
             for name, found in ancestors.items()
             for ancestor in found
             for method in methods[name] & methods.get(ancestor, set())
-            for pair in ((ancestor, method), (name, method))
         )
 
     @classmethod
@@ -565,10 +379,7 @@ class FlextInfraUtilitiesLintRecipes:
         recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
         overridden: frozenset[t.Pair[str, str]],
     ) -> t.VariadicTuple[m.Infra.Issue]:
-        """Return the static-method findings the recipe must not convert.
-
-        A method on an override chain, or one whose body reads its receiver,
-        keeps its receiver.
+        """Return the static-method findings whose method a subclass overrides.
 
         Returns:
             The findings the static-method recipe leaves to their owner.
@@ -580,25 +391,7 @@ class FlextInfraUtilitiesLintRecipes:
             for issue in issues
             if recipes.get(issue.code) is c.Infra.LintFixRecipe.STATIC_METHOD
             for owner, method in (cls._receiver_method_at(tree, issue, path),)
-            if (owner.name, method.name) in overridden or cls._reads_receiver(method)
-        )
-
-    @staticmethod
-    def _reads_receiver(method: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
-        """Tell whether the body reads its receiver, by name or through ``super()``.
-
-        Zero-argument ``super()`` and ``__class__`` bind the receiver
-        implicitly, so a static declaration would break them as well.
-
-        Returns:
-            Whether the body reads its receiver.
-
-        """
-        receiver = (*method.args.posonlyargs, *method.args.args)[0].arg
-        return any(
-            isinstance(node, ast.Name) and node.id in {receiver, "super", "__class__"}
-            for statement in method.body
-            for node in ast.walk(statement)
+            if (owner.name, method.name) in overridden
         )
 
     @staticmethod
@@ -757,12 +550,7 @@ class FlextInfraUtilitiesLintRecipes:
         )
         raw = "".join(lines)[start:end]
         body = raw.lstrip("rRuU")
-        delimiter = '"""'
-        if not (
-            body.startswith(delimiter)
-            and body.endswith(delimiter)
-            and len(body) >= 2 * len(delimiter)
-        ):
+        if not (body.startswith('"""') and body.endswith('"""') and len(body) >= 6):
             msg = f'{path}: docstring at line {value.lineno} is not a """ literal'
             raise ValueError(msg)
         return start, end, raw
@@ -1030,33 +818,6 @@ class FlextInfraUtilitiesLintRecipes:
             inner = f"{inner}\n\n" + "\n\n".join(appended)
         return f'{prefix}"""{inner}\n{indent}"""'
 
-    @staticmethod
-    def _notice_span(inner: str, path: Path) -> t.Triple[int, int, str]:
-        """Locate the notice paragraph span and the text that follows it.
-
-        The notice paragraph starts at the line the declared notice pattern
-        (``tools.ruff.lint.copyright-notice-rgx``) matches and runs to the
-        next blank line.
-
-        Returns:
-            The resulting ``(first, last, after)`` notice span.
-
-        Raises:
-            ValueError: If module docstring carries no copyright notice.
-
-        """
-        found = re.search(
-            config.Infra.tooling.tools.ruff.lint.copyright_notice_rgx,
-            inner,
-        )
-        if found is None:
-            msg = f"{path}: module docstring carries no copyright notice"
-            raise ValueError(msg)
-        first = inner.rfind("\n", 0, found.start()) + 1
-        blank = inner.find("\n\n", found.end())
-        last = len(inner) if blank < 0 else blank
-        return first, last, inner[last:].strip("\n")
-
     @classmethod
     def notice_last(cls, source: str, *, path: Path) -> str:
         """Return ``source`` with its docstring notice paragraph as the last text.
@@ -1085,7 +846,17 @@ class FlextInfraUtilitiesLintRecipes:
             path,
         )
         prefix, inner = cls._split_literal(raw)
-        first, last, after = cls._notice_span(inner, path)
+        found = re.search(
+            config.Infra.tooling.tools.ruff.lint.copyright_notice_rgx,
+            inner,
+        )
+        if found is None:
+            msg = f"{path}: module docstring carries no copyright notice"
+            raise ValueError(msg)
+        first = inner.rfind("\n", 0, found.start()) + 1
+        blank = inner.find("\n\n", found.end())
+        last = len(inner) if blank < 0 else blank
+        after = inner[last:].strip("\n")
         if not after.strip():
             return source
         before = inner[:first].rstrip("\n")

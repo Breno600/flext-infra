@@ -329,10 +329,7 @@ class TestsFlextInfraModTextGateEngine:
         """
         u.Cli.atomic_write_text_file(
             root / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-            "rules:\n"
-            "  - id: publication-probe\n"
-            "    find: 'before'\n"
-            "    replace: 'after'\n",
+            "rules:\n  - id: publication-probe\n    find: 'before'\n    replace: 'after'\n",
         ).unwrap()
         package = root / "src" / "mod_workspace"
         u.Cli.ensure_dir(package).unwrap()
@@ -483,7 +480,7 @@ class TestsFlextInfraModTextGateEngine:
             for state in states
         )
         analysis = m.Infra.CodegenPhaseAnalysis(
-            phase=c.Infra.CodegenStagedFilePhase.MOD_TEXT,
+            phase="mod-text",
             files=plans,
             inputs=states,
         )
@@ -648,9 +645,7 @@ class TestsFlextInfraModTextGateEngine:
         tm.ok(
             u.Cli.atomic_write_text_file(
                 mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n"
-                "  - id: first\n    find: 'alpha'\n"
-                "  - id: first\n    find: 'beta'\n",
+                "rules:\n  - id: first\n    find: 'alpha'\n  - id: first\n    find: 'beta'\n",
             ),
         )
         duplicate = FlextInfraModTextGateEngine.load_rules(mod_workspace)
@@ -660,146 +655,11 @@ class TestsFlextInfraModTextGateEngine:
         tm.ok(
             u.Cli.atomic_write_text_file(
                 mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n"
-                "  - id: first\n    find: 'alpha'\n"
-                "  - id: second\n    find: 'beta'\n",
+                "rules:\n  - id: first\n    find: 'alpha'\n  - id: second\n    find: 'beta'\n",
             ),
         )
         valid = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
         tm.that({"first", "second"} <= {rule.rule_id for rule in valid}, eq=True)
-
-    @pytest.mark.parametrize("scope", ["include", "exclude"])
-    @pytest.mark.parametrize(
-        "declaration",
-        [
-            "'src/**'",
-            "{'src/**': true}",
-            "{}",
-            "null",
-            "42",
-            "[42]",
-            "[null]",
-            "[false]",
-            "['src/**', 42]",
-            "['']",
-            "['   ']",
-        ],
-    )
-    def test_invalid_scope_rejects_loading_and_scanning_before_publication(
-        self,
-        mod_workspace: Path,
-        scope: str,
-        declaration: str,
-    ) -> None:
-        """Malformed scopes cannot broaden or suppress the authenticated batch."""
-        first, second = self._publication_inputs(mod_workspace)
-        outside = mod_workspace / "outside.py"
-        tm.ok(u.Cli.atomic_write_text_file(outside, 'value = "before"\n'))
-        paths = (first, second, outside)
-        originals = tuple(path.read_bytes() for path in paths)
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n"
-                "  - id: invalid-scope\n"
-                f"    {scope}: {declaration}\n"
-                "    find: 'before'\n"
-                "    replace: 'after'\n",
-            ),
-        )
-        diagnostic = f"text rule {scope} must be a list of non-empty strings"
-        tm.fail(FlextInfraModTextGateEngine.load_rules(mod_workspace), has=diagnostic)
-        for fix in (False, True):
-            tm.fail(
-                FlextInfraModTextGateEngine.scan(mod_workspace, fix=fix),
-                has=diagnostic,
-            )
-            tm.that(tuple(path.read_bytes() for path in paths), eq=originals)
-
-    def test_valid_scope_scan_and_fix_elect_the_same_sources(
-        self,
-        mod_workspace: Path,
-    ) -> None:
-        """Valid globs preserve excluded and out-of-scope source bytes."""
-        first, second = self._publication_inputs(mod_workspace)
-        outside = mod_workspace / "outside.py"
-        tm.ok(u.Cli.atomic_write_text_file(outside, 'value = "before"\n'))
-        preserved = (second.read_bytes(), outside.read_bytes())
-        selected = first.relative_to(mod_workspace).as_posix()
-        excluded = second.relative_to(mod_workspace).as_posix()
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n"
-                "  - id: valid-scope\n"
-                "    include: ['src/**']\n"
-                f"    exclude: ['{excluded}']\n"
-                "    find: 'before'\n"
-                "    replace: 'after'\n"
-                "    expected: 1\n",
-            ),
-        )
-        tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
-        scanned = tm.ok(
-            FlextInfraModTextGateEngine.scan(
-                mod_workspace,
-                fix=False,
-                validate_receipts=True,
-            ),
-        )
-        tm.that(first.read_text(encoding="utf-8"), eq='value = "before"\n')
-        tm.that(
-            tuple(entry.file.as_posix() for entry in scanned.entries),
-            eq=(selected,),
-        )
-        applied = tm.ok(
-            FlextInfraModTextGateEngine.scan(
-                mod_workspace,
-                fix=True,
-                validate_receipts=True,
-            ),
-        )
-        tm.that(applied, eq=scanned)
-        tm.that(first.read_text(encoding="utf-8"), eq='value = "after"\n')
-        tm.that((second.read_bytes(), outside.read_bytes()), eq=preserved)
-        tm.that(
-            tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False)).findings,
-            eq=0,
-        )
-
-    @pytest.mark.parametrize("scopes", ["", "    include: []\n    exclude: []\n"])
-    def test_omitted_and_empty_scopes_preserve_typed_defaults(
-        self,
-        mod_workspace: Path,
-        scopes: str,
-    ) -> None:
-        """Absent scopes use typed defaults; explicit empty scopes override them."""
-        paths = self._publication_inputs(mod_workspace)
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n"
-                "  - id: scope-defaults\n"
-                f"{scopes}"
-                "    find: 'before'\n"
-                "    replace: 'after'\n",
-            ),
-        )
-        loaded = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
-        rule = next(rule for rule in loaded if rule.rule_id == "scope-defaults")
-        if not scopes:
-            defaults = m.Infra.ModTextRule(rule_id=rule.rule_id, find=rule.find)
-            tm.that(
-                (rule.include, rule.exclude),
-                eq=(defaults.include, defaults.exclude),
-            )
-            return
-        tm.that((rule.include, rule.exclude), eq=((), ()))
-        scanned = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False))
-        applied = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
-        tm.that(applied, eq=scanned)
-        for path in paths:
-            tm.that(path.read_text(encoding="utf-8"), eq='value = "after"\n')
 
     @staticmethod
     def test_include_and_exclude_globs_elect_exact_targets(

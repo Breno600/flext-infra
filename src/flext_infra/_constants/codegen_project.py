@@ -17,7 +17,6 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from enum import StrEnum, unique
-from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
@@ -60,10 +59,8 @@ class FlextInfraConstantsCodegenProject:
         ALL = "all"
         DEPENDENCIES = "dependencies"
         DOCS_CONFIG = "docs-config"
-        FACADES = "facades"
-        LAZY_INIT = "lazy-init"
         MAKEFILE = "makefile"
-        MISE_CONFIG = "mise-config"
+        MISE_TRIPLE = "mise-triple"
         PYPROJECT = "pyproject"
 
     @unique
@@ -72,30 +69,6 @@ class FlextInfraConstantsCodegenProject:
 
         CHECK = "check"
         APPLY = "apply"
-
-    @unique
-    class CodegenStagedFilePhase(StrEnum):
-        """Generation phase that owns one codegen staged publication.
-
-        The closed vocabulary the journal models and the stager accept in
-        ``phase``: every publication and staging site names its owner
-        through this enum instead of a string literal, so the phase
-        contract is code-owned in one declaration.
-        """
-
-        CANDIDATE_BOOTSTRAP = "candidate-bootstrap"
-        CONFORM = "conform"
-        CONFORM_BOOTSTRAP = "conform-bootstrap"
-        DOCS = "docs"
-        LAZY_INIT = "lazy-init"
-        LAYOUT = "layout"
-        MISE = "mise"
-        MOD_TEXT = "mod-text"
-        RECOVERY = "recovery"
-        SCAFFOLD = "scaffold"
-        SEMANTIC = "semantic"
-        TRANSACTION = "transaction"
-        VERSION_FILE = "version-file"
 
     @unique
     class MiseResolutionMode(StrEnum):
@@ -246,34 +219,20 @@ class FlextInfraConstantsCodegenProject:
     WORKSPACE_MANIFEST_VERSION: ClassVar[int] = 3
     UV_LOCK_FILENAME: ClassVar[str] = "uv.lock"
     MISE_LOCK_FILENAME: ClassVar[str] = "mise.lock"
-    MISE_LOCK_JOURNAL_FILENAME: ClassVar[str] = "transaction.json"
-    "Staged journal the mise.lock publisher commits before the lock rename."
-    MISE_LOCK_NEW_FILENAME: ClassVar[str] = "new.lock"
-    "Staged replacement lock published only after its sidecars match."
-    MISE_LOCK_OLD_FILENAME: ClassVar[str] = "old.lock"
-    "Previous lock retained until the staged replacement is published."
+    MISE_LOCK_TRANSACTION_SCRIPT: ClassVar[str] = "bin/mise-lock-transaction.py"
+    "Generated publisher the Makefile bootstrap runs to commit a staged mise.lock."
+    MISE_LOCK_CONVERGE_SCRIPT: ClassVar[str] = "bin/mise-lock-converge.py"
+    "Generated script ``make upg`` runs to hold broken releases inside a lock stage."
     MAKEFILE_BOOTSTRAP_DESTINATIONS: ClassVar[frozenset[str]] = frozenset({
         FlextInfraConstantsSharedInfra.MAKEFILE_FILENAME,
+        MISE_LOCK_TRANSACTION_SCRIPT,
+        MISE_LOCK_CONVERGE_SCRIPT,
     })
-    "The Makefile surface: the generated Makefile alone."
+    "The Makefile surface: the Makefile and the lock scripts its bootstrap runs."
     MISE_LOCK_ANNOTATION: ClassVar[str] = "~"
     "Lockfile cache-key fragment (``<version>~<hash>``); never a selector."
     MISE_MOVING_SELECTOR: ClassVar[str] = "latest"
     "Selector resolved only by ``make upg`` into the committed ``mise.lock``."
-    MISE_VERSION_PLACEHOLDER: ClassVar[str] = "{version}"
-    "Placeholder a toolchain version_probe pattern carries for the lock version."
-    MISE_LOCK_PLATFORM_KEY: ClassVar[str] = "platforms.{platform}"
-    "mise.lock per-platform table key of one locked tool version."
-    MISE_PLATFORM_BY_HOST: ClassVar[t.MappingKV[t.StrPair, str]] = MappingProxyType({
-        ("Linux", "x86_64"): "linux-x64",
-        ("Linux", "aarch64"): "linux-arm64",
-        ("Darwin", "x86_64"): "macos-x64",
-        ("Darwin", "arm64"): "macos-arm64",
-        ("Windows", "AMD64"): "windows-x64",
-    })
-    "Host (platform.system(), platform.machine()) -> mise.lock platform name."
-    MISE_MUSL_PLATFORM_SUFFIX: ClassVar[str] = "-musl"
-    "mise.lock platform suffix of a Linux host without glibc."
     GIT_URL_SUFFIX: ClassVar[str] = ".git"
     "Canonical clone-URL suffix every governed RepositoryRef URL carries."
     CUSTOM_MAKE_FILENAME: ClassVar[str] = "custom.mk"

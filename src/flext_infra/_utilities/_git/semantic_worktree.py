@@ -6,12 +6,17 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from git import GitCommandError, Repo
 
-from flext_infra import m, p, r
+from flext_infra import m, r
 from flext_infra._utilities._git.semantic_index import (
     FlextInfraUtilitiesGitSemanticIndexMixin,
 )
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitSemanticWorktreeMixin(
@@ -30,15 +35,6 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
             The resulting ``p.Result[m.Infra.GitTextReport]``.
 
         """
-        admitted = cls.git_verify_lane(
-            m.Infra.GitLaneVerificationRequest(
-                repo_root=request.repo_root,
-                operation="create",
-                candidate=request.base,
-            ),
-        )
-        if admitted.failure:
-            return r[m.Infra.GitTextReport].from_failure(admitted)
         try:
             repo = cls._repo(request.repo_root)
             text = cls._git_add_worktree_args(repo, request)
@@ -103,28 +99,23 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
 
         """
         try:
-            cls._force_attach_branch_at_head(request)
+            repo = cls._repo(request.repo_root)
+            repo.git.branch("--quiet", "-f", request.branch, "HEAD")
+            repo.git.symbolic_ref("HEAD", f"refs/heads/{request.branch}")
+            remote_ref = f"refs/remotes/origin/{request.branch}"
+            if remote_ref in {ref.path for ref in repo.refs}:
+                repo.git.branch(
+                    "--quiet",
+                    "--set-upstream-to",
+                    f"origin/{request.branch}",
+                    request.branch,
+                )
         except (GitCommandError, OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
                 f"failed to attach {request.branch} at HEAD: {exc}",
                 exception=exc,
             )
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
-
-    @classmethod
-    def _force_attach_branch_at_head(cls, request: m.Infra.GitBranchRequest) -> None:
-        """Force-create the branch at HEAD and set its upstream when present."""
-        repo = cls._repo(request.repo_root)
-        repo.git.branch("--quiet", "-f", request.branch, "HEAD")
-        repo.git.symbolic_ref("HEAD", f"refs/heads/{request.branch}")
-        remote_ref = f"refs/remotes/origin/{request.branch}"
-        if remote_ref in {ref.path for ref in repo.refs}:
-            repo.git.branch(
-                "--quiet",
-                "--set-upstream-to",
-                f"origin/{request.branch}",
-                request.branch,
-            )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitSemanticWorktreeMixin"]

@@ -19,15 +19,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestsFlextInfraPatchableNode(ast.Name):
+class _PatchableNode(ast.Name):
     """AST node carrying the fields the patched-AST writer attaches at runtime.
 
     The fork's ``patch_ast`` sets ``sorted_children`` as a dynamic field, so
     the test declares that contract locally instead of reviving the deleted
     monkeypatch protocols.
     """
-
-    __test__ = False
 
     sorted_children: list[ast.expr | str]
 
@@ -226,7 +224,7 @@ class TestsFlextInfraRopeSignaturePatch:
         # The patched AST carries `sorted_children` as a dynamically attached
         # field: the fork's patch_ast sets it at runtime, so the test writes
         # it the same way instead of through a typing-only wrapper.
-        patchable = cast("TestsFlextInfraPatchableNode", widths)
+        patchable = cast("_PatchableNode", widths)
         patchable.sorted_children = ["sizes"]
 
         rendered = patchedast.write_ast(tree)

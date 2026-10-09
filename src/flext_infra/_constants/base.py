@@ -107,8 +107,6 @@ class FlextInfraConstantsBase(
     "Pyrefly search-path settings key."
     PROJECT_EXCLUDES: ClassVar[str] = "project-excludes"
     "Pyrefly project-excludes settings key."
-    PYREFLY_PROJECT_EXCLUDES_FLAG: ClassVar[str] = "--project-excludes"
-    "Pyrefly CLI flag carrying project excludes when explicit files are checked."
     SUB_CONFIG: ClassVar[str] = "sub-settings"
     "Pyrefly sub-settings key."
     EXTRA_PATHS: ClassVar[str] = "extraPaths"
@@ -202,7 +200,7 @@ class FlextInfraConstantsBase(
     OK: ClassVar[str] = "✓"
     FAIL: ClassVar[str] = "✗"
     WARN: ClassVar[str] = "⚠"
-    SKIP: ClassVar[str] = "-"
+    SKIP: ClassVar[str] = "–"
 
     # CLI tool binary names
     GIT: ClassVar[str] = "git"
@@ -269,8 +267,6 @@ class FlextInfraConstantsBase(
     "Ambient uv variables removed before a policy-bound release build."
     SG: ClassVar[str] = "ast-grep"
     "Canonical ast-grep binary."
-    MISE: ClassVar[str] = "mise"
-    "Canonical mise binary; -C <root> exec -- resolves the repository-pinned tool."
     SG_CONFIG_FLAG: ClassVar[str] = "--config"
     "Canonical ast-grep configuration-file option."
     SG_FILTER_FLAG: ClassVar[str] = "--filter"

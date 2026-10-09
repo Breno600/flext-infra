@@ -14,13 +14,11 @@ from typing import Annotated, Self
 from flext_infra import c, config, m, t, u
 from flext_infra.base import s
 
+type PytestPolicy = m.Infra.PytestConfig
+
 
 class FlextInfraPytestRunnerBase(s[int]):
     """Own immutable inputs shared by all pytest runner phases."""
-
-    _cache_publication: m.Infra.TestmonCachePublication | None = m.PrivateAttr(
-        default=None,
-    )
 
     started_at_monotonic: Annotated[
         float,
@@ -45,18 +43,18 @@ class FlextInfraPytestRunnerBase(s[int]):
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
     ] = False
-    collection_command_prefix: Annotated[
-        t.StrTuple,
-        m.Field(
-            description="Explicit profiling child invocation from the outer boundary.",
-        ),
-    ] = ()
     profile_enabled: Annotated[
         bool,
         m.Field(
             description="Profile the real suite child and preserve its native exit",
         ),
     ] = False
+    collection_command_prefix: Annotated[
+        t.StrTuple,
+        m.Field(
+            description="Explicit profiling child invocation from the outer boundary.",
+        ),
+    ] = ()
     slow_phase: Annotated[
         bool,
         m.Field(
@@ -123,7 +121,7 @@ class FlextInfraPytestRunnerBase(s[int]):
             ),
         )
 
-    @m.model_validator(mode="after")
+    @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
         r"""Require repository-contained target and report paths.
 
@@ -155,11 +153,8 @@ class FlextInfraPytestRunnerBase(s[int]):
                 msg = f"{name} escapes the repository"
                 raise ValueError(msg)
         target_path = self.root / self.target
-        if (
-            not (target_path.is_dir() or target_path.is_file())
-            or target_path.is_symlink()
-        ):
-            msg = f"test target must be an existing directory or file: {self.target}"
+        if not target_path.is_dir() or target_path.is_symlink():
+            msg = f"test target must be an existing directory: {self.target}"
             raise ValueError(msg)
         if not self.testmon_db.is_absolute():
             msg = "testmon database path must be absolute"
@@ -238,7 +233,7 @@ class FlextInfraPytestRunnerBase(s[int]):
             return None
         return u.Infra.project_name_from_payload(pyproject_path, payload)
 
-    def run_timeout_seconds(self, policy: m.Infra.PytestConfig) -> int:
+    def run_timeout_seconds(self, policy: PytestPolicy) -> int:
         """Resolve the declared project's measured wall over the fleet default.
 
         Returns:
@@ -252,7 +247,7 @@ class FlextInfraPytestRunnerBase(s[int]):
 
     def _declared_worker_ceiling(
         self,
-        policy: m.Infra.PytestConfig,
+        policy: PytestPolicy,
     ) -> int | m.Infra.PytestWorkerCeiling:
         """Resolve the declared project's ceiling over the fleet default.
 
@@ -290,7 +285,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         numerator_text, denominator_text = (ceiling.cpu_fraction or "1/1").split("/")
         return max(1, cpu_count * int(numerator_text) // int(denominator_text))
 
-    def parallel_worker_budget(self, policy: m.Infra.PytestConfig) -> int:
+    def parallel_worker_budget(self, policy: PytestPolicy) -> int:
         """Bound xdist by configuration, CPU, and physical memory.
 
         The per-project override map (``[project].name`` → absolute workers or

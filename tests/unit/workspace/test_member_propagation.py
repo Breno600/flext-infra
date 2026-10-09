@@ -24,12 +24,14 @@ from flext_tests import tm
 
 from flext_infra import infra, main
 from flext_infra.codegen import FlextInfraCodegenConform
-from tests import c, t, u
+from tests import TestsFlextInfraUtilities as u, c, t
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
 
+# Why: each propagation conforms and relocks real member repositories, the
+# same slow harness the release protocol's version phase already declares.
 pytestmark = pytest.mark.slow
 
 
@@ -71,11 +73,9 @@ class TestsFlextInfraWorkspaceMemberPropagation:
                     u.Tests.WorktreeFixture.initialize_governed_project(
                         root / name,
                         name,
-                        beads=u.Tests.BeadsIdentity(
-                            workspace="fixture-workspace",
-                            database="fixture_workspace",
-                            issue_prefix="fixture-workspace",
-                        ),
+                        workspace="fixture-workspace",
+                        database="fixture_workspace",
+                        issue_prefix="fixture-workspace",
                     )
                     u.Tests.checkout_integration(root / name)
                 u.Tests.WorktreeFixture.write_gitmodules(root, self.MEMBERS)
@@ -303,61 +303,3 @@ class TestsFlextInfraWorkspaceMemberPropagation:
                 )
                 tm.that(self._published(tmp_path, name), eq="")
             tm.that(gh_log.exists(), eq=False)
-
-    def test_external_consumer_lane_runs_its_own_verbs(
-        self,
-        tmp_path: Path,
-        hermetic_git_environment: t.StrMapping,
-    ) -> None:
-        """A declared external consumer advances its lane through its make verbs."""
-        consumer_root = tmp_path / "consumer"
-        consumer_root.mkdir()
-        (consumer_root / "Makefile").write_text(
-            "upg gen fix-namespace fix-accessors fix fmt:\n"
-            "\tprintf '%s\\n' \"$@\" >> ran.txt\n",
-            encoding="utf-8",
-        )
-        u.Tests.git_run(consumer_root, "init", "--initial-branch", "main")
-        u.Tests.git_run(consumer_root, "add", "Makefile")
-        u.Tests.commit_git_changes(consumer_root, "consumer base")
-        self._publish_to_local_origin(consumer_root, tmp_path / "remotes" / "consumer")
-        with self._workspace(
-            tmp_path,
-            settled=(self.SETTLED,),
-            hermetic=hermetic_git_environment,
-        ) as (root, gh_log):
-            manifest = root / "config" / "workspace.yaml"
-            manifest.write_text(
-                manifest.read_text(encoding="utf-8")
-                + (
-                    "external_consumers:\n"
-                    f"  - name: consumer-x\n"
-                    f"    root: {consumer_root}\n"
-                ),
-                encoding="utf-8",
-            )
-
-            tm.that(self._propagate(root), eq=0)
-
-            lane = self._published(tmp_path, "consumer")
-            tm.that(lane, ne="")
-            tm.that(self._on_clean_base(consumer_root), eq=True)
-            verbs_ran = u.Tests.git_capture(
-                consumer_root,
-                "show",
-                f"{c.Infra.PROPAGATION_BRANCH}:ran.txt",
-            )
-            tm.that(
-                verbs_ran.splitlines(),
-                eq=[
-                    "upg",
-                    "gen",
-                    "fix-namespace",
-                    "fix-accessors",
-                    "fix",
-                    "fmt",
-                ],
-            )
-            recorded = gh_log.read_text(encoding="utf-8")
-            tm.that(recorded.count("pr create"), eq=2)
-            tm.that(recorded, has="pr create --base main --head")

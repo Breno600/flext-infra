@@ -17,7 +17,7 @@ from flext_infra import config, infra, settings
 from tests import c, m, u
 
 
-class TestsFlextInfraDynamicEnvironmentCutover:
+class TestsDynamicEnvironmentCutover:
     """Preserve unset, empty, and populated values without default normalization."""
 
     @pytest.mark.parametrize("value", [None, "", "literal value"])
@@ -46,8 +46,7 @@ class TestsFlextInfraDynamicEnvironmentCutover:
             "    try:\n"
             "        read_value()\n"
             "    except KeyError as error:\n"
-            "        assert error.args == (str(config.Infra.codegen.make.mypy_cache"
-            ".data_home_environment_variable),)\n"
+            "        assert error.args == (str(config.Infra.codegen.make.mypy_cache.data_home_environment_variable),)\n"
             "    else:\n"
             "        raise AssertionError('required key was defaulted')\n"
             "else:\n"
@@ -81,15 +80,13 @@ class TestsFlextInfraDynamicEnvironmentCutover:
         tm.that(remaining, empty=True)
         path.write_text(sources[path], encoding="utf-8")
         key = str(config.Infra.codegen.make.mypy_cache.data_home_environment_variable)
-        environment: dict[str, str] = {} if value is None else {key: value}
+        environment = {} if value is None else {key: value}
         mode = "missing-required" if required and value is None else "value"
         output = tm.ok(
             u.Cli.run_raw(
                 (sys.executable, "-I", str(path), mode),
-                options=m.Cli.ProcessOptions(
-                    env=environment,
-                    remove_env_keys=(key,) if value is None else (),
-                ),
+                env=environment,
+                remove_env_keys=(key,) if value is None else (),
             ),
         )
         tm.that(u.Cli.process_succeeded(output.outcome), eq=True, msg=output.stderr)

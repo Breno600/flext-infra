@@ -7,19 +7,10 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
-import traceback
 from collections.abc import MutableMapping
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import m, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesCodegenNamespace,
-    FlextInfraUtilitiesRopeRuntimeModules,
-)
-from flext_infra._utilities._semantic_cutover.class_scope import (
-    FlextInfraUtilitiesSemanticCutoverClassScope,
-)
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
@@ -35,8 +26,14 @@ from flext_infra._utilities._semantic_cutover.nesting_owner import (
 from flext_infra._utilities._semantic_cutover.test_helpers import (
     FlextInfraUtilitiesSemanticTestHelpers,
 )
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_runtime_modules import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from flext_infra import p
 
 
@@ -46,7 +43,6 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
     FlextInfraUtilitiesSemanticCutoverNestingCst,
     FlextInfraUtilitiesSemanticCutoverNestingOwner,
     FlextInfraUtilitiesSemanticCutoverEdits,
-    FlextInfraUtilitiesSemanticCutoverClassScope,
 ):
     """Plan class nesting from semantic module ownership instead of record lists."""
 
@@ -92,154 +88,11 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         }
 
     @classmethod
-    def _suite_reference_pins(
-        cls,
-        tree: ast.Module,
-        classes: t.MappingKV[str, ast.ClassDef],
-        movable: frozenset[str],
-        owner: str,
-    ) -> frozenset[str]:
-        """Return classes that must stay at module level to keep suite lookups.
-
-        A nested class suite looks names up in the module globals. The owner
-        name is not bound until its class statement finishes, so neither the
-        bare sibling nor ``Owner.Sibling`` resolves during that suite. A base
-        in the class header does see the enclosing scope. An immediate load
-        from a class that is moving, or from a class already nested in the
-        owner, keeps its target at module level. A class that stays outside
-        also keeps the bases it names there: qualifying those bases through
-        the owner fails when the owner statement has not run yet.
-
-        Returns:
-            The movable classes pinned by an immediate suite reference.
-
-        """
-        pinned = cls._pins_from_suite_loads(tree, movable, owner)
-        return cls._pins_from_outside_bases(classes, movable, pinned)
-
-    @classmethod
-    def _pins_from_suite_loads(
-        cls,
-        tree: ast.Module,
-        movable: frozenset[str],
-        owner: str,
-    ) -> set[str]:
-        """Return classes pinned because a suite loads them immediately.
-
-        Returns:
-            The movable classes named by an immediate suite load.
-
-        """
-        pinned: set[str] = set()
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.ClassDef) or node.name == owner:
-                continue
-            for statement in node.body:
-                referenced = set(cls._immediate_suite_loads(statement) & movable)
-                referenced.discard(node.name)
-                if not referenced:
-                    continue
-                if node.name in movable:
-                    pinned.add(node.name)
-                pinned.update(referenced)
-        return pinned
-
-    @staticmethod
-    def _pins_from_outside_bases(
-        classes: t.MappingKV[str, ast.ClassDef],
-        movable: frozenset[str],
-        pinned: set[str],
-    ) -> frozenset[str]:
-        """Pin bases of classes that stay at module level.
-
-        Returns:
-            ``pinned`` plus every movable base those classes name.
-
-        """
-        changed = True
-        while changed:
-            changed = False
-            for name, node in classes.items():
-                if name in movable and name not in pinned:
-                    continue
-                for base in node.bases:
-                    current: ast.expr = base
-                    while isinstance(current, ast.Attribute):
-                        current = current.value
-                    if (
-                        isinstance(current, ast.Name)
-                        and current.id in movable
-                        and current.id not in pinned
-                    ):
-                        pinned.add(current.id)
-                        changed = True
-        return frozenset(pinned)
-
-    @classmethod
-    def _class_value_aliases(
-        cls,
-        project: p.Infra.RopeProject,
-        file_path: Path,
-        tree: ast.Module,
-    ) -> frozenset[str]:
-        """Pin nested class identities instead of treating them as loose values.
-
-        Returns:
-            Bindings holding a nested class or its instance in the same snapshot.
-
-        Raises:
-            ValueError: If the module exposes no root semantic scope.
-
-        Loose top-level helper and sentinel classes can move together with their
-        construction sites. A class already inside an owner is not such a helper.
-        """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
-
-        resource = project.get_resource(
-            file_path.relative_to(Path(project.root.real_path)).as_posix(),
-        )
-        module = project.get_pymodule(resource)
-        root_scope = module.get_scope()
-        if root_scope is None:
-            msg = f"module has no root scope: {file_path}"
-            raise ValueError(msg)
-        pending: list[tuple[t.Infra.RopeScope, int]] = [(root_scope, 0)]
-        identities: list[t.Infra.RopePyObject] = []
-        while pending:
-            scope, class_depth = pending.pop()
-            if scope.get_kind() == "Class":
-                class_depth += 1
-                if class_depth > 1:
-                    identities.append(scope.pyobject)
-            pending.extend((child, class_depth) for child in scope.get_scopes())
-        aliases: set[str] = set()
-        for statement in tree.body:
-            if not isinstance(statement, ast.Assign | ast.AnnAssign):
-                continue
-            name = cls._loose_value_name(statement)
-            value = statement.value
-            if isinstance(value, ast.Call):
-                value = value.func
-            if name is None or not isinstance(value, ast.Name | ast.Attribute):
-                continue
-            resolved = FlextInfraUtilitiesRopeRuntimeModules.resolve_symbol(
-                root_scope,
-                value,
-            )
-            if resolved is not None and any(
-                resolved.get_object() is identity for identity in identities
-            ):
-                aliases.add(name)
-        return frozenset(aliases)
-
-    @classmethod
     def _class_nesting_definitions(
         cls,
         rope_workspace: p.Infra.RopeWorkspaceDsl,
         file_path: Path,
         source: str,
-        *,
-        project: p.Infra.RopeProject,
     ) -> p.Result[t.StrMapping]:
         """Map each loose top-level class to the owner Rope's module policy elects.
 
@@ -266,8 +119,6 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             tree,
             values=not convention.module_policy.allow_type_alias,
         )
-        class_aliases = cls._class_value_aliases(project, file_path, tree)
-        loose = tuple(name for name in loose if name not in class_aliases)
         if len(classes) <= 1 and not loose:
             return planned.ok({})
         owned = cls._module_owner(
@@ -296,15 +147,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             name: owner for name in classes if name != owner and name not in bound
         }
         definitions.update((name, owner) for name in movable.value)
-        pinned = cls._suite_reference_pins(
-            tree,
-            classes,
-            frozenset(definitions),
-            owner,
-        )
-        return planned.ok({
-            name: owner for name, owner in definitions.items() if name not in pinned
-        })
+        return planned.ok(definitions)
 
     @classmethod
     def _plan_class_nesting(
@@ -375,25 +218,12 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         }
         editable = cls._editable_sources(sources)
         owned = tuple(item for item in editable if item[0] in modules)
-        project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
-            rope_workspace.rope_project,
-            sources,
-        )
 
         def definitions_for(item: t.Pair[Path, str]) -> p.Result[t.StrMapping]:
-            try:
-                return cls._class_nesting_definitions(
-                    rope_workspace,
-                    *item,
-                    project=project,
-                )
-            except Exception:
-                traceback.print_exc()
-                raise
+            return cls._class_nesting_definitions(rope_workspace, *item)
 
         planned = r[t.StrMapping].traverse(owned, definitions_for, fail_fast=False)
         if planned.failure:
-            project.close()
             return planned_edits.from_failure(planned)
         definitions_by_file = {
             path: definitions
@@ -406,7 +236,6 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             bindings = bindings_by_module.setdefault(module_name, {})
             for name, owner in definitions.items():
                 if bindings.setdefault(name, owner) != owner:
-                    project.close()
                     return planned_edits.fail(
                         f"ambiguous class-nesting owner for {module_name}.{name}: "
                         f"{bindings[name]}, {owner}",
@@ -415,8 +244,11 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             name for bindings in bindings_by_module.values() for name in bindings
         )
         if not nested_names:
-            project.close()
             return planned_edits.ok(())
+        project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
+            rope_workspace.rope_project,
+            sources,
+        )
         try:
             quoted = cls._nesting_quoted_sources(
                 project,

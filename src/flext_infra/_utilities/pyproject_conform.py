@@ -19,7 +19,8 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
 
     @staticmethod
     def requirement_group_fields(
-        document: t.Cli.TomlDocument, project: t.Cli.TomlTable
+        document: t.Cli.TomlDocument,
+        project: t.Cli.TomlTable,
     ) -> Iterator[t.Pair[t.Cli.TomlTable, str]]:
         """Yield ``(section, group_name)`` for every declared requirement group.
 
@@ -39,29 +40,31 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
 
     @classmethod
     def _parsed_pyproject(
-        cls, pyproject_content: str
+        cls,
+        pyproject_content: str,
     ) -> p.Result[t.Pair[t.Cli.TomlDocument, str]]:
         """Parse one pyproject source and return it with its declared project name."""
         source = u.Cli.toml_parse_text(pyproject_content)
         if source is None:
             return r[t.Pair[t.Cli.TomlDocument, str]].fail(
-                "pyproject content is not valid TOML"
+                "pyproject content is not valid TOML",
             )
         project = u.Cli.toml_table_child(source, c.Infra.PROJECT)
         if project is None:
             return r[t.Pair[t.Cli.TomlDocument, str]].fail(
-                "pyproject content must define [project]"
+                "pyproject content must define [project]",
             )
         project_name_raw = u.Cli.toml_value(project, c.Infra.NAME)
         if not isinstance(project_name_raw, str) or not project_name_raw.strip():
             return r[t.Pair[t.Cli.TomlDocument, str]].fail(
-                "[project].name must be a non-empty string"
+                "[project].name must be a non-empty string",
             )
         return r[t.Pair[t.Cli.TomlDocument, str]].ok((source, project_name_raw.strip()))
 
     @classmethod
     def _declared_uv_constraint_dependencies(
-        cls, document: t.Cli.TomlDocument
+        cls,
+        document: t.Cli.TomlDocument,
     ) -> t.SequenceOf[str]:
         """Return the document-declared ``[tool.uv] constraint-dependencies``."""
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
@@ -155,7 +158,7 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
                     dict.fromkeys((
                         *toolchain.dependency_cooldown_exclusions,
                         *toolchain.additional_python_tool_distributions,
-                    ))
+                    )),
                 )
                 if dependency_cooldown_exclusions is None
                 else dependency_cooldown_exclusions
@@ -210,7 +213,9 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
         )
         if workspace_context_root:
             sources_result = cls._validate_root_uv_sources(
-                source, workspace=workspace, providers=providers
+                source,
+                workspace=workspace,
+                providers=providers,
             )
             if sources_result.failure:
                 return r[str].from_failure(sources_result)
@@ -243,7 +248,7 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
                 workspace=workspace,
                 workspace_mode=workspace_mode,
                 constraint_dependencies=cls._declared_uv_constraint_dependencies(
-                    source
+                    source,
                 ),
             )
         )
@@ -373,19 +378,22 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
             if "@" in requirement_part:
                 return r[str].fail(
                     "workspace dependency declares a conflicting direct source: "
-                    f"{dependency_name}"
+                    f"{dependency_name}",
                 )
             return r[str].ok(
-                f"{head}; {marker_text}" if separator and marker_text else head
+                f"{head}; {marker_text}" if separator and marker_text else head,
             )
         reference_result = cls._repository_reference(
-            dependency_name, repositories=repositories, providers=providers
+            dependency_name,
+            repositories=repositories,
+            providers=providers,
         )
         if reference_result.failure:
             return r[str].from_failure(reference_result)
         reference = reference_result.value
         provider = FlextInfraUtilitiesRepository.repository_provider(
-            reference, providers
+            reference,
+            providers,
         )
         if provider.failure:
             return r[str].from_failure(provider)
@@ -400,7 +408,7 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
         branch = provider.value.branch
         inline = f"{head} @ git+{reference.url}@{branch}"
         return r[str].ok(
-            f"{inline}; {marker_text}" if separator and marker_text else inline
+            f"{inline}; {marker_text}" if separator and marker_text else inline,
         )
 
     @staticmethod
@@ -425,8 +433,9 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
         if not matches:
             return r.ok(
                 FlextInfraUtilitiesRepository.derived_repository_ref(
-                    distribution, provider=providers[0]
-                )
+                    distribution,
+                    provider=providers[0],
+                ),
             )
         reference = matches[0]
         if any(
@@ -434,7 +443,7 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
             for item in matches[1:]
         ):
             return r.fail(
-                f"repository catalog conflicts for distribution: {distribution}"
+                f"repository catalog conflicts for distribution: {distribution}",
             )
         return r.ok(reference)
 
@@ -455,7 +464,7 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
         optional_dev: t.StrSequence = ()
         if optional is not None:
             optional_dev = u.Cli.toml_as_string_list(
-                u.Cli.toml_value(optional, str(c.Infra.DEV))
+                u.Cli.toml_value(optional, str(c.Infra.DEV)),
             )
         # SSOT required floors win over existing same-name pins: dedupe_specs
         # keeps the first occurrence, so toolchain floors must lead the merge.
@@ -527,7 +536,7 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
                 groups,
                 "workspace",
                 tuple(
-                    sorted(project.distribution for project in workspace.subprojects)
+                    sorted(project.distribution for project in workspace.subprojects),
                 ),
             )
             return
@@ -535,7 +544,9 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
 
     @staticmethod
     def _is_topology_repository_root(
-        *, project_name: str, workspace: p.Infra.WorkspaceSpec
+        *,
+        project_name: str,
+        workspace: p.Infra.WorkspaceSpec,
     ) -> bool:
         """Identify the real multi-project root, not an autonomous repository."""
         return bool(workspace.subprojects) and (
@@ -554,7 +565,8 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
         return (
             workspace_mode is c.Infra.MakeProfile.WORKSPACE
             and cls._is_topology_repository_root(
-                project_name=project_name, workspace=workspace
+                project_name=project_name,
+                workspace=workspace,
             )
         )
 
@@ -595,13 +607,13 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
         for key in interpreter_keys:
             u.Cli.toml_remove_key_if_present(pyright, key)
         raw_environments = u.Cli.json_as_sequence(
-            u.Cli.toml_value(pyright, "executionEnvironments")
+            u.Cli.toml_value(pyright, "executionEnvironments"),
         )
         normalized_environments: t.JsonValueList = []
         for index, environment in enumerate(raw_environments):
             if not isinstance(environment, Mapping):
                 return r[bool].fail(
-                    f"tool.pyright.executionEnvironments[{index}] must be a mapping"
+                    f"tool.pyright.executionEnvironments[{index}] must be a mapping",
                 )
             mapping = t.Cli.JSON_MAPPING_ADAPTER.validate_python(environment)
             normalized: t.JsonDict = dict(mapping)
@@ -612,7 +624,9 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
             normalized_environments.append(normalized)
         if raw_environments:
             u.Cli.toml_sync_value(
-                pyright, "executionEnvironments", normalized_environments
+                pyright,
+                "executionEnvironments",
+                normalized_environments,
             )
         return r[bool].ok(True)
 
@@ -670,7 +684,9 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
         )
         if retained_constraints:
             u.Cli.toml_sync_string_list(
-                uv, "constraint-dependencies", retained_constraints
+                uv,
+                "constraint-dependencies",
+                retained_constraints,
             )
         else:
             u.Cli.toml_remove_key_if_present(uv, "constraint-dependencies")
@@ -693,14 +709,17 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
             u.Cli.toml_remove_key_if_present(uv, "environments")
         if exclude_newer_packages is not None or exclude_newer_overrides is not None:
             exclude_newer_payload: t.JsonDict = dict.fromkeys(
-                sorted(exclude_newer_packages or ()), False
+                sorted(exclude_newer_packages or ()),
+                False,
             )
             exclude_newer_payload.update(
-                sorted((exclude_newer_overrides or {}).items())
+                sorted((exclude_newer_overrides or {}).items()),
             )
             if exclude_newer_payload:
                 u.Cli.toml_sync_value(
-                    uv, "exclude-newer-package", exclude_newer_payload
+                    uv,
+                    "exclude-newer-package",
+                    exclude_newer_payload,
                 )
             else:
                 u.Cli.toml_remove_key_if_present(uv, "exclude-newer-package")
@@ -714,12 +733,13 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
                     {
                         key: value
                         for key, value in item.model_dump(
-                            mode="json", exclude_none=True
+                            mode="json",
+                            exclude_none=True,
                         ).items()
                         if key != "project"
                     }
                     for item in exclude_dependencies
-                ])
+                ]),
             )
             if exclude_payload:
                 u.Cli.toml_sync_value(uv, "exclude-dependencies", exclude_payload)
@@ -757,7 +777,9 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
         if repository_root:
             for member in workspace.subprojects:
                 u.Cli.toml_sync_mapping_table(
-                    sources, member.distribution, {"workspace": True}
+                    sources,
+                    member.distribution,
+                    {"workspace": True},
                 )
         elif not tuple(sources):
             u.Cli.toml_remove_key_if_present(uv, "sources")
@@ -776,7 +798,9 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
         candidates = (workspace.repository, *workspace.subprojects)
         for distribution in dict.fromkeys(item.distribution for item in candidates):
             reference_result = cls._repository_reference(
-                distribution, repositories=candidates, providers=providers
+                distribution,
+                repositories=candidates,
+                providers=providers,
             )
             if reference_result.failure:
                 return r.fail(reference_result.error or "repository resolution failed")
@@ -803,14 +827,15 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
             return r[bool].fail("root pyproject must define [tool.uv]")
         if "override-dependencies" in uv:
             return r[bool].fail(
-                "root pyproject must not define tool.uv.override-dependencies"
+                "root pyproject must not define tool.uv.override-dependencies",
             )
         uv_workspace = uv.get("workspace")
         if not isinstance(uv_workspace, Mapping):
             return r[bool].fail("root pyproject must define [tool.uv.workspace]")
         try:
             members = t.Infra.STR_SEQ_ADAPTER.validate_python(
-                uv_workspace.get("members"), strict=True
+                uv_workspace.get("members"),
+                strict=True,
             )
         except c.ValidationError as exc:
             return r[bool].fail_op("validate root uv workspace package entries", exc)
@@ -819,13 +844,14 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
         )
         if tuple(members) != expected_members:
             return r[bool].fail(
-                "root uv workspace package entries differ from workspace SSOT"
+                "root uv workspace package entries differ from workspace SSOT",
             )
         sources = uv.get("sources")
         if not isinstance(sources, Mapping):
             return r[bool].fail("root pyproject must define [tool.uv.sources]")
         resolved_result = FlextInfraUtilitiesPyprojectConform._resolved_root_sources(
-            workspace=workspace, providers=providers
+            workspace=workspace,
+            providers=providers,
         )
         if resolved_result.failure:
             return r[bool].from_failure(resolved_result)
@@ -840,7 +866,7 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
                 or dict(source) != expected_source
             ):
                 return r[bool].fail(
-                    f"root uv workspace sources differ from workspace SSOT: {source_name}"
+                    f"root uv workspace sources differ from workspace SSOT: {source_name}",
                 )
         return r[bool].ok(True)
 
@@ -892,7 +918,7 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
             if workspace_context_root and has_direct_source:
                 return r[bool].fail(
                     "workspace dependency declares a conflicting direct source: "
-                    f"{dependency_name}"
+                    f"{dependency_name}",
                 )
             # Standalone provenance is catalog-owned: [tool.uv.sources] is
             # rendered from the workspace member URL, so the requirement line
@@ -905,7 +931,7 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
             if member is not None and not member.url.startswith("https://"):
                 return r[bool].fail(
                     "internal dependency catalog provenance must be HTTPS: "
-                    f"{dependency_name} ({member.url})"
+                    f"{dependency_name} ({member.url})",
                 )
         return r[bool].ok(True)
 
@@ -964,10 +990,12 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
                 if key == c.Infra.DEPENDENCIES:
                     try:
                         required = t.Infra.STR_SEQ_ADAPTER.validate_python(
-                            project.get(key, []), strict=True
+                            project.get(key, []),
+                            strict=True,
                         )
                         custom = t.Infra.STR_SEQ_ADAPTER.validate_python(
-                            live_project[key], strict=True
+                            live_project[key],
+                            strict=True,
                         )
                     except c.ValidationError as exc:
                         return r[str].fail_op("validate runtime dependencies", exc)
@@ -980,15 +1008,22 @@ class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBas
                     # The merged array carries the canonical dependency order so
                     # overlay over a conformed document is the fixed point.
                     project[key] = [
-                        *dict.fromkeys(sorted((
-                            *required,
-                            *(
-                                item
-                                for item in custom
-                                if FlextInfraUtilitiesDependencies.dep_name(item)
-                                not in owned_names
+                        *dict.fromkeys(
+                            sorted(
+                                (
+                                    *required,
+                                    *(
+                                        item
+                                        for item in custom
+                                        if FlextInfraUtilitiesDependencies.dep_name(
+                                            item,
+                                        )
+                                        not in owned_names
+                                    ),
+                                ),
+                                key=cls._dependency_order_key,
                             ),
-                        ), key=cls._dependency_order_key))
+                        ),
                     ]
                 else:
                     project[key] = live_project[key]

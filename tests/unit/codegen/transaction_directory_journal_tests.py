@@ -15,10 +15,10 @@ from flext_tests import tm
 
 from flext_infra import config, m, p, r
 from flext_infra.codegen import (
+    FlextInfraCodegenTransaction,
     FlextInfraMiseArtifactsCandidates,
     FlextInfraMiseArtifactsJournal,
     FlextInfraMiseArtifactsVerification,
-    codegen_transaction as transaction,
 )
 from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
@@ -66,7 +66,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
     ) -> None:
         """Readiness proves current state without promoting or removing history."""
         root = u.Tests.git_repository(tmp_path)
-        owner = transaction.FlextInfraCodegenTransaction(
+        owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         roots = {"@readiness-0": root}
@@ -75,13 +75,13 @@ class TestsFlextInfraTransactionDirectoryJournal:
                 owner.run_files_locked(
                     roots,
                     lambda scope: owner.begin_files_locked(scope, roots, ()),
-                )
+                ),
             )
             before = tm.ok(
                 u.Cli.atomic_read_binary_file_state(
                     session.plan.layout.journal_path,
                     required=True,
-                )
+                ),
             )
             tm.fail(
                 owner.run_files_locked(
@@ -96,7 +96,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
                     u.Cli.atomic_read_binary_file_state(
                         session.plan.layout.journal_path,
                         required=True,
-                    )
+                    ),
                 ),
                 eq=before,
             )
@@ -106,7 +106,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
                     roots,
                     lambda _scope: r[bool].ok(value=True),
                     prepare=False,
-                )
+                ),
             )
 
     def test_generation_source_accepts_authenticated_hardlink(
@@ -184,7 +184,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         root = u.Tests.git_repository(tmp_path)
         u.Tests.copy_tracked_mise_seeds(root)
         mise_owner = FlextInfraCodegenMiseArtifacts(repository_root=root)
-        owner = transaction.FlextInfraCodegenTransaction(mise_owner)
+        owner = FlextInfraCodegenTransaction(mise_owner)
         layout = tm.ok(
             FlextInfraMiseWorkspacePlanner(mise_owner).layout_from_selectors(
                 root,
@@ -261,7 +261,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
     ) -> None:
         """Each phase that replaces an existing file owns a distinct backup."""
         root = u.Tests.git_repository(tmp_path)
-        owner = transaction.FlextInfraCodegenTransaction(
+        owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         roots = {"@docs-0": root}
@@ -301,7 +301,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         """Undo exact new publications, never a foreign replacement at their path."""
         root = u.Tests.git_repository(tmp_path)
         u.Tests.copy_tracked_mise_seeds(root)
-        owner = transaction.FlextInfraCodegenTransaction(
+        owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         target = root / "docs/generated/readme.md"
@@ -380,7 +380,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         """A failing or raising phase after begin recovers under the same lease."""
         root = u.Tests.git_repository(tmp_path)
         u.Tests.copy_tracked_mise_seeds(root)
-        owner = transaction.FlextInfraCodegenTransaction(
+        owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         target = root / "generated.md"
@@ -464,7 +464,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         """Never adopt a foreign parent while staging a previously absent file."""
         root = u.Tests.git_repository(tmp_path)
         u.Tests.copy_tracked_mise_seeds(root)
-        owner = transaction.FlextInfraCodegenTransaction(
+        owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         target = root / "docs/generated/readme.md"
@@ -520,7 +520,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         root = u.Tests.git_repository(tmp_path)
         u.Tests.copy_tracked_mise_seeds(root)
         mise_owner = FlextInfraCodegenMiseArtifacts(repository_root=root)
-        owner = transaction.FlextInfraCodegenTransaction(mise_owner)
+        owner = FlextInfraCodegenTransaction(mise_owner)
         config_path = root / ".mise.toml"
         before = tm.ok(u.Cli.atomic_read_binary_file_state(config_path, required=True))
         config_plan = m.Infra.CodegenFilePlan(
@@ -562,7 +562,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
     ) -> None:
         """Unregistered children are outside scope; in-scope residue fails closed."""
         root = u.Tests.git_repository(tmp_path)
-        owner = transaction.FlextInfraCodegenTransaction(
+        owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         participant = root / "unregistered" if unregistered_child else root
@@ -602,7 +602,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
     ) -> None:
         """Failure to create a phase root cannot authorize deleting that root."""
         root = u.Tests.git_repository(tmp_path)
-        owner = transaction.FlextInfraCodegenTransaction(
+        owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         roots = {"@docs-0": root}
@@ -646,7 +646,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
     ) -> None:
         """Full-state CAS rejects a new inode even when journal bytes/mode match."""
         root = u.Tests.git_repository(tmp_path)
-        owner = transaction.FlextInfraCodegenTransaction(
+        owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         roots = {"@docs-0": root}

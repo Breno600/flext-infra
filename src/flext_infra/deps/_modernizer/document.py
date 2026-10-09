@@ -76,10 +76,7 @@ class FlextInfraPyprojectModernizerDocument:
             if read.failure:
                 return result_type.from_failure(read)
             source = read.value
-        recovered = u.Infra.recover_live_pyproject_text(source)
-        if recovered.failure:
-            return result_type.from_failure(recovered)
-        payload_source = u.Cli.toml_mapping_from_text(recovered.value)
+        payload_source = u.Cli.toml_mapping_from_text(source)
         if payload_source is None:
             return result_type.fail(f"invalid TOML: {path}")
         validated: p.Result[t.MutableJsonMapping] = u.validate_value(
@@ -350,7 +347,7 @@ class FlextInfraPyprojectModernizerDocument:
                 rendered,
                 path=path,
                 toolchain_root=self.root,
-                taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
+                taplo_version=config.Infra.codegen.toolchain.taplo_version,
                 process_timeout_seconds=(
                     config.Infra.tooling.tools.tomlsort.process_timeout_seconds
                 ),

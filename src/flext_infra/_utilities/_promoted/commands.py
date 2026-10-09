@@ -8,9 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_cli import u
-
-from flext_infra import c, m
+from flext_infra import c
 from flext_infra._utilities._promoted.workspace import (
     FlextInfraUtilitiesPromotedWorkspace,
 )
@@ -35,6 +33,8 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
                 c.Infra.PromotedRegistryError]``.
 
         """
+        from flext_infra import u
+
         header = c.Infra.PromotedHeader
         headers: t.MutableMappingKV[
             Path,
@@ -88,6 +88,8 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
             The resulting ``p.Infra.PromotedCommand``.
 
         """
+        from flext_infra import m
+
         key = c.Infra.PromotedHeader
         message = c.Infra.PromotedMessage
         verb = cls._promoted_text(data, key.VERB, path)
@@ -107,7 +109,7 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
         params_raw = data.get(key.PARAMS, [])
         if not isinstance(params_raw, list):
             cls.promoted_fail(message.PARAMS_NOT_LIST, path=path)
-        params: t.MutableSequenceOf[p.Infra.PromotedParam] = []
+        params = []
         for item in params_raw:
             if not isinstance(item, dict):
                 cls.promoted_fail(message.PARAMS_NOT_TABLE, path=path)

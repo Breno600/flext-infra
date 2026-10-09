@@ -54,7 +54,10 @@ class TestsFlextInfraLazyInitDeterminism:
         init_text = (package_root / c.Infra.INIT_PY).read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        entries, _refs = u.Infra.lazy_import_mapping_source(init_text)
+        entries, _refs = u.Infra.module_mapping_assignment_source(
+            init_text,
+            u.Infra.lazy_imports_name_source(init_text),
+        )
         keys = [key for key, _names in entries]
         tm.that(keys, empty=False)
         tm.that(keys, eq=sorted(keys))

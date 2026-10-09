@@ -6,18 +6,154 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 from git import GitCommandError
 
-from flext_infra import c, m, p, r, t
+from flext_infra import c, m, r, t
 from flext_infra._utilities._git.worktree_materialization import (
     FlextInfraUtilitiesGitWorktreeMaterializationMixin,
 )
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
     FlextInfraUtilitiesGitWorktreeMaterializationMixin,
 ):
     """Own worktree checkpoint operations."""
+
+    @classmethod
+    def git_checkpoint_worktree(
+        cls,
+        worktree_root: Path,
+        *,
+        message: str,
+        excluded: t.SequenceOf[Path] = (),
+    ) -> p.Result[str]:
+        """Commit the complete isolated state as a synthetic checkpoint.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
+        # `make setup` fast-forwards every declared submodule to its branch tip by
+        # contract, so staging gitlinks made the checkpoint differ from HEAD before
+        # the verb even ran: every later verb then reported pending changes for
+        # pointers it never touched, and `gen` aborted before applying anything.
+        submodules_result = cls.git_declared_submodule_paths(worktree_root)
+        if submodules_result.failure:
+            return r[str].from_failure(submodules_result)
+        gitlink_exclusions = tuple(
+            f":(exclude){path.as_posix()}" for path in submodules_result.value
+        )
+        try:
+            commit_sha = cls._git_create_checkpoint_commit(
+                worktree_root,
+                gitlink_exclusions,
+                excluded,
+                message,
+            )
+        except GitCommandError as exc:
+            return r[str].fail(str(exc), exception=exc)
+        except (OSError, ValueError) as exc:
+            return r[str].fail(f"failed to create checkpoint: {exc}", exception=exc)
+        return r[str].ok(commit_sha)
+
+    @staticmethod
+    def _git_text(output: bytes | str | tuple[int, bytes, str]) -> str:
+        """Normalize one GitPython command result to text at its typed boundary.
+
+        GitPython types every command result as ``bytes | str |`` the
+        extended-output tuple; the tuple shape only exists behind
+        ``with_extended_output``, which the checkpoint commands never request.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            TypeError: If git command returned extended output without its contract.
+
+        """
+        if isinstance(output, bytes):
+            return output.decode(c.Cli.ENCODING_DEFAULT)
+        if isinstance(output, str):
+            return output
+        msg = "git command returned extended output without its contract"
+        raise TypeError(msg)
+
+    @classmethod
+    def _git_create_checkpoint_commit(
+        cls,
+        worktree_root: Path,
+        gitlink_exclusions: t.VariadicTuple[str],
+        excluded: t.SequenceOf[Path],
+        message: str,
+    ) -> str:
+        """Stage all state and create a synthetic checkpoint commit-tree.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            OSError: If ``parent_result.failure``; or if checkpoint parent has invalid
+                author identity.
+
+        """
+        repo = cls._repo(worktree_root)
+        if excluded:
+            tracked_output = repo.git.ls_files(
+                "-z",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "--",
+                ".",
+                *(f":(exclude){path.as_posix()}" for path in excluded),
+            )
+            tracked_paths = tuple(path for path in tracked_output.split("\0") if path)
+            if tracked_paths:
+                repo.git.add("-A", "-f", "--", *tracked_paths, *gitlink_exclusions)
+        else:
+            # `-f` matches the tracked-paths branch and the operation delta:
+            # the checkpoint must capture ignored-but-tracked paths.
+            repo.git.add("-A", "-f", "--", *gitlink_exclusions)
+        tree = repo.git.write_tree().strip()
+        parent_result = cls._git_head_oid(worktree_root)
+        if parent_result.failure:
+            raise OSError(parent_result.error or "failed to resolve checkpoint parent")
+        parent = parent_result.value
+        identity_output = repo.git.show("-s", "--format=%an%x00%ae", parent).rstrip(
+            "\n",
+        )
+        identity = identity_output.split("\0")
+        match identity:
+            case [author_name, author_email] if (
+                author_name.strip() and author_email.strip()
+            ):
+                pass
+            case _:
+                detail = "checkpoint parent has invalid author identity"
+                raise OSError(detail)
+        commit_sha = cls._git_text(
+            repo.git.execute([
+                c.Infra.GIT,
+                "-c",
+                f"user.name={author_name}",
+                "-c",
+                f"user.email={author_email}",
+                "commit-tree",
+                tree,
+                "-p",
+                parent,
+                "-m",
+                message,
+            ]),
+        ).strip()
+        repo.git.update_ref(c.Infra.GIT_HEAD, commit_sha)
+        return commit_sha
 
     @staticmethod
     def _transaction_exclusion_pathspecs() -> t.VariadicTuple[str]:

@@ -6,18 +6,15 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import logging
-import sys
 from collections.abc import MutableMapping
 from importlib import import_module
-from logging.handlers import BufferingHandler
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from flext_cli import u
 
 from flext_infra import c, m
-from flext_infra._utilities import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -141,10 +138,9 @@ class FlextInfraUtilitiesDocsBuild:
     ) -> m.Infra.DocsPhaseReport:
         """Build one MkDocs config file into a site directory.
 
-        A MkDocs failure escapes with its own exception and traceback; the
-        warnings MkDocs logged before aborting (a strict build fails on them)
-        are attached to that exception as notes, never translated into a
-        report.
+        A MkDocs failure becomes the phase's ``FAIL`` report — the phase
+        result, not a raised exception, is the reporting contract every
+        caller (``execute`` above all) consumes.
 
         Returns:
             The resulting ``m.Infra.DocsPhaseReport``.
@@ -155,18 +151,17 @@ class FlextInfraUtilitiesDocsBuild:
             / c.Infra.DEFAULT_DOCS_OUTPUT_DIR
             / f"{c.Infra.DIR_SITE}{site_suffix}"
         ).resolve()
-        mkdocs_logger = logging.getLogger(c.Infra.MKDOCS_LOGGER_NAME)
-        warnings = BufferingHandler(capacity=sys.maxsize)
-        warnings.setLevel(logging.WARNING)
-        mkdocs_logger.addHandler(warnings)
         try:
             FlextInfraUtilitiesDocsBuild._run_mkdocs_api(settings, site_dir)
         except Exception as exc:
-            for record in warnings.buffer:
-                exc.add_note(f"{record.levelname}: {record.getMessage()}")
-            raise
-        finally:
-            mkdocs_logger.removeHandler(warnings)
+            return m.Infra.DocsPhaseReport(
+                phase="build",
+                scope=scope.name,
+                result=c.Infra.ResultStatus.FAIL,
+                reason=f"build failed ({settings.name}): {exc}",
+                site_dir="",
+                passed=False,
+            )
         return m.Infra.DocsPhaseReport(
             phase="build",
             scope=scope.name,
@@ -190,21 +185,13 @@ class FlextInfraUtilitiesDocsBuild:
             FlextInfraUtilitiesDocsBuild._module_callable(mkdocs_build, "build"),
         )
         site_dir.parent.mkdir(parents=True, exist_ok=True)
-        logger = logging.getLogger("mkdocs")
-        diagnostics = logging.StreamHandler()
-        diagnostics.setLevel(logging.WARNING)
-        logger.addHandler(diagnostics)
-        try:
-            config_obj = FlextInfraUtilitiesDocsBuild._load_mkdocs_config(
-                load,
-                settings,
-                site_dir,
-            )
-            config_obj["strict"] = True
-            _ = build(config_obj, dirty=False)
-        finally:
-            logger.removeHandler(diagnostics)
-            diagnostics.close()
+        config_obj = FlextInfraUtilitiesDocsBuild._load_mkdocs_config(
+            load,
+            settings,
+            site_dir,
+        )
+        config_obj["strict"] = True
+        _ = build(config_obj, dirty=False)
 
     @staticmethod
     def docs_serve_mkdocs(

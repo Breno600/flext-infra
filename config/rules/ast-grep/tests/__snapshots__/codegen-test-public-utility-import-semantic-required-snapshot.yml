@@ -1,8 +1,0 @@
-id: codegen-test-public-utility-import-semantic-required
-snapshots:
-  import tests.utilities:
-    labels:
-    - source: import tests.utilities
-      style: primary
-      start: 0
-      end: 22

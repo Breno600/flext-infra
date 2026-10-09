@@ -165,8 +165,10 @@ class TestsFlextInfraRealGateRunners:
                 [
                     sys.executable,
                     "-c",
-                    "import sys; sys.path.insert(0, 'src'); "
-                    "from fix_imports.report import render; print(render())",
+                    (
+                        "import sys; sys.path.insert(0, 'src'); "
+                        "from fix_imports.report import render; print(render())"
+                    ),
                 ],
                 cwd=project_dir,
             ),
@@ -246,15 +248,12 @@ class TestsFlextInfraRealGateRunners:
         tm.that(result.result.passed, eq=True)
         tm.that(source.read_text(encoding="utf-8"), eq="value = [1, 2, 3]\n")
 
-    @pytest.mark.requires_engine("pyright")
     def test_pyright_reports_real_type_error(self, tmp_path: Path) -> None:
         """Test pyright reports real type error."""
         project_dir = u.Tests.mk_project(
             tmp_path,
             "pyright-project",
-            pyproject=(
-                '[tool.pyright]\ninclude = ["src"]\ntypeCheckingMode = "strict"\n'
-            ),
+            pyproject='[tool.pyright]\ninclude = ["src"]\ntypeCheckingMode = "strict"\n',
             with_src=True,
         )
         (project_dir / "src" / "demo.py").write_text(

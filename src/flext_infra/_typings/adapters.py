@@ -6,9 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from collections.abc import Mapping, MutableMapping, Sequence
+from collections.abc import MutableMapping
 from pathlib import Path
-from typing import ClassVar
+from typing import Annotated, ClassVar
 
 from flext_cli import t
 
@@ -30,25 +30,25 @@ class FlextInfraTypesAdapters:
     "Validates MutableMapping[str, InfraValue] for in-place mutation."
 
     STR_MAPPING_ADAPTER: ClassVar[m.TypeAdapter[t.StrMapping]] = u.type_adapter(
-        Mapping[str, str],
+        Annotated[t.MappingKV[str, str], None],
     )
     "Validates t.StrMapping."
 
     CONTAINER_MAPPING_ADAPTER: ClassVar[
         m.TypeAdapter[t.MappingKV[str, t.Scalar | Path]]
-    ] = u.type_adapter(Mapping[str, t.Scalar | Path])
+    ] = u.type_adapter(Annotated[t.MappingKV[str, t.Scalar | Path], None])
     "Validates flat scalar/path mappings (no nested containers)."
 
     INFRA_SEQ_ADAPTER: ClassVar[m.TypeAdapter[t.JsonList]] = t.Cli.JSON_LIST_ADAPTER
     "Validates t.SequenceOf[InfraValue]."
 
     CONTAINER_DICT_SEQ_ADAPTER: ClassVar[m.TypeAdapter[t.SequenceOf[t.JsonMapping]]] = (
-        u.type_adapter(Sequence[Mapping[str, t.JsonValue]])
+        u.type_adapter(Annotated[t.SequenceOf[t.JsonMapping], None])
     )
     "Validates t.SequenceOf[ContainerDict]."
 
     STR_SEQ_ADAPTER: ClassVar[m.TypeAdapter[t.StrSequence]] = u.type_adapter(
-        Sequence[str],
+        Annotated[t.SequenceOf[str], None],
     )
     "Validates t.StrSequence."
 

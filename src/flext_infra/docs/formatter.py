@@ -16,13 +16,13 @@ from flext_infra.docs.base import FlextInfraDocServiceBase
 class FlextInfraDocFormatter(FlextInfraDocServiceBase):
     """Format governed docs scopes through the canonical markdown-format gate.
 
-    The service never builds its own rumdl invocation: configuration,
+    The service never builds its own prettier invocation: configuration,
     ignore handling, and command construction stay owned by the gate, so
     ``docs fmt`` and ``make fmt`` can never disagree about the formatting
     contract. The gate is another service family, so the facade binds it
     (``FlextInfra.docs_format``) and the formatter only consumes the port. The
     single-pass verb law holds: one operation per scope — the mutating pass
-    with ``--apply``, the read-only ``rumdl fmt --check`` preview without it.
+    with ``--apply``, the read-only ``prettier --check`` preview without it.
     """
 
     format_gate: t.Port[p.Infra.MarkdownFormatGateFactory | None] = m.Field(
@@ -105,18 +105,10 @@ class FlextInfraDocFormatter(FlextInfraDocServiceBase):
         )
         execution = gate.fix(scope.path, ctx) if apply else gate.check(scope.path, ctx)
         if apply:
-            # The mutating pass reports every repair as a finding line marked
-            # ``[fixed]``; the files those lines name are the rewritten surface.
             files = tuple(
-                dict.fromkeys(
-                    match.group("file")
-                    for line in execution.raw_output.splitlines()
-                    if (match := c.Infra.MARKDOWN_RE.match(line.strip()))
-                    and match
-                    .group("msg")
-                    .strip()
-                    .endswith(c.Infra.MARKDOWN_FIXED_SUFFIX)
-                ),
+                match.group("file")
+                for line in execution.raw_output.splitlines()
+                if (match := c.Infra.DOCS_PRETTIER_WRITE_LINE_RE.match(line.strip()))
             )
         else:
             files = tuple(issue.file for issue in execution.issues)

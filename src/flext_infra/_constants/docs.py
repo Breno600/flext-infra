@@ -17,9 +17,6 @@ class FlextInfraConstantsDocs:
     """Docs infrastructure constants."""
 
     DEFAULT_DOCS_OUTPUT_DIR: ClassVar[str] = ".reports/docs"
-    # MkDocs logs every strict-mode warning to this logger before it aborts
-    # with only a count; the build captures it so a failure carries its cause.
-    MKDOCS_LOGGER_NAME: ClassVar[str] = "mkdocs"
     # Registered docs CLI action names; make.docs.actions must stay inside this
     # surface so the generated Makefile loop can never dispatch a missing verb.
     DOCS_ACTION_IDS: ClassVar[frozenset[str]] = frozenset({
@@ -45,6 +42,11 @@ class FlextInfraConstantsDocs:
         DOCS_VALIDATE_SUMMARY_FILENAME,
         DOCS_VALIDATE_REPORT_FILENAME,
     )
+    # Prettier --write lists every processed file as "<path> <duration>ms";
+    # the fmt phase report surfaces exactly that surface per scope.
+    DOCS_PRETTIER_WRITE_LINE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^(?P<file>\S+)\s+\d+(?:\.\d+)?ms$",
+    )
     DOCS_INSECURE_WEB_SCHEME: ClassVar[str] = "http"
     DOCS_SECURE_WEB_SCHEME: ClassVar[str] = "https"
     # A generated document may point outward, never carry a payload: a `data:`
@@ -59,41 +61,15 @@ class FlextInfraConstantsDocs:
     DOCS_FRAGMENT_PREFIX: ClassVar[str] = "#"
     PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = (
         "undocumented-public-module",
-        "undocumented-public-function",
-        "undocumented-public-class",
-        "undocumented-public-method",
-        "undocumented-public-init",
         "missing-copyright-notice",
         "implicit-namespace-package",
         "print",
-        "assert",
-        "boolean-positional-value-in-call",
-        "no-self-use",
-        "pytest-assert-in-except",
-        "magic-value-comparison",
-        "docstring-missing-returns",
-        "docstring-missing-exception",
     )
     """Only module-header (docstring, copyright notice) and package rules are
     inapplicable to a standalone Markdown fence, which is not a module file;
-    the pydocstyle public-surface family is inapplicable for the same reason
-    (the surrounding prose is the fence's documentation), as is the
-    docstring-completeness contract (example helpers keep their one-line
-    docstrings; full Args/Returns sections are authored-source law),
-    ``print`` is the fence demonstrating its output, ``assert`` and the
-    pytest-idiom rules are the test-idiom contract of executable fences,
-    which the pytest markdown-docs plugin runs as tests during ``make test``
-    (the fleet's justified per-rule S101/PT test-idiom exception) — fences
-    teaching exception semantics show real ``except`` blocks, the
-    boolean-trap call-site rule is inapplicable because a fence must
-    faithfully demonstrate the owning API's declared call signature;
-    ``no-self-use`` is inapplicable for the same reason on adapter fences,
-    where ``self`` is the port protocol's interface contract rather than an
-    unused receiver, and magic-value-comparison is inapplicable because a
-    fence's concrete
-    literals are narrative data illustrating one scenario, never
-    config-owned values. All names, behavior, types, and security rules
-    remain active and require correction in the authored source."""
+    ``print`` is the fence demonstrating its output. All names, behavior,
+    types, docstring, and security rules remain active and require correction
+    in the authored source."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
         r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)",
     )

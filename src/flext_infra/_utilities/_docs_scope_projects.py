@@ -9,17 +9,18 @@ from __future__ import annotations
 import operator
 from collections.abc import MutableMapping
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from flext_core.result import FlextResult as r
 from flext_infra import c, m, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGit,
-    FlextInfraUtilitiesProjectDiscovery,
-)
 from flext_infra._utilities._docs_scope_policy import (
     FlextInfraUtilitiesDocsScopePolicyMixin,
 )
-from flext_infra.protocols import FlextInfraProtocols as p
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+
+if TYPE_CHECKING:
+    from flext_infra import FlextInfraProtocols as p
 
 
 class FlextInfraUtilitiesDocsScopeProjectsMixin(
@@ -90,10 +91,10 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
         root = FlextInfraUtilitiesDocsScopeProjectsMixin.absolute_lexical(
             repository_root,
         )
-        declared = FlextInfraUtilitiesGit.git_submodule_declarations(root)
+        declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(root)
         if declared.failure:
             raise ValueError(declared.error or f"invalid workspace: {root}")
-        return frozenset(root / item.path for item in declared.value)
+        return frozenset(root / path for path in declared.value)
 
     @staticmethod
     def project_info_for_entry(

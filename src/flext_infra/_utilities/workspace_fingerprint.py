@@ -11,9 +11,13 @@ import os
 import stat
 from collections.abc import MutableMapping
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from flext_infra import c, m, p, r, t
-from flext_infra._utilities import FlextInfraUtilitiesGit
+from flext_infra import c, m, r
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
+
+if TYPE_CHECKING:
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesWorkspaceFingerprint:
@@ -75,110 +79,6 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
         except OSError as exc:
             return r[bytes].fail(f"workspace fingerprint read failed for {path}: {exc}")
 
-    @staticmethod
-    def _index_entries(
-        index_z: bytes,
-    ) -> p.Result[t.MutableMappingKV[bytes, list[bytes]]]:
-        """Parse the NUL-delimited git index into per-path stage metadata.
-
-        Returns:
-            The resulting ``p.Result[t.MutableMappingKV[bytes, list[bytes]]]``.
-
-        """
-        index_entries: MutableMapping[bytes, list[bytes]] = {}
-        for record in index_z.split(b"\0"):
-            if not record:
-                continue
-            try:
-                metadata, raw_path = record.split(b"\t", maxsplit=1)
-            except ValueError:
-                return r[t.MutableMappingKV[bytes, list[bytes]]].fail(
-                    "invalid NUL-delimited git index entry",
-                )
-            index_entries.setdefault(raw_path, []).append(metadata)
-        return r[t.MutableMappingKV[bytes, list[bytes]]].ok(index_entries)
-
-    @classmethod
-    def _fingerprint_entries(
-        cls,
-        root: Path,
-        paths_z: bytes,
-        index_entries: t.MappingKV[bytes, list[bytes]],
-        exclusions: frozenset[Path],
-    ) -> p.Result[t.VariadicTuple[m.Infra.WorkspaceFingerprintEntry]]:
-        """Digest every governed tracked path into one fingerprint entry.
-
-        Returns:
-            The resulting
-            ``p.Result[t.VariadicTuple[m.Infra.WorkspaceFingerprintEntry]]``.
-
-        """
-        entries: list[m.Infra.WorkspaceFingerprintEntry] = []
-        for raw_path in sorted(filter(None, paths_z.split(b"\0"))):
-            relative = Path(os.fsdecode(raw_path))
-            if relative.is_absolute() or ".." in relative.parts:
-                return r[t.VariadicTuple[m.Infra.WorkspaceFingerprintEntry]].fail(
-                    f"unsafe repository path in fingerprint: {relative}",
-                )
-            if cls._excluded(relative, exclusions):
-                continue
-            content_result = cls._file_content_digest(root / relative)
-            if content_result.failure:
-                return r[
-                    t.VariadicTuple[m.Infra.WorkspaceFingerprintEntry]
-                ].from_failure(content_result)
-            entries.append(
-                m.Infra.WorkspaceFingerprintEntry(
-                    path=relative.as_posix(),
-                    digest=cls._entry_digest(
-                        raw_path,
-                        index_entries.get(raw_path, ()),
-                        content_result.value,
-                    ),
-                ),
-            )
-        return r[t.VariadicTuple[m.Infra.WorkspaceFingerprintEntry]].ok(tuple(entries))
-
-    @staticmethod
-    def _entry_digest(
-        raw_path: bytes,
-        index_metadata: t.SequenceOf[bytes],
-        content_digest: bytes,
-    ) -> str:
-        """Hash one entry's path, index stage records, and content digest.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        entry_digest = hashlib.sha256()
-        entry_digest.update(raw_path)
-        entry_digest.update(b"\0")
-        for metadata in sorted(index_metadata):
-            entry_digest.update(metadata)
-            entry_digest.update(b"\0")
-        entry_digest.update(content_digest)
-        return entry_digest.hexdigest()
-
-    @staticmethod
-    def _aggregate_digest(
-        head: bytes,
-        entries: list[m.Infra.WorkspaceFingerprintEntry],
-    ) -> str:
-        """Hash HEAD and every entry into the workspace aggregate digest.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        aggregate = hashlib.sha256(head)
-        for entry in entries:
-            aggregate.update(entry.path.encode())
-            aggregate.update(b"\0")
-            aggregate.update(entry.digest.encode())
-            aggregate.update(b"\0")
-        return aggregate.hexdigest()
-
     @classmethod
     def workspace_fingerprint(
         cls,
@@ -198,21 +98,59 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
         )
         if inputs.failure:
             return r[m.Infra.WorkspaceFingerprint].from_failure(inputs)
-        index_entries = cls._index_entries(inputs.value.index_z)
-        if index_entries.failure:
-            return r[m.Infra.WorkspaceFingerprint].from_failure(index_entries)
-        entries = cls._fingerprint_entries(
-            root,
-            inputs.value.paths_z,
-            index_entries.value,
-            frozenset(excluded_paths),
-        )
-        if entries.failure:
-            return r[m.Infra.WorkspaceFingerprint].from_failure(entries)
+        paths_result_value = inputs.value.paths_z
+        index_result_value = inputs.value.index_z
+        head = inputs.value.head
+
+        index_entries: MutableMapping[bytes, list[bytes]] = {}
+        for record in index_result_value.split(b"\0"):
+            if not record:
+                continue
+            try:
+                metadata, raw_path = record.split(b"\t", maxsplit=1)
+            except ValueError:
+                return r[m.Infra.WorkspaceFingerprint].fail(
+                    "invalid NUL-delimited git index entry",
+                )
+            index_entries.setdefault(raw_path, []).append(metadata)
+
+        exclusions = frozenset(excluded_paths)
+        entries: list[m.Infra.WorkspaceFingerprintEntry] = []
+        for raw_path in sorted(filter(None, paths_result_value.split(b"\0"))):
+            relative = Path(os.fsdecode(raw_path))
+            if relative.is_absolute() or ".." in relative.parts:
+                return r[m.Infra.WorkspaceFingerprint].fail(
+                    f"unsafe repository path in fingerprint: {relative}",
+                )
+            if cls._excluded(relative, exclusions):
+                continue
+            content_result = cls._file_content_digest(root / relative)
+            if content_result.failure:
+                return r[m.Infra.WorkspaceFingerprint].from_failure(content_result)
+            entry_digest = hashlib.sha256()
+            entry_digest.update(raw_path)
+            entry_digest.update(b"\0")
+            for index_metadata in sorted(index_entries.get(raw_path, ())):
+                entry_digest.update(index_metadata)
+                entry_digest.update(b"\0")
+            entry_digest.update(content_result.value)
+            entries.append(
+                m.Infra.WorkspaceFingerprintEntry(
+                    path=relative.as_posix(),
+                    digest=entry_digest.hexdigest(),
+                ),
+            )
+
+        aggregate = hashlib.sha256(head)
+        for entry in entries:
+            aggregate.update(entry.path.encode())
+            aggregate.update(b"\0")
+            aggregate.update(entry.digest.encode())
+            aggregate.update(b"\0")
         return r[m.Infra.WorkspaceFingerprint].ok(
             m.Infra.WorkspaceFingerprint(
-                digest=cls._aggregate_digest(inputs.value.head, list(entries.value)),
-                entries=entries.value,
+                digest=aggregate.hexdigest(),
+                entries=tuple(entries),
             ),
         )
 

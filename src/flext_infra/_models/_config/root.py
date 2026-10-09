@@ -15,7 +15,7 @@ from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
 from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 from flext_infra._models._config.release import FlextInfraConfigModelsRelease
 from flext_infra._models._config.static import FlextInfraConfigModelsStatic
-from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra._models.deps import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraConfigModelsRoot:

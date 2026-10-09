@@ -7,14 +7,18 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from flext_cli import u as cli_u
 
-from flext_infra import m, p, r, t
-from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+from flext_infra import m, r, t
 from flext_infra._utilities._docs_generate_sources import (
     FlextInfraUtilitiesDocsGenerateSourcesMixin,
 )
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesDocsGeneratePlanMixin(
@@ -109,7 +113,6 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
         """
         # The physical repository root is carried by the bundle: the first output
         # scope is a member when the root is excluded from the render.
-
         repository_root = bundle.repository_root
         scope_roots = tuple(scoped.scope.path for scoped in bundle.scopes)
         # The single race barrier of the docs cycle: every snapshotted source is

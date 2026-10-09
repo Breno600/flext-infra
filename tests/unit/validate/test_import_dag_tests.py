@@ -12,11 +12,12 @@ import pytest
 from flext_tests import tm
 
 from flext_infra.validate.test_import_dag import FlextInfraValidateTestImportDag
+from tests import m
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import m, t
+    from tests import t
 
 
 class TestsFlextInfraImportDag:

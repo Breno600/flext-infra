@@ -59,14 +59,6 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     f"- {gate}: {gate_status} ({len(execution.issues)} issues)",
                 )
                 lines.extend(f"  - {issue.formatted}" for issue in execution.issues)
-                if execution.raw_receipt is not None:
-                    lines.extend([
-                        (
-                            f"  - Native output receipt: "
-                            f"[{execution.raw_receipt.name}]"
-                            f"({execution.raw_receipt.resolve().as_uri()})"
-                        ),
-                    ])
             lines.append("")
         return "\n".join(lines)
 
@@ -75,6 +67,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
         cls,
         results: t.SequenceOf[m.Infra.ProjectResult],
         gates: t.StrSequence,
+        summary: m.Infra.CheckReportSummary | None = None,
     ) -> m.Infra.SarifReport:
         """Build the SARIF 2.1.0 report model from workspace gate results.
 
@@ -94,14 +87,15 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     rule_id = issue.code or gate
                     rules_by_id.setdefault(
                         rule_id,
-                        m.Infra.SarifRule.model_validate({
-                            "id": rule_id,
-                            "short_description": f"{tool_name} ({gate}) issue",
-                            "help_uri": tool_url,
-                        }),
+                        m.Infra.SarifRule(
+                            id=rule_id,
+                            short_description=f"{tool_name} ({gate}) issue",
+                            helpUri=tool_url,
+                        ),
                     )
                     sarif_results.append(cls._sarif_issue(issue, rule_id))
         return m.Infra.SarifReport(
+            properties=summary,
             runs=(
                 m.Infra.SarifRun(
                     tool_name="flext-infra-check",
@@ -125,21 +119,18 @@ class FlextInfraWorkspaceCheckReportsMixin:
             if issue.severity.lower() == c.Infra.SeverityLevel.WARNING
             else "error"
         )
-        return m.Infra.SarifResult.model_validate({
-            "rule_id": rule_id,
-            "level": level,
-            "message": issue.message,
-            "locations": list(issue.locations)
-            if issue.locations
-            else [
+        return m.Infra.SarifResult(
+            ruleId=rule_id,
+            level=level,
+            message=issue.message,
+            locations=[
                 m.Infra.SarifLocation(
                     uri=issue.file,
                     start_line=issue.line,
                     start_column=issue.column,
                 ),
             ],
-            "related_locations": issue.related_locations,
-        })
+        )
 
     @classmethod
     def _write_reports_and_summary(
@@ -147,6 +138,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
         resolved_gates: t.StrSequence,
         report_base: Path,
         outcome: p.Infra.WorkspaceLoopOutcome,
+        summary: m.Infra.CheckReportSummary,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
         """Write markdown/SARIF reports and print summary to output.
 
@@ -168,13 +160,14 @@ class FlextInfraWorkspaceCheckReportsMixin:
         if md_write_result.failure:
             return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(md_write_result)
         sarif_path = report_base / c.Infra.CHECK_REPORT_SARIF_FILENAME
-        sarif_report = cls._generate_sarif(results, resolved_gates)
-        try:
-            u.Infra.export_pydantic_json(sarif_report, sarif_path)
-        except OSError as exc:
-            return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
-                f"failed to write sarif report: {exc}",
-                exception=exc,
+        sarif_report = cls._generate_sarif(results, resolved_gates, summary)
+        sarif_write_result = u.Cli.atomic_write_text_file(
+            sarif_path,
+            sarif_report.model_dump_json(indent=2, round_trip=True),
+        )
+        if sarif_write_result.failure:
+            return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(
+                sarif_write_result,
             )
         total_findings = sum(project.total_findings for project in results)
         success = len(results) - outcome.failed

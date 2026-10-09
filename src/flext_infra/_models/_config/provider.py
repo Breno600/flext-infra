@@ -6,10 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
-from flext_cli import m
+from flext_cli import m, u
 
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsSharedInfra
@@ -54,33 +53,13 @@ class FlextInfraConfigModelsProvider:
         @m.computed_field
         @property
         def internal_distribution_prefix(self) -> str:
-            """Derive the internal distribution namespace from the owner name.
-
-            Returns:
-                The resulting ``str``.
-            """
+            """Derive the internal distribution namespace from the owner name."""
             namespace, _, _ = self.distribution.partition("-")
             return f"{namespace}-"
 
     class BranchPolicySpec(FlextInfraConfigModelsContract.ConfigContract):
         """Global branch policy shared by every provider."""
 
-        lane_remote: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Remote whose live integration tip governs lanes"),
-        ]
-        lane_temporary_roots: Annotated[
-            tuple[Path, ...],
-            m.Field(description="Temporary roots requiring registered ownership"),
-        ]
-        lane_pr_limit: Annotated[
-            int,
-            m.Field(gt=0, description="PR page bound; saturation fails the inventory"),
-        ]
-        lane_governance_file: Annotated[
-            Path,
-            m.Field(description="Global coordination SSOT, consumed without copying"),
-        ]
         ci_trigger_branches: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -123,7 +102,9 @@ class FlextInfraConfigModelsProvider:
     class CiPrivateSubmoduleDeployKeySpec(
         FlextInfraConfigModelsContract.ConfigContract,
     ):
-        """One read-only deploy key unlocking a private subproject in CI."""
+        """One read-only deploy key that unlocks
+        a private workspace subproject in CI.
+        """
 
         secret: Annotated[
             t.NonEmptyStr,
@@ -168,13 +149,6 @@ class FlextInfraConfigModelsProvider:
                 description="CI secret holding the private-dependency App key",
             ),
         ]
-        repositories: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                min_length=1,
-                description="Selected repositories granted contents-read only",
-            ),
-        ]
 
     class CiPrivateSubmodulesSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Per-distribution private submodule init contract for generated CI."""
@@ -205,7 +179,7 @@ class FlextInfraConfigModelsProvider:
             m.Field(min_length=1, description="Ordered deploy-key materializations"),
         ]
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_private_submodule_identity(self) -> Self:
             """Keep path, key, and host identities complete and unambiguous.
 

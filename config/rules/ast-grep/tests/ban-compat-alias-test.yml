@@ -1,12 +1,7 @@
 id: ban-compat-alias
 valid:
   - "c = FlextConstants"
-  - "t = FlextTypes"
-  - "p = FlextProtocols"
-  - "m = FlextModels"
   - "u = FlextUtilities"
-  - "r = FlextResult"
-  - "s = FlextService"
   - "config = FlextInfraConfig.fetch_global()"
 invalid:
   - "OldService = NewService"

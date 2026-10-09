@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import main
+from flext_infra import main as infra_main
 from tests import c, u
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ class TestsFlextInfraDocsMain:
 
         tm.that(
             (
-                main([
+                infra_main([
                     "docs",
                     "validate",
                     "--repository-root",
@@ -53,7 +53,7 @@ class TestsFlextInfraDocsMain:
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         tm.that(
-            main([
+            infra_main([
                 "docs",
                 "generate",
                 "--repository-root",

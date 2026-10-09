@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from git import (
     Git,
@@ -23,7 +24,10 @@ from git import (
     Repo,
 )
 
-from flext_infra import c, m, p, r, t
+from flext_infra import c, m, r
+
+if TYPE_CHECKING:
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesGitRepo:
@@ -79,56 +83,6 @@ class FlextInfraUtilitiesGitRepo:
                 bare = False
                 locked = False
         return tuple(entries)
-
-    @classmethod
-    def _worktree_registry(
-        cls,
-        repo: Repo,
-        porcelain: str,
-    ) -> t.VariadicTuple[m.Infra.GitWorktreeEntry]:
-        """Bind a storage-only primary row to Git-proven checkout identity.
-
-        Returns:
-            Typed registry entries with the primary checkout authenticated by Git.
-
-        Raises:
-            ValueError: If shared storage cannot be bound to a real primary checkout.
-
-        """
-        entries = cls._registered_worktree_entries(porcelain)
-        common_dir = Path(
-            repo.git.rev_parse(
-                c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS,
-                "--git-common-dir",
-            ).strip(),
-        ).resolve()
-        if not entries:
-            msg = "Git worktree registry is empty"
-            raise ValueError(msg)
-        if entries[0].bare or entries[0].path != common_dir:
-            return entries
-        git_dir = Path(
-            repo.git.rev_parse(
-                c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS,
-                "--git-dir",
-            ).strip(),
-        ).resolve()
-        if git_dir != common_dir:
-            msg = (
-                "primary checkout is unproven for storage-only registry row: "
-                f"{common_dir}"
-            )
-            raise ValueError(msg)
-        checkout = Path(repo.git.rev_parse("--show-toplevel").strip()).resolve()
-        if (
-            repo.working_tree_dir is None
-            or checkout == common_dir
-            or Path(repo.working_tree_dir).resolve() != checkout
-            or repo.git.rev_parse("--is-inside-work-tree").strip() != "true"
-        ):
-            msg = f"Git checkout identity disagrees with shared storage: {common_dir}"
-            raise ValueError(msg)
-        return (entries[0].model_copy(update={"path": checkout}), *entries[1:])
 
     @classmethod
     def refresh_binary(cls) -> p.Result[bool]:
@@ -202,85 +156,83 @@ class FlextInfraUtilitiesGitRepo:
         return opened.value
 
     @classmethod
-    def _primary_from_config(
-        cls,
-        common_dir: Path,
-        configured_output: str,
-    ) -> p.Result[Path]:
-        """Resolve the primary root from an explicit ``core.worktree`` setting.
-
-        Returns:
-            The resulting ``p.Result[Path]``.
-
-        """
-        configured = Path(configured_output)
-        primary_root = (
-            configured if configured.is_absolute() else common_dir / configured
-        ).resolve()
-        return r[Path].ok(primary_root)
-
-    @classmethod
-    def _primary_from_registry(
-        cls,
-        repo: Repo,
-        common_dir: Path,
-        repository_path: Path,
-    ) -> p.Result[Path]:
-        """Resolve the primary root from Git's worktree registry for shared storage.
+    def _git_primary_worktree_root_path(cls, repository_path: Path) -> p.Result[Path]:
+        """Resolve the primary worktree from Git's shared storage topology.
 
         Returns:
             The resulting ``p.Result[Path]``.
 
         """
         try:
-            git_dir = Path(
+            repo = cls._repo(repository_path)
+            common_dir = Path(
                 repo.git.rev_parse(
-                    c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS, "--git-dir"
+                    "--path-format=absolute",
+                    "--git-common-dir",
                 ).strip(),
             ).resolve()
-            caller_root = Path(
-                repo.git.rev_parse("--show-toplevel").strip(),
-            ).resolve()
-            entries = (
-                ()
-                if git_dir == common_dir
-                else cls._registered_worktree_entries(
-                    repo.git.worktree("list", "--porcelain"),
-                )
-            )
+            configured_output = repo.git.config(
+                "--path",
+                "--get",
+                "core.worktree",
+                with_exceptions=False,
+            ).strip()
         except GitCommandError as exc:
             return r[Path].fail(str(exc), exception=exc)
-        # Git lists the main worktree first. Bare shared storage has no main
-        # checkout, so each registered worktree is its own primary.
-        # A composed submodule with core.worktree unset makes Git record
-        # the shared module storage (.git/modules/<name>) as the main
-        # entry's path — that directory is not a checkout, so it is
-        # bare-equivalent and a registered caller is its own primary.
-        if git_dir == common_dir:
-            return r[Path].ok(caller_root)
-        if not entries:
+        except (OSError, ValueError) as exc:
             return r[Path].fail(
-                f"Git worktree registry is empty for {repository_path}",
+                f"failed to resolve primary worktree: {exc}",
+                exception=exc,
             )
-        if not entries[0].bare and not entries[0].path.is_relative_to(common_dir):
-            return r[Path].ok(entries[0].path)
-        if caller_root in {entry.path for entry in entries}:
-            return r[Path].ok(caller_root)
-        return r[Path].fail(
-            f"current worktree is absent from Git's canonical registry: {caller_root}",
-        )
 
-    @classmethod
-    def _validated_primary_root(
-        cls,
-        primary_root: Path,
-    ) -> p.Result[Path]:
-        """Prove the resolved primary root is a real Git checkout.
+        if configured_output:
+            configured = Path(configured_output)
+            primary_root = (
+                configured if configured.is_absolute() else common_dir / configured
+            ).resolve()
+        elif common_dir.name == c.Infra.GIT_DIR:
+            primary_root = common_dir.parent
+        else:
+            try:
+                git_dir = Path(
+                    repo.git.rev_parse("--path-format=absolute", "--git-dir").strip(),
+                ).resolve()
+                caller_root = Path(
+                    repo.git.rev_parse("--show-toplevel").strip(),
+                ).resolve()
+                entries = (
+                    ()
+                    if git_dir == common_dir
+                    else cls._registered_worktree_entries(
+                        repo.git.worktree("list", "--porcelain"),
+                    )
+                )
+            except GitCommandError as exc:
+                return r[Path].fail(str(exc), exception=exc)
+            # Git lists the main worktree first. Bare shared storage has no main
+            # checkout, so each registered worktree is its own primary.
+            # A composed submodule with core.worktree unset makes Git record
+            # the shared module storage (.git/modules/<name>) as the main
+            # entry's path — that directory is not a checkout, so it is
+            # bare-equivalent and a registered caller is its own primary.
+            if git_dir == common_dir:
+                primary_root = caller_root
+            elif not entries:
+                return r[Path].fail(
+                    f"Git worktree registry is empty for {repository_path}",
+                )
+            elif not entries[0].bare and not entries[0].path.is_relative_to(
+                common_dir,
+            ):
+                primary_root = entries[0].path
+            elif caller_root in {entry.path for entry in entries}:
+                primary_root = caller_root
+            else:
+                return r[Path].fail(
+                    "current worktree is absent from Git's canonical registry: "
+                    f"{caller_root}",
+                )
 
-        Returns:
-            The resulting ``p.Result[Path]``.
-
-        """
         primary_repo = cls._open_repo(primary_root)
         if primary_repo.failure:
             return r[Path].fail(
@@ -300,46 +252,6 @@ class FlextInfraUtilitiesGitRepo:
                 f"Git primary worktree mismatch: {primary_root} != {resolved_top}",
             )
         return r[Path].ok(primary_root)
-
-    @classmethod
-    def _git_primary_worktree_root_path(cls, repository_path: Path) -> p.Result[Path]:
-        """Resolve the primary worktree from Git's shared storage topology.
-
-        Returns:
-            The resulting ``p.Result[Path]``.
-
-        """
-        try:
-            repo = cls._repo(repository_path)
-            common_dir = Path(
-                repo.git.rev_parse(
-                    c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS,
-                    "--git-common-dir",
-                ).strip(),
-            ).resolve()
-            configured_output = repo.git.config(
-                "--path",
-                "--get",
-                "core.worktree",
-                with_exceptions=False,
-            ).strip()
-        except GitCommandError as exc:
-            return r[Path].fail(str(exc), exception=exc)
-        except (OSError, ValueError) as exc:
-            return r[Path].fail(
-                f"failed to resolve primary worktree: {exc}",
-                exception=exc,
-            )
-
-        if configured_output:
-            primary = cls._primary_from_config(common_dir, configured_output)
-        elif common_dir.name == c.Infra.GIT_DIR:
-            primary = r[Path].ok(common_dir.parent)
-        else:
-            primary = cls._primary_from_registry(repo, common_dir, repository_path)
-        if primary.failure:
-            return primary
-        return cls._validated_primary_root(primary.value)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitRepo"]

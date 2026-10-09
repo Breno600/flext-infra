@@ -1,27 +1,7 @@
 Infra:
   tooling:
     # Canonical validated tooling and suppression-policy SSOT.
-    raw-check-receipt-suffix: .raw.log
     tools:
-      bandit:
-        # Each exception exists only with the operator ruling that authorized
-        # it and its reason. Bandit reads no per-path exception, so the
-        # security gate audits the files an entry matches in their own
-        # invocation that skips only the entry's tests; every other file keeps
-        # every test. Repositories declare no exception of their own.
-        authorized-exceptions:
-          - tests: [B404, B603]
-            files:
-              - src/flext_cli/_utilities/processes.py
-              - src/flext_cli/_utilities/runtime.py
-              - src/flext_core/**/*.py
-            authority: operator-ruling-2026-10-08-subprocess-test-imports
-            reason: >-
-              Only the u.Cli.run process owner in flext-cli and the flext-core
-              source may import and spawn subprocess; every other module runs
-              processes through u.Cli.run. The codemod rule
-              ban-subprocess-outside-run-owner bans subprocess everywhere
-              else, with the same owner scope.
       codespell:
         check-filenames: true
         ignore-words-list: crate,nd
@@ -38,18 +18,17 @@ Infra:
         rules:
           default: true
           MD001: false
-          # MD013 prose and code lengths are THE markdown line contract for
-          # both rumdl surfaces: `rumdl check` (markdown gate, `make fix`) and
-          # `rumdl fmt` (markdown-format gate, `make fmt`) read this one rule
-          # set through the generated .markdownlint.json. Headings use
-          # MD013.heading_line_length because no tool can reflow a heading.
+          # MD013 prose and code lengths are THE markdown line contract: the
+          # prettier projection (printWidth) and the .prettierrc render read
+          # MD013.line_length. Headings use MD013.heading_line_length because
+          # no tool can reflow a heading.
           #
           # Wrapping is hand-owned, not tool-owned: rumdl's normalize reflow
           # joins a hand-wrapped paragraph into one line and cannot re-split
-          # lines containing inline-code spans. With reflow off, nobody
-          # rewrites an author's breaks, and MD013 stays the check-only line
-          # contract: a genuinely long line is a finding the author fixes by
-          # wrapping.
+          # lines containing inline-code spans. With reflow off, prettier keeps
+          # `prose-wrap: preserve` below, nobody rewrites an author's breaks,
+          # and MD013 stays the check-only line contract: a genuinely long line
+          # is a finding the author fixes by wrapping.
           MD013:
             line_length: 88
             heading_line_length: 200
@@ -72,6 +51,26 @@ Infra:
           MD057: false
           MD060: false
           MD076: false
+          # Prettier is the last writer of the `make docs` cycle (DOCS_ACTIONS
+          # ends at fmt), and its list-continuation printer reindents wrapped
+          # list content to its own column, which MD077's two accepted columns
+          # reject; no canonical repair runs after fmt, so the finding is
+          # unfixable by construction. A dialect rule the canonical formatter
+          # cannot satisfy leaves the rule set; MD013 keeps owning the real line
+          # contract.
+          MD077: false
+        # Prettier formatting policy (markdown-format gate): rendered into the
+        # managed .prettierrc. prettier --write is owned by `make fmt` and
+        # prettier --check by `make check`; `make fix` never runs it.
+        #
+        # `prose-wrap: preserve` (not `always`) so prettier never reflows a
+        # paragraph or a link-reference definition onto a fresh, bracket-less
+        # line — the exact shape rumdl's MD034 (bare URL) flags. Wrapping
+        # ownership stays with the author under the MD013 contract above.
+        prettier:
+          prose-wrap: preserve
+          tab-width: 4
+          md-tab-width: 2
         exclude:
           # AGENTS.md is a tool-managed projection (tracker and agent setup
           # blocks): gating generated output is a projection defect.
@@ -85,9 +84,6 @@ Infra:
           - GEMINI.md
           - .kilo/**
           - .omo/**
-          # ZCode session artifacts (plan files) are machine-local scratch,
-          # never a live docs or markdown-gate surface.
-          - .zcode/**
           - .tmp/**
           - .claude/**
           - .vscode/**
@@ -95,17 +91,6 @@ Infra:
           - .snapshots/**
           - .benchmarks/**
           - .hypothesis/**
-          # CHANGELOG.md files are release-please output: their bullets embed
-          # compare/commit URLs that cannot reflow under the line budget, and
-          # hand-wrapping them is overwritten by the next release render
-          # (operator authorization 2026-10-03).
-          - CHANGELOG.md
-          # Codegen-managed docs projections (make gen / docs generate): the
-          # renderer's output is canonical as emitted — a formatter rewriting
-          # them fights the codegen fixed point and the conform gate flags
-          # the drift both ways (merge-admin 2026-10-07, root evidence).
-          - docs/docs_config.json
-          - docs/architecture/architecture_config.json
           - .mypy_cache/**
           - .pytest_cache/**
           - .ruff_cache/**
@@ -131,49 +116,17 @@ Infra:
           # codegen surface; MD058 (blank lines around tables) is upstream of
           # the projection and cannot be repaired at the projection itself.
           - docs/knowledge-index.md
-          - docs/architecture/communities/index.md
+          - docs/architecture/communities/README.md
           # External CRG tool output: pipe-separated rows (MD075) and long JSON
           # lines (MD013) originate from code-review-graph, not hand-authored docs.
           - docs/architecture/crg-reports/**
           # Generated api-reference and project-catalog projections (make gen /
           # docs generate): the renderer's output is canonical as emitted, so
-          # no formatter rewrites generated docs and the codegen fixed point
+          # prettier never rewrites generated docs and the codegen fixed point
           # stays stable.
           - docs/api-reference/generated/**
-          # Historical evidence documents (plans, handoffs, frozen law text):
-          # their formatting is frozen evidence per operator law 11 —
-          # reformatting rewrites the record. Frozen as evidence, never
-          # re-rendered.
-          - docs/plans/2026-09-14-stabilization-handoff/previous-handoff-source.md
-          - docs/plans/2026-09-22-pipeline-integracao-continua-plano.md
-          - docs/plans/2026-09-22-rope-generator-stabilization/02-achados-codegen.md
-          - docs/plans/2026-09-23-handoff-mypy-stabilization-e-integracao.md
-          - docs/plans/2026-09-25-v8-flext-service-base/05-phases.md
-          - docs/plans/2026-09-25-v8-flext-service-base/07-sessions-guide.md
-          - docs/standards/consumption-law.md
           - docs/projects/generated/**
       ruff:
-        # Ruff exits 1 on findings; a repair verb completing with remaining
-        # findings continues under this status while any other failure stops it.
-        findings-exit-codes: [1]
-        extend-exclude:
-          # Historical evidence trees (.archive/**) hold archived session
-          # artifacts, never live source: they are evidence-only material
-          # (operator law 11) and stay outside the lint scope of every
-          # projected member.
-          - "**/.archive/**"
-          # Generated source trees (codegen artifacts with generated_source)
-          # are appended by the projection from that one key, never listed.
-          # Provider-owned AI Hub hook projections live under the tool-home
-          # dot directories (.agents/.claude/.codex/.cursor/.gemini ...); the
-          # operators rule (fleet learned constraint) keeps ~/.* code outside
-          # the lint scope, and these hooks are distributed tool-home state,
-          # not member source.
-          - "**/.agents/aihub-hooks/**"
-          - "**/.claude/aihub-hooks/**"
-          - "**/.codex/aihub-hooks/**"
-          - "**/.cursor/aihub-hooks/**"
-          - "**/.gemini/aihub-hooks/**"
         # Lint covers every tracked Python surface; `.gitignore` alone decides
         # visibility (respect-gitignore below), never a copied exclude list.
         # tests, examples, and scripts are dev/tooling source roots (see `src`
@@ -184,23 +137,7 @@ Infra:
         fix: false
         # Ruff exits 1 when it reports violations (2 on an error): a repair
         # verb completes with findings under this status; any other fails it.
-        # Operator ruling 2026-10-05: rules the operator never authorized as
-        # blocking are informative only. The lint gate keeps reporting these
-        # in the gate log, the summary, and the SARIF reports, but their
-        # findings never fail the run. Re-measure each entry as the fleet
-        # converges and retire the rule from this list when its census
-        # reaches zero.
-        informative-rules:
-          - too-many-arguments
-          - too-many-positional-arguments
-          - too-many-locals
-          - too-many-return-statements
-          - too-many-branches
-          - too-many-public-methods
-          - too-many-statements
-          - complex-structure
-          - suspicious-subprocess-import
-          - subprocess-without-shell-equals-true
+        findings-exit-codes: [1]
         line-length: 88
         preview: true
         respect-gitignore: true
@@ -234,28 +171,25 @@ Infra:
             - pytest-duplicate-parametrize-test-cases
             - redefined-while-unused
             - unused-variable
-          # OPERATOR LAW 2026-10-05 (direct order, OBLIGATORY, NEVER DISABLED
-          # AGAIN): `make fix` ALWAYS applies Ruff's unsafe fixes — the
-          # mandatory lint_fix surface carries --unsafe-fix in codegen.yaml
-          # and MakeRuffSpec fails validation without it. This list keeps its
-          # historical evidence records for the rules whose fixes were proven
-          # semantics-preserving while the channel was opt-in; it no longer
-          # gates the channel (nothing needs promotion into a channel that is
-          # always on). Rules whose fixes would destroy information remain in
-          # `unfixable` above — that is rule selection, never disabling the
-          # mandatory unsafe channel.
+          # The only channel that promotes an unsafe Ruff fix into make fix:
+          # a rule enters here with evidence that its fix preserves code,
+          # comments and diagnostics. Evidence declared per entry:
+          # - relative-imports (relative-imports): the fleet contract is absolute-only
+          #   (ban-relative-imports: all, and make mod rewrites relative
+          #   imports) — the fix enforces the declared contract, no semantics.
+          # - camelcase-imported-as-lowercase (N813): pure alias rename, the
+          #   bound object is unchanged. TC001 stays OUT of this list: its fix
+          #   moves first-party imports into TYPE_CHECKING, which breaks the
+          #   eager-by-law lazy roots (see the scoped __init__.py exception).
           extend-safe-fixes:
             - relative-imports
-            - typing-only-first-party-import
             - camelcase-imported-as-lowercase
           # Every import is absolute: make mod rewrites relative imports and
           # the lazy-init generator renders absolute import statements.
           ban-relative-imports: all
           # Every module carries the copyright notice (CPY001) in the shape the
           # scaffold templates render from the project's declared author and
-          # copyright year. The fix recipe writes the module's project-relative
-          # path, without its shared suffix, between that sentence and the
-          # SPDX line so the notice is not one stamp.
+          # copyright year; the SPDX line follows it in the module docstring.
           copyright-notice-rgx: 'Copyright \(c\) \d{4} \S[^\n]*\. All rights reserved\.'
           # Repairs make fix applies after Ruff's own fixes, to findings Ruff
           # reports without a fix: each Ruff rule name maps to one recipe the
@@ -321,203 +255,35 @@ Infra:
           # (D203/D211, multi-line-summary-first-line/D213) included, so no run warns about them.
           pydocstyle:
             convention: google
+          # Operator approval 2026-10-09: "Parametrizar Dois Descritores".
+          # Python type.__base__ is the native layout base; type.__bases__ is
+          # the tuple of direct bases. Protocols expose both as read-only
+          # properties without changing their signatures or native identity.
+          # https://docs.python.org/3.13/reference/datamodel.html#type.__base__
+          # https://docs.python.org/3.13/reference/datamodel.html#type.__bases__
+          # https://docs.astral.sh/ruff/rules/bad-dunder-method-name/
+          # PLW3201 remains enabled for every other unrecognized dunder name.
+          pylint:
+            allow-dunder-method-names: [__base__, __bases__]
           # Each exception exists only with the operator ruling that authorized
           # it and its reason; Ruff receives the unscoped entries as `ignore`
           # and the scoped ones as `per-file-ignores`. Repositories declare no
-          # exception of their own. Operator order 2026-10-05 (latest, direct,
-          # merge-admin mandate): TC001-TC004 are ALL BLOCKED — enforced by
-          # rule name on every file (the four names live in the select
-          # surface, never in an ignore table; the same-day
-          # tc001-tc004-off-pydantic disable is superseded), and the scoped
-          # lazy-root dunder-init exception below stays the only relief.
-          # Pydantic runtime-evaluation is protected by the
-          # runtime-evaluated-roots projection, not by disabling the rules.
+          # exception of their own.
           authorized-exceptions:
-            - rules: [missing-trailing-comma]
-              authority: operator-file-gate-verdict-mandate-2026-10-08
+            - rules: [missing-required-import, implicit-namespace-package, typing-only-first-party-import]
+              authority: operator-ruling-2026-10-03-tc001-off-global
               reason: >-
-                Ruff's formatter owns trailing comma layout. The official COM812
-                documentation recommends removing this redundant lint rule when
-                using the formatter; enabling both emits a configuration conflict.
-                https://docs.astral.sh/ruff/rules/missing-trailing-comma/
-            - files: "tests/test_snapshot_drill.py"
-              rules: [import-private-name]
-              authority: operator-relocation-mandate-2026-10-06-snapshot-stems
-              reason: >-
-                The datacosmos-backup snapshot drill exercises the canonical
-                use-case stem directly through a fake port; the models family
-                module is private by naming, public by contract (the root lazy
-                map publishes its class), and the public facades cannot expose
-                it without an import cycle through the root package.
-            - files: "**/bin/**"
-              rules:
-                [
-                  missing-copyright-notice,
-                  docstring-missing-exception,
-                  docstring-missing-returns,
-                  undocumented-public-method,
-                  line-too-long,
-                  magic-value-comparison,
-                  type-check-without-type-error,
-                  print,
-                  import-outside-top-level,
-                  unused-class-method-argument,
-                ]
-              authority: operator-order-2026-10-06-make-verbs-green
-              reason: >-
-                The generated bin bootstrap scripts (mise lock transaction,
-                converge) run stdlib-only under env -i before the project
-                environment exists: mutex journal recovery and diagnostic
-                prints are their documented design (subprocess relief removed
-                by operator-ruling-2026-10-08-subprocess-supersedes-all),
-                their module docstrings carry the projected copyright and
-                SPDX closing lines, and exhaustive
-                control-flow exception docstrings do not survive the codegen
-                render. Operator order 2026-10-06 (make every verb green)
-                authorizes the scoped relief; the rules stay active
-                everywhere else.
-            - files: "**/xlsx.py"
-              rules: [import-outside-top-level]
-              authority: operator-ruling-2026-10-05-heavy-adapter-boundary
-              reason: >-
-                The xlsx/docx/pptx utility boundaries are the typed lazy
-                adapters: their renderer submodules import the heavy office
-                toolkits at their own module top, so the boundary loads them
-                per operation (the class contract documents this). Hoisting
-                the first-party import would eager-load openpyxl/docx/pptx
-                into every CLI start; the per-operation import is the
-                documented design, and the rule stays active everywhere
-                else.
-            - files: "**/docx.py"
-              rules: [import-outside-top-level]
-              authority: operator-ruling-2026-10-05-heavy-adapter-boundary
-              reason: >-
-                See the xlsx.py entry: the same heavy-adapter boundary, one
-                ruling.
-            - files: "**/pptx.py"
-              rules: [import-outside-top-level]
-              authority: operator-ruling-2026-10-05-heavy-adapter-boundary
-              reason: >-
-                See the xlsx.py entry: the same heavy-adapter boundary, one
-                ruling.
-            - files: "**/flext_core/_models/pydantic.py"
-              rules: [any-type, builtin-argument-shadowing, too-many-arguments]
-              authority: operator-ruling-2026-10-07-facade-signature-mirror
-              reason: >-
-                The flext-core pydantic facade's TYPE_CHECKING block mirrors
-                pydantic's public ``computed_field``/``model_serializer``
-                signatures one-to-one (including the ``repr`` keyword and the
-                12-kwarg surface) so consumers get pydantic's exact call
-                contract through the facade. Renaming keywords, de-typing with
-                object, or collapsing parameters would break the mirrored API
-                contract the stubs exist to carry; the admission is bounded to
-                this single signature-mirror module.
-            - files: "**/framework.py"
-              rules: [import-outside-top-level]
-              authority: operator-ruling-2026-10-05-heavy-adapter-boundary
-              reason: >-
-                The CLI framework adapter loads its toolkit wiring lazily at
-                application-build time for the same startup-budget reason;
-                every other module keeps the top-level import contract.
-            - files: "**/_config.py"
-              rules: [invalid-function-name]
-              authority: operator-ruling-2026-10-05-config-namespace-surface
-              reason: >-
-                The config namespace surface is law (ADR-005): consumers read
-                ``config.<Namespace>.*`` with the namespace spelled as the
-                domain noun (``config.Cli``), so the accessor keeps its
-                declared casing; the rule stays active for every other
-                function name.
-            - files: "**/__init__.py"
-              rules: [line-too-long]
-              authority: operator-ruling-2026-10-05-generated-lazy-init-paths
-              reason: >-
-                Generated lazy-init initializers render from-import lines
-                whose module path alone can exceed the line budget; the line
-                cannot wrap. The cure owner is the generator template; until
-                it lands, the generated surface stays exempt while hand code
-                keeps the budget.
-            - files: "**/file_test_helpers.py"
-              rules: [line-too-long]
-              authority: operator-ruling-2026-10-05-partnn-module-paths
-              reason: >-
-                The PartNN split names modules by concatenating the project,
-                family and part stems, and several generated module paths
-                exceed the line budget by themselves, so their from-import
-                lines cannot wrap below the budget. The cure owner is the
-                PartNN naming scheme; the rule stays active everywhere else.
-            - files: "**/flextcliutilitiesfiletesthelpersmixin_part_03.py"
-              rules: [line-too-long]
-              authority: operator-ruling-partnn-module-path-length
-              reason: >-
-                See file_test_helpers.py: the same PartNN module-path length
-                defect, one ruling.
-            - files: "**/test_public_contracts_cov.py"
-              rules: [line-too-long]
-              authority: operator-ruling-partnn-module-path-length
-              reason: >-
-                See file_test_helpers.py: the same PartNN module-path length
-                defect over the tests/_cases layout, one ruling.
-            - files: "**/framework.py"
-              rules: [banned-api]
-              authority: operator-ruling-2026-10-05-cli-owner-adapter
-              reason: >-
-                The banned click/typer/rich/tabulate/argparse API governs
-                consumer modules so they route through the owning package's
-                CLI facade; each CLI owner's framework adapter is the one
-                module that exists to bind those libraries directly, so its
-                imports are the licensed surface. Every other module stays
-                blocked by the same rule.
-            # runtime-import-in-type-checking-block — is DISABLED for every
-            # file: Ruff must not execute these rules anywhere. Declared by
-            # rule name (the fleet's canonical naming format). This supersedes
-            # the TC arms of the 2026-10-01 rulings (TC002/TC003 pydantic,
-            # TC004/TC001 lazy-root scoped forms) and of the 2026-10-03 ruling
-            # (TC001 global): the pydantic hazard those older rulings worked
-            # around is moot because the rules never run. One unscoped entry
-            # carries all four rules exactly once, without a scoped substitute.
-            - rules: [
-                typing-only-first-party-import,
-                typing-only-third-party-import,
-                typing-only-standard-library-import,
-                runtime-import-in-type-checking-block,
-              ]
-              authority: operator-direct-order-2026-10-05-tc001-tc004-off-pydantic
-              reason: >-
-                Operator ruling 2026-10-05: TC001-TC004 are blocked from
-                executing on every file; Ruff receives them as global ignores
-                declared by rule name in this single unscoped exception.
-                Pydantic evaluates model annotations at runtime; moving their
-                required imports into TYPE_CHECKING can break model declaration.
-                No model or import workaround substitutes for this prohibition.
-                Canonical tracking remains flext-p7bxt and flext-4536i.
-            - files: "**/tests/**"
-              rules: [ magic-value-comparison, private-member-access, compare-to-empty-string, too-many-public-methods, boolean-positional-value-in-call, pytest-fixture-autouse, mutable-class-default, no-self-use, import-private-name ]
-              authority: operator-ruling-2026-10-07-tests-family-consumption
-              reason: >-
-                Test idioms: assertions compare against literal expected values
-                (the magic values ARE the expectations), the tests exercise
-                private members of the unit under test, and test classes group
-                many public test methods by design. The import-private-name
-                relief resolves the operator question pending since
-                2026-10-06: the tests consume the families' package-level
-                public-named contracts (flext_infra._utilities publishes the
-                family's concrete classes; 32 test files consume family
-                packages directly), and exposing rope/file-plan internals on
-                the fleet facade would leak implementation into the public
-                API. Actionable quality rules (complexity, naming,
-                documentation) stay active on the tests tree.
-            - rules: [missing-required-import, implicit-namespace-package]
-              authority: operator-ruling-2026-10-03-import-banners-off-global
-              reason: >-
-                Operator ruling 2026-10-03: I001 (unsorted-imports) stays
-                enforced as the import-order contract; I002
-                (missing-required-import) and the isort-only I003 slot are
-                DISABLED — required-import banners duplicate the
-                absolute-import law (ban-relative-imports: all) and F401
-                already governs unused imports. The lazy-root __init__
-                exception remains the only lazy form; model_rebuild stays
-                forbidden.
+                Operator ruling 2026-10-03 (supersedes the earlier TC001-on):
+                I001 (unsorted-imports) stays enforced as the import-order
+                contract; I002 (missing-required-import), the isort-only I003
+                slot and TC001 (typing-only-first-party-import) are DISABLED —
+                required-import banners duplicate the absolute-import law
+                (ban-relative-imports: all); F401 already governs unused
+                imports; and the TC001 autofix moves runtime-required imports
+                into TYPE_CHECKING, leaving pydantic models "not fully
+                defined" (the OptionSpec/RuntimeCommandCase PydanticUserError
+                wave). The lazy-root __init__ exception remains the only lazy
+                form; model_rebuild stays forbidden.
             - files: "scripts/**/*.py"
               rules:
                 - commented-out-code
@@ -538,6 +304,19 @@ Infra:
                 Pytest assertions are the test contract. Ruff's S101 assert
                 restriction applies to runtime code, while tests intentionally
                 use Python assert statements to report failed expectations.
+            - rules:
+                - typing-only-third-party-import
+                - typing-only-standard-library-import
+                - runtime-import-in-type-checking-block
+              authority: operator-ruling-2026-10-08-tc001-tc004-off-global
+              reason: >-
+                The operator disabled TC001 through TC004 globally. TC001
+                is covered by the first-party import exception above.
+                Pydantic evaluates field annotations at runtime; import
+                placement follows the declaration owner and facade layers,
+                with generated lazy exports retaining their TYPE_CHECKING
+                declarations. Automated typing-import relocation must not
+                change that runtime contract.
             - rules: [camelcase-imported-as-lowercase]
               authority: operator-ruling-2026-10-01-n813-accepted
               reason: >-
@@ -557,66 +336,37 @@ Infra:
                 Generated lazy-init package initializers must execute the lazy
                 installation, which is not a re-export.
 
+
             - files: "scripts/**"
-              rules: [ any-type, unused-function-argument, undocumented-public-class, undocumented-public-method, undocumented-public-function, undocumented-public-init, unnecessary-multiline-docstring, blank-line-after-function, missing-blank-line-after-summary, multi-line-summary-first-line, raw-string-in-exception, f-string-in-exception, commented-out-code, shebang-not-executable, boolean-type-hint-positional-argument, boolean-default-value-positional-argument, read-whole-file, write-whole-file, if-exp-instead-of-or-operator, repeated-append, logging-string-concat, non-lowercase-variable-in-function, invalid-module-name, manual-list-comprehension, manual-list-copy, multiple-starts-ends-with, missing-maxsplit-arg, import-private-name, magic-value-comparison, literal-membership, unspecified-encoding, os-path-abspath, os-path-exists, os-path-join, os-path-dirname, builtin-open, path-constructor-current-directory, avoidable-escaped-quote, unsorted-dunder-all, used-dummy-variable, unused-noqa, noqa-comments, print, runtime-cast-value, banned-api, relative-imports, raise-vanilla-args, error-instead-of-exception, verbose-raise ]
+              rules: [any-type, unused-function-argument, undocumented-public-class, undocumented-public-method, undocumented-public-function, undocumented-public-init, unnecessary-multiline-docstring, blank-line-after-function, missing-blank-line-after-summary, multi-line-summary-first-line, raw-string-in-exception, f-string-in-exception, commented-out-code, shebang-not-executable, boolean-type-hint-positional-argument, boolean-default-value-positional-argument, read-whole-file, write-whole-file, if-exp-instead-of-or-operator, repeated-append, logging-string-concat, non-lowercase-variable-in-function, invalid-module-name, manual-list-comprehension, manual-list-copy, multiple-starts-ends-with, missing-maxsplit-arg, import-private-name, magic-value-comparison, literal-membership, unspecified-encoding, os-path-abspath, os-path-exists, os-path-join, os-path-dirname, builtin-open, path-constructor-current-directory, avoidable-escaped-quote, unsorted-dunder-all, used-dummy-variable, unused-noqa, noqa-comments, suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, print, runtime-cast-value, banned-api, relative-imports, raise-vanilla-args, error-instead-of-exception, verbose-raise]
               authority: operator-ruling-2026-10-02-mcb-scripts-automation
               reason: >-
-                Repository automation helpers (mcb scripts/**, migrated from mcb config/managed-artifacts.yaml when the project per-file declaration surface retired): CLI entrypoints print to stdout and use os.path; the sys.path bootstrap forces module-level imports after executable code. Scoped to scripts/** so shipped source keeps every rule. Subprocess relief removed by operator-ruling-2026-10-08-subprocess-supersedes-all: processes go through u.Cli.run.
+                Repository automation helpers (mcb scripts/**, migrated from
+                mcb config/managed-artifacts.yaml when the project per-file
+                declaration surface retired): CLI entrypoints print to stdout,
+                drive subprocesses and use os.path; the sys.path bootstrap
+                forces module-level imports after executable code. Scoped to
+                scripts/** so shipped source keeps every rule.
             - files: "**/tests/python/**"
-              rules: [ raise-vanilla-args ]
+              rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, raise-vanilla-args]
               authority: operator-ruling-2026-10-02-mcb-tests-python
               reason: >-
-                mcb tests/python exercises the scripts automation end to end (migrated from the retired project per-file surface: TRY003). Subprocess relief removed by operator-ruling-2026-10-08-subprocess-supersedes-all.
-            - files: "src/flext_cli/_utilities/processes.py"
-              rules: [ suspicious-subprocess-import, subprocess-without-shell-equals-true ]
-              authority: operator-ruling-2026-10-08-subprocess-supersedes-all
-              reason: >-
-                flext-cli owns the child-process lifecycle: this module is the
-                Popen machinery that u.Cli.run itself is built on, so the
-                ruling's "processes go through u.Cli.run" terminates here and
-                cannot apply to the owner without a circular rewire. Bounded
-                to the two owner modules; every other caller is rewired.
-            - files: "src/flext_cli/_utilities/runtime.py"
-              rules: [ suspicious-subprocess-import, subprocess-without-shell-equals-true ]
-              authority: operator-ruling-2026-10-08-subprocess-supersedes-all
-              reason: >-
-                Same owner boundary as processes.py: the streamed-lifecycle
-                raw child spawn lives here by design under the u.Cli.run
-                facade. Bounded to this module.
-            - files: "**/.agents/skills/webapp-testing/scripts/with_server.py"
-              rules: [ suspicious-subprocess-import, subprocess-without-shell-equals-true ]
-              authority: operator-ruling-2026-10-08-subprocess-supersedes-all
-              reason: >-
-                Standalone skill bootstrap (webapp-testing) runs before any
-                workspace venv exists and cannot import the u.Cli facade; it
-                owns its dev-server process lifecycle by design. Bounded to
-                this single skill script.
+                mcb tests/python exercises the scripts automation end to end and
+                legitimately drives subprocesses (migrated from the retired
+                project per-file surface: S404/S603/S607/TRY003).
       mypy:
         # Wall-time bound for the bounded Mypy execution (SSOT). A project
         # config/tooling.yaml overlay may only lower it; no environment
         # variable changes it.
-        # Operator 2026-10-08: 600s (the documented mypy bound) because 120s
-        # killed the bounded run mid-type-check on flext-core (exit=-15) and
-        # every large member, so the gate never produced real findings.
-        timeout_seconds: 600
-        # Pydantic 2 and pydantic.mypy are mandatory (operator 2026-10-05).
-        # Missing, empty, and v1 plugin declarations fail validation rather
-        # than being silently repaired by schema defaults.
+        timeout_seconds: 120
         plugins: [pydantic.mypy]
-        # Operator 2026-10-05, flext-8i57m: suspend only these two codes
-        # globally, not additional diagnostics. Proven code workarounds for
-        # these codes are repaired at their runtime owners, not accommodated.
-        disable-error-code: [prop-decorator, call-arg]
         # The canonical facade form imports the parent letter, subclasses it
         # and rebinds the letter (`from flext_core import u`,
         # `class FlextCliUtilities(u)`, `u = FlextCliUtilities`). Mypy 2.3.1
         # rejects that module-level rebind with these codes even under
-        # allow_redefinition — `assignment` because the rebound letter's type
-        # (the subclass) is by design never the imported alias's type
-        # (type[FlextService] vs type[FlextApiServiceBase]); codegen disables
-        # them only in the modules it detects in that form
-        # (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
-        facade-rebind-error-codes: [misc, no-redef, assignment]
+        # allow_redefinition; codegen disables them only in the modules it
+        # detects in that form (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
+        facade-rebind-error-codes: [misc, no-redef]
         boolean-settings:
           allow_redefinition: true
           namespace_packages: true
@@ -655,7 +405,6 @@ Infra:
           pythonVersion: "3.13"
           typeCheckingMode: strict
         extended-settings:
-          reportCallIssue: error
           reportConstantRedefinition: error
           reportIncompatibleMethodOverride: error
           reportInconsistentConstructor: error
@@ -721,10 +470,6 @@ Infra:
         disable-project-excludes-heuristics: true
         python-version: "3.13"
         use-ignore-files: false
-        # prop-decorator suspension lives in the MYPY ruling surface above
-        # (ruling-disable-error-codes): the pyrefly release the non-producer
-        # repositories resolve does not know the code and rejects it as an
-        # unknown variant, so a pyrefly-side suspension cannot be fleet-wide.
         strict-errors:
           # --- type safety ---
           - bad-argument-count
@@ -812,6 +557,8 @@ Infra:
           - "**/__pyrefly_virtual__/**"
           - "**/node_modules"
           - "**/.venv/**"
+          - "**/*_pb2*.py"
+          - "**/*_pb2_grpc*.py"
           - "**/site-packages/**"
           - "**/typings/**"
           - "**/venv/**"
@@ -820,9 +567,9 @@ Infra:
           - "typings/**"
           - "vendor/**"
         path-rules:
+          env-dirs: [src, tests, examples, scripts]
           source-dir: src
           project-root: .
-          env-dirs: [src, tests, examples, scripts]
           root-typings-paths: []
           project-typings-paths: []
           workspace-include-children: false
@@ -865,23 +612,6 @@ Infra:
           # its runners). This measurement ceiling permits a complete cold
           # local run of the 241-case suite.
           cosmos-charts: 600
-          # algar-oud-mig budgeted suite measured on 2026-10-03 (operator
-          # exception docs/guides/testing.md: the global budget is 180s):
-          # the 124s entry clock SIGTERM'd the suite at 64% (~194s projected
-          # full runtime) once every OUD-bound case started owning a per-test
-          # LDAP namespace (worker+run token, teardown included). This
-          # measurement ceiling covers the documented operator budget plus
-          # the namespace lifecycle overhead before the measured
-          # parallel-worker ceiling lands.
-          algar-oud-mig: 300
-          # cosmos-docgen slow phase measured on 2026-10-06: the full-slow
-          # selection (~44 real-work cases: isolated-workspace builds, deck
-          # and document renders, subprocess resolvers) reaches ~150s wall on
-          # a cold testmon database, so the 120s entry clock SIGTERM'd the
-          # phase with 43 cases green. This measurement ceiling permits a
-          # complete cold slow phase; the budgeted phase completes inside the
-          # fleet default.
-          cosmos-docgen: 600
         termination-grace-seconds: 2
         # One failure stops the invocation. The next run starts from the
         # corrected owner instead of accumulating a backlog of unrelated
@@ -903,8 +633,6 @@ Infra:
         # invocation; in-flight cases may report after the stop, which the
         # declaring consumer accepts by declaring.
         parallel-worker-overrides:
-          cosmos-docgen:
-            workers: 4
           # The measured ceiling for this suite; higher ceilings regressed the
           # cold run because per-window dispatch overhead dominates.
           flext-infra:
@@ -915,11 +643,9 @@ Infra:
           # facade stack, so the serial phase reached the 120s entry clock at
           # its 33rd item. The cases are host-lock and namespace isolated.
           flext-tests:
-            workers: 1
+            workers: 4
           # CPU-fraction ceilings (cpu_fraction: "n/d") resolve at runtime
           # against the process CPU count.
-        # Reserve physical memory for each xdist worker and its child process
-        # tree; this bound may reduce the tested ceiling on smaller hosts.
         # Reserve physical memory for each xdist worker and its child process
         # tree; this bound may reduce the tested ceiling on smaller hosts.
         parallel-worker-memory-gb: 2
@@ -955,11 +681,7 @@ Infra:
         # (flext-tests registers default::{category}); all other warnings stay
         # fatal. See flext-core test_enforcement_warning_visibility.
         filter-warnings:
-          [
-            error,
-            "module::flext_core._constants.enforcement.FlextMroViolation",
-            "once::pytest.PytestAssertRewriteWarning",
-          ]
+          [error, "module::flext_core._constants.enforcement.FlextMroViolation"]
         standard-markers:
           - "smoke: public-interface smoke tests"
           - "unit: unit tests"
@@ -976,7 +698,6 @@ Infra:
           - "resilience: resilience tests"
           - "discovery: catalog and stream discovery tests"
           - "singer: Singer protocol contract tests"
-          - "requires_engine: native check engine required by this test"
         # External-token gates never run inside
         # offline verification (`make test`); the runner records their exclusion.
         # `make test-full` first completes that incremental phase, then executes
@@ -987,9 +708,6 @@ Infra:
         # local and pre-push execution retain slow tests. The full phase of
         # `make test-full` includes these markers in every context.
         ci-excluded-markers: [slow]
-        # Fixtures declaring local engines or resolution cannot execute in approval.
-        ci-excluded-fixtures:
-          [resolved_make_templates, detector_project, mod_workspace, smells_project, _clear_make_ci_token]
         standard-addopts:
           - --benchmark-disable
           - --strict-markers
@@ -1034,6 +752,17 @@ Infra:
         - m
         - u
         - other
+        - base
+        - services
+        - api
+        - cli
+        - settings
+        - config
+        - c
+        - t
+        - p
+        - m
+        - u
         - base
         - services
         - api

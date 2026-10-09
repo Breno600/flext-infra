@@ -1,9 +1,0 @@
-id: gate-tool-error-typed-code
-snapshots:
-  c.Infra.ToolOutcome.ERROR == "TOOL_ERROR":
-    fixed: c.Infra.ToolOutcome.ERROR == c.Infra.ToolOutcome.ERROR
-    labels:
-    - source: c.Infra.ToolOutcome.ERROR == "TOOL_ERROR"
-      style: primary
-      start: 0
-      end: 41

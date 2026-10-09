@@ -137,11 +137,20 @@ class FlextInfraPyprojectModernizerRun:
             u.Cli.error(project_paths.error or "project selection failed")
             return 2
         root_pyproject = self.root / c.PYPROJECT_FILENAME
-        validated = self._validated_root(root_pyproject, include_root=include_root)
-        if validated.failure:
+        root_state = self._read_document_state(root_pyproject)
+        if root_state.failure:
             return 2
         if self.rewrite_constraints:
-            return self._rewrite_constraints(validated.value, dry_run=dry_run)
+            return self._rewrite_constraints(root_state.value, dry_run=dry_run)
+        if include_root:
+            try:
+                _ = u.Infra.project_name_from_payload(
+                    root_pyproject,
+                    root_state.value.payload,
+                )
+            except c.EXC_TYPE_VALIDATION as exc:
+                u.Cli.error(str(exc))
+                return 2
         found = u.Infra.find_all_pyproject_files(
             self.root,
             skip_dirs=c.Infra.PYPROJECT_SKIP_DIRS,
@@ -151,109 +160,13 @@ class FlextInfraPyprojectModernizerRun:
         if include_root and root_pyproject.is_file():
             files.add(root_pyproject)
         canonical_dev: t.StrSequence = t.Infra.STR_SEQ_ADAPTER.validate_python(
-            u.Infra.canonical_dev_dependencies_from_payload(validated.value.payload),
+            u.Infra.canonical_dev_dependencies_from_payload(root_state.value.payload),
         )
-        scanned = self._scan_documents(
-            sorted(files),
-            validated,
-            root_pyproject,
-            canonical_dev=canonical_dev,
-            dry_run=dry_run,
-        )
-        if scanned.failure:
-            u.Cli.error(scanned.error or "document scan failed")
-            return 2
-        violations, states, invalid_paths = scanned.value
-        total = self._report_violations(violations, dry_run=dry_run)
-        if check_mode and total > 0:
-            return 1
-        return (
-            0
-            if dry_run or self.skip_check
-            else self._run_build_check(states, invalid_paths=invalid_paths)
-        )
-
-    @staticmethod
-    def _report_violations(
-        violations: t.MappingKV[str, t.StrSequence],
-        *,
-        dry_run: bool,
-    ) -> int:
-        """Emit every change grouped by file with the closing total.
-
-        Returns:
-            The total change count across all files.
-
-        """
-        total = sum(len(changes) for changes in violations.values())
-        for rel_path, changes in violations.items():
-            u.Cli.info(f"{rel_path}:")
-            for change in changes:
-                u.Cli.info(f"  - {change}")
-        if violations:
-            u.Cli.info(f"Total: {total} change(s) across {len(violations)} file(s)")
-            if dry_run:
-                u.Cli.info("(dry-run — no files modified)")
-        return total
-
-    def _validated_root(
-        self,
-        root_pyproject: Path,
-        *,
-        include_root: bool,
-    ) -> p.Result[m.Infra.PyprojectDocumentState]:
-        """Read and validate the root document state for the requested scope.
-
-        Returns:
-            The resulting validated root document state.
-
-        """
-        root_state = self._read_document_state(root_pyproject)
-        if root_state.failure:
-            return root_state
-        if include_root:
-            try:
-                _ = u.Infra.project_name_from_payload(
-                    root_pyproject,
-                    root_state.value.payload,
-                )
-            except c.EXC_TYPE_VALIDATION as exc:
-                u.Cli.error(str(exc))
-                return r[m.Infra.PyprojectDocumentState].fail(str(exc), exception=exc)
-        return root_state
-
-    def _scan_documents(
-        self,
-        ordered: t.SequenceOf[Path],
-        root_state: p.Result[m.Infra.PyprojectDocumentState],
-        root_pyproject: Path,
-        *,
-        canonical_dev: t.StrSequence,
-        dry_run: bool,
-    ) -> p.Result[
-        t.Triple[
-            t.MappingKV[str, t.StrSequence],
-            t.SequenceOf[m.Infra.PyprojectDocumentState],
-            t.SequenceOf[Path],
-        ]
-    ]:
-        """Process every ordered pyproject and collect the modernization scan.
-
-        Returns:
-            The resulting ``(violations, states, invalid_paths)`` triple.
-
-        """
-        outcome = r[
-            t.Triple[
-                t.MappingKV[str, t.StrSequence],
-                t.SequenceOf[m.Infra.PyprojectDocumentState],
-                t.SequenceOf[Path],
-            ]
-        ]
         violations: MutableMapping[str, t.StrSequence] = {}
         states: t.MutableSequenceOf[m.Infra.PyprojectDocumentState] = []
         invalid_paths: t.MutableSequenceOf[Path] = []
         drift_reported = False
+        ordered = sorted(files)
         for index, file_path in enumerate(ordered, start=1):
             u.Cli.progress(index, len(ordered), str(file_path), c.Infra.CLI_GROUP_DEPS)
             state = (
@@ -263,7 +176,7 @@ class FlextInfraPyprojectModernizerRun:
             )
             if state.failure:
                 invalid_paths.append(file_path)
-                changes: t.StrSequence = ("invalid TOML",)
+                changes: t.StrSequence = ["invalid TOML"]
             else:
                 processed = self._process_document_state(
                     state.value,
@@ -272,7 +185,8 @@ class FlextInfraPyprojectModernizerRun:
                     skip_comments=self.skip_comments,
                 )
                 if processed.failure:
-                    return outcome.from_failure(processed)
+                    u.Cli.error(f"{file_path}: {processed.error}")
+                    return 2
                 changes = processed.value
                 if changes and not drift_reported:
                     drift_reported = True
@@ -294,7 +208,20 @@ class FlextInfraPyprojectModernizerRun:
                     if resolved.is_relative_to(self.root.resolve())
                     else str(resolved)
                 ] = changes
-        return outcome.ok((dict(violations), tuple(states), tuple(invalid_paths)))
+        total = sum(len(changes) for changes in violations.values())
+        for rel_path, changes in violations.items():
+            u.Cli.info(f"{rel_path}:")
+            for change in changes:
+                u.Cli.info(f"  - {change}")
+        if violations:
+            u.Cli.info(f"Total: {total} change(s) across {len(violations)} file(s)")
+            if dry_run:
+                u.Cli.info("(dry-run — no files modified)")
+        if check_mode and total > 0:
+            return 1
+        if dry_run or self.skip_check:
+            return 0
+        return self._run_build_check(states, invalid_paths=invalid_paths)
 
     def _rewrite_constraints(
         self,

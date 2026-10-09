@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from git import (
     GitCommandError,
@@ -16,14 +17,15 @@ from git import (
     Repo,
 )
 
-from flext_infra import c, m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGitRemote,
-    FlextInfraUtilitiesGitRepo,
-)
+from flext_infra import c, m, r
+from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
+from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
 from flext_infra._utilities._git.semantic_lane import (
     FlextInfraUtilitiesGitSemanticLaneMixin,
 )
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitSemanticIdentityMixin(
@@ -79,15 +81,11 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
 
         Raises:
             GitCommandError: If ``status``.
-            TypeError: If symbolic-ref returned a non-text reference.
 
         """
         if repo.head.is_valid():
             return False
         branch_ref = repo.git.symbolic_ref("--quiet", "HEAD")
-        if not isinstance(branch_ref, str):
-            msg = "symbolic-ref returned a non-text reference"
-            raise TypeError(msg)
         status, stdout, stderr = repo.git.show_ref(
             "--exists",
             branch_ref,
@@ -188,67 +186,6 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             repo.close()
 
     @classmethod
-    def _redacted_remotes(cls, repo: Repo) -> t.Pair[str | None, str | None]:
-        """Return the redacted origin and upstream remote URLs.
-
-        Returns:
-            The resulting ``(origin, upstream)`` redacted remote URL pair.
-
-        """
-        remotes = {remote.name: remote.url for remote in repo.remotes}
-        origin = remotes.get("origin")
-        upstream = remotes.get("upstream")
-        return (
-            FlextInfraUtilitiesGitRemote.redact_origin_remote(origin)
-            if origin
-            else None,
-            FlextInfraUtilitiesGitRemote.redact_origin_remote(upstream)
-            if upstream
-            else None,
-        )
-
-    @classmethod
-    def _superproject_root(
-        cls,
-        repo: Repo,
-        *,
-        primary_root: Path,
-        working_tree: Path,
-    ) -> Path | None:
-        """Resolve the superproject working tree, probing the primary handle.
-
-        Returns:
-            The resulting ``Path | None``.
-
-        """
-        raw_super = repo.git.rev_parse("--show-superproject-working-tree").strip()
-        if not raw_super and primary_root != working_tree:
-            primary_repo = cls._repo(primary_root)
-            try:
-                raw_super = primary_repo.git.rev_parse(
-                    "--show-superproject-working-tree",
-                ).strip()
-            finally:
-                # The secondary handle is only opened for this one probe; every
-                # open GitPython handle pins a `git cat-file` child.
-                primary_repo.close()
-        return Path(raw_super).resolve() if raw_super else None
-
-    @staticmethod
-    def _has_gitlink_stages(repo: Repo) -> bool:
-        """Report whether the index stages any gitlink (submodule) entry.
-
-        Returns:
-            The resulting ``bool``.
-
-        """
-        staged_entries = repo.git.ls_files("--stage")
-        return any(
-            line.startswith(f"{c.Infra.GIT_GITLINK_MODE_TEXT} ")
-            for line in staged_entries.splitlines()
-        )
-
-    @classmethod
     def _collect_identity_facts(
         cls,
         repo: Repo,
@@ -268,19 +205,42 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         common_dir = Path(repo.common_dir).resolve()
         porcelain = repo.git.status("--porcelain", "--untracked-files=all")
         branch = None if repo.head.is_detached else repo.active_branch.name
-        origin_remote, upstream_remote = cls._redacted_remotes(repo)
-        superproject = cls._superproject_root(
-            repo,
-            primary_root=primary_root,
-            working_tree=working_tree,
+        remotes = {remote.name: remote.url for remote in repo.remotes}
+        origin = remotes.get("origin")
+        upstream = remotes.get("upstream")
+        origin_remote = (
+            FlextInfraUtilitiesGitRemote.redact_origin_remote(origin)
+            if origin
+            else None
         )
+        upstream_remote = (
+            FlextInfraUtilitiesGitRemote.redact_origin_remote(upstream)
+            if upstream
+            else None
+        )
+        raw_super = repo.git.rev_parse("--show-superproject-working-tree").strip()
+        if not raw_super and primary_root != working_tree:
+            primary_repo = cls._repo(primary_root)
+            try:
+                raw_super = primary_repo.git.rev_parse(
+                    "--show-superproject-working-tree",
+                ).strip()
+            finally:
+                # The secondary handle is only opened for this one probe; every
+                # open GitPython handle pins a `git cat-file` child.
+                primary_repo.close()
+        superproject = Path(raw_super).resolve() if raw_super else None
 
         is_worktree = git_dir != common_dir
         # Gitlink modes live in the index, never in `status --porcelain` (which
         # emits XY status codes and paths, never file modes). Reading them from
         # the porcelain text made has_submodules unconditionally False, so a
         # real submodule superproject was never recognized as one.
-        has_submodules = cls._has_gitlink_stages(repo)
+        staged_entries = repo.git.ls_files("--stage")
+        has_submodules = any(
+            line.startswith(f"{c.Infra.GIT_GITLINK_MODE_TEXT} ")
+            for line in staged_entries.splitlines()
+        )
         # Why: git rev-parse --show-superproject-
         # working-tree already means "this working tree is a submodule".
         # Requiring .git to be a gitfile excluded absorbed/converted submodules

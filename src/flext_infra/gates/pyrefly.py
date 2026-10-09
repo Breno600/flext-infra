@@ -27,33 +27,6 @@ class FlextInfraPyreflyGate(FlextInfraGate):
     checker_info_prefixes: ClassVar[t.StrSequence] = ("INFO",)
     requires_python_targets: ClassVar[bool] = True
 
-    # Native JSON report replaced before every run: ``{project}-pyrefly.json``.
-    check_report_filename: ClassVar[str] = "pyrefly.json"
-    check_remove_env_keys: ClassVar[t.StrSequence] = (
-        *FlextInfraGate.check_remove_env_keys,
-        c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,
-    )
-
-    def _native_report_path(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
-    ) -> Path:
-        """Resolve the JSON report this gate replaces before every run.
-
-        Returns:
-            The resulting ``Path``.
-
-        Raises:
-            RuntimeError: If ``check_report_filename`` is empty.
-
-        """
-        report_path = self._check_report_path(project_dir, ctx)
-        if report_path is None:
-            msg = "FlextInfraPyreflyGate.check_report_filename is empty"
-            raise RuntimeError(msg)
-        return report_path
-
     @override
     def _get_check_dirs(
         self,
@@ -76,13 +49,13 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Run Pyrefly against the project config, writing its JSON report file.
+        """Build check command.
 
         Returns:
-            The Pyrefly invocation bound to ``sys.executable``.
+            The resulting ``t.StrSequence``.
 
         """
-        json_file = self._native_report_path(project_dir, ctx)
+        json_file = self._check_report_path(project_dir, ctx)
         target_args = u.Infra.pyrefly_target_args(project_dir, tuple(check_dirs))
         return self._python_module_command(
             c.Infra.PYREFLY,
@@ -102,19 +75,46 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         )
 
     @override
+    def _check_report_path(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
+        """Use the existing native report owner, freshly replaced for every run.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
+        return ctx.reports_dir / f"{project_dir.name}-pyrefly.json"
+
+    @override
+    def _check_remove_env_keys(
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+    ) -> t.StrSequence:
+        """Use configured search paths without Pyrefly's inherited-path warning.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        return (
+            *super()._check_remove_env_keys(project_dir, ctx),
+            c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,
+        )
+
+    @override
     def _parse_check_output(
         self,
         result: p.Cli.CommandOutput,
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Read Pyrefly's freshly written JSON report file into findings.
+        """Parse check output.
 
         Returns:
-            The run's verdict and its diagnostics or stderr failures.
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
 
         """
-        json_file = self._native_report_path(project_dir, ctx)
+        json_file = self._check_report_path(project_dir, ctx)
         if not u.Cli.process_succeeded(result.outcome) and not json_file.exists():
             return False, (
                 self._command_error_issue(
@@ -139,21 +139,36 @@ class FlextInfraPyreflyGate(FlextInfraGate):
                     file=str(json_file),
                 ),
             )
-        issues = self._checker_issues(
-            result,
-            project_dir,
-            tuple(
-                m.Infra.Issue(
-                    file=diag.path,
-                    line=diag.line,
-                    column=diag.column,
-                    code=diag.name,
-                    message=diag.description,
-                    severity=diag.severity,
+        report = validated.value
+        issues: t.MutableSequenceOf[m.Infra.Issue] = [
+            m.Infra.Issue(
+                file=diag.path,
+                line=diag.line,
+                column=diag.column,
+                code=diag.name,
+                message=diag.description,
+                severity=diag.severity,
+            )
+            for diag in report.errors
+        ]
+        issues.extend(self._checker_stderr_issues(result, project_dir))
+        if (not issues) and not u.Cli.process_succeeded(result.outcome):
+            message = (result.stderr or result.stdout).strip()
+            if not message:
+                message = (
+                    f"pyrefly exited with code {result.outcome.raw_return_code} "
+                    "without JSON diagnostics"
                 )
-                for diag in validated.value.errors
-            ),
-        )
+            issues.append(
+                m.Infra.Issue(
+                    file=c.PYPROJECT_FILENAME,
+                    line=1,
+                    column=1,
+                    code="pyrefly-exec",
+                    message=message,
+                    severity=c.Infra.ERROR,
+                ),
+            )
         return (
             u.Cli.process_succeeded(result.outcome)
             and not any(

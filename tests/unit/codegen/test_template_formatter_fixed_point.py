@@ -40,10 +40,11 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             docstring='"""Tests package."""',
             runtime_import_lines=(
                 f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
-                "install_lazy_exports"
+                f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
             ),
             exports_tuple="()",
-            lazy_export_mapping="    MappingProxyType({}),",
+            lazy_module_mapping="        MappingProxyType({}),",
+            lazy_alias_mapping="        alias_groups=MappingProxyType({}),",
         )
 
     @staticmethod
@@ -57,10 +58,8 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
             ci_trigger_branches=u.CodegenTestSupport.Ci.ci_trigger_branches("develop"),
-            overrides=u.CodegenTestSupport.Ci.WorkflowRenderOverrides(
-                workspace_repositories=workspace_repositories,
-                has_devcontainer=has_devcontainer,
-            ),
+            workspace_repositories=workspace_repositories,
+            has_devcontainer=has_devcontainer,
         )
 
     @staticmethod
@@ -123,13 +122,10 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
 
         Ruff respects magic trailing commas and COM812 demands one on every
         exploded call, so the projection is the one-argument-per-line form
-        with a trailing comma after each argument, including the flat map.
+        with a trailing comma after each argument and after the inner call.
         """
         rendered = tm.ok(
             u.Cli.template_render(self._ROOT_TEMPLATE, self._empty_root_render()),
         )
 
-        tm.that(
-            rendered,
-            has="    MappingProxyType({}),\n    public_exports=__all__,\n)",
-        )
+        tm.that(rendered, has="        sort_keys=False,\n    ),\n)")

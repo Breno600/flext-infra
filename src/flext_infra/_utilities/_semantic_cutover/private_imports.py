@@ -11,16 +11,20 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import m, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesPrivateImportAncestry as ImportAncestry,
-    FlextInfraUtilitiesPrivateImportFacades,
-    FlextInfraUtilitiesPrivateImportValidation,
-)
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
 from flext_infra._utilities._semantic_cutover.private_import_cst import (
     FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
+)
+from flext_infra._utilities.private_import_ancestry import (
+    FlextInfraUtilitiesPrivateImportAncestry,
+)
+from flext_infra._utilities.private_import_facades import (
+    FlextInfraUtilitiesPrivateImportFacades,
+)
+from flext_infra._utilities.private_import_validation import (
+    FlextInfraUtilitiesPrivateImportValidation,
 )
 
 if TYPE_CHECKING:
@@ -40,77 +44,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
     """
 
     @staticmethod
-    def _type_checking_ancestors(tree: ast.Module) -> t.MappingKV[ast.AST, ast.AST]:
-        """Map every node of one module tree to its parent.
-
-        Returns:
-            The resulting ``t.MappingKV[ast.AST, ast.AST]``.
-
-        """
-        return {
-            child: parent
-            for parent in ast.walk(tree)
-            for child in ast.iter_child_nodes(parent)
-        }
-
-    @staticmethod
-    def _is_type_only(
-        parents: t.MappingKV[ast.AST, ast.AST],
-        node: ast.AST,
-    ) -> bool:
-        """Report whether one node sits inside a ``TYPE_CHECKING`` boundary.
-
-        Returns:
-            The resulting ``bool``.
-
-        """
-        parent = parents.get(node)
-        while parent is not None:
-            if (
-                isinstance(parent, ast.If)
-                and isinstance(parent.test, ast.Name)
-                and parent.test.id == "TYPE_CHECKING"
-            ):
-                return True
-            parent = parents.get(parent)
-        return False
-
-    @staticmethod
-    def _imported_public_aliases(
-        node: ast.ImportFrom,
-        plan: m.Infra.PrivateImportRewritePlan,
-    ) -> set[str]:
-        """Return the facade aliases one import-from statement contributes.
-
-        Returns:
-            The resulting ``set[str]``.
-
-        """
-        aliases: set[str] = set()
-        module = node.module
-        if module is None:
-            return aliases
-        for imported in node.names:
-            qualified = f"{module}.{imported.name}"
-            if imported.name in plan.removals.get(module, frozenset()):
-                reference = plan.replacements.get(qualified)
-                if reference is not None:
-                    aliases.add(reference.split(".", 1)[0])
-            elif imported.name in plan.obsolete_imports.get(
-                module,
-                frozenset(),
-            ):
-                aliases.add(imported.asname or imported.name)
-            elif (
-                plan.public_imports.get(imported.name) == module
-                and imported.asname is None
-            ):
-                aliases.add(imported.name)
-        return aliases
-
-    @classmethod
     def _runtime_public_aliases(
-        cls,
         tree: ast.Module,
         plan: m.Infra.PrivateImportRewritePlan,
     ) -> frozenset[str]:
@@ -120,26 +54,71 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             Facades required outside a ``TYPE_CHECKING`` boundary.
 
         """
-        parents = cls._type_checking_ancestors(tree)
+        parents = {
+            child: parent
+            for parent in ast.walk(tree)
+            for child in ast.iter_child_nodes(parent)
+        }
+
+        def is_type_only(node: ast.AST) -> bool:
+            parent = parents.get(node)
+            while parent is not None:
+                if (
+                    isinstance(parent, ast.If)
+                    and isinstance(parent.test, ast.Name)
+                    and parent.test.id == "TYPE_CHECKING"
+                ):
+                    return True
+                parent = parents.get(parent)
+            return False
+
         runtime_aliases: set[str] = set()
         for node in ast.walk(tree):
             if not isinstance(node, ast.ImportFrom) or node.module is None:
                 continue
-            if not cls._is_type_only(parents, node):
-                runtime_aliases.update(cls._imported_public_aliases(node, plan))
+            aliases: set[str] = set()
+            for imported in node.names:
+                qualified = f"{node.module}.{imported.name}"
+                if imported.name in plan.removals.get(node.module, frozenset()):
+                    reference = plan.replacements.get(qualified)
+                    if reference is not None:
+                        aliases.add(reference.split(".", 1)[0])
+                elif imported.name in plan.obsolete_imports.get(
+                    node.module,
+                    frozenset(),
+                ):
+                    aliases.add(imported.asname or imported.name)
+                elif (
+                    plan.public_imports.get(imported.name) == node.module
+                    and imported.asname is None
+                ):
+                    aliases.add(imported.name)
+            if not is_type_only(node):
+                runtime_aliases.update(aliases)
         return frozenset(runtime_aliases)
 
     @classmethod
-    def _cross_owner_statements(
+    def _private_import_references(
         cls,
-        live_findings: t.SequenceOf[m.Infra.ModScanFinding],
-    ) -> t.VariadicTuple[str]:
-        """Return the cross-owner private import texts among live findings.
+        root: Path,
+        sources: t.MappingKV[Path, str],
+        findings: t.SequenceOf[m.Infra.ModScanFinding],
+    ) -> t.Infra.PrivateImportReferences:
+        """Resolve every reported cross-owner private import to its public owner.
 
         Returns:
-            The resulting ``t.VariadicTuple[str]``.
+            The resulting ``t.Infra.PrivateImportReferences``.
+
+        Raises:
+            ValueError: If ambiguous private star import in; or if no public facade
+                exposes cross-owner private import.
 
         """
+        live_findings = tuple(
+            finding
+            for finding in findings
+            if cls._finding_is_live(root, sources, finding)
+        )
         cross_owner_statements: list[str] = []
         for finding in live_findings:
             statement = cls._finding_statement(finding)
@@ -152,123 +131,34 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                 is not None
             ):
                 cross_owner_statements.append(finding.text)
-        return tuple(cross_owner_statements)
-
-    @classmethod
-    def _resolved_facades(
-        cls,
-        cross_owner_statements: t.VariadicTuple[str],
-        sources: t.MappingKV[Path, str],
-    ) -> t.Pair[
-        t.MappingKV[str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]]],
-        t.Triple[
-            t.MappingKV[str, set[str]],
-            t.MappingKV[str, set[str]],
-            t.MappingKV[str, t.VariadicTuple[str]],
-        ],
-    ]:
-        """Resolve facade inventories for the cross-owner import statements.
-
-        Returns:
-            The resulting ``(facades, bindings)`` pair, where bindings carries
-            ``(export bindings, declared exports, class bases)``.
-
-        """
         facades: t.MappingKV[
             str,
             t.VariadicTuple[t.Quad[ast.Module, str, str, str]],
         ] = {}
-        bindings: t.Triple[
-            t.MappingKV[str, set[str]],
-            t.MappingKV[str, set[str]],
-            t.MappingKV[str, t.VariadicTuple[str]],
-        ] = ({}, {}, {})
-        if not cross_owner_statements:
-            return facades, bindings
-        discovery_sources = FlextInfraUtilitiesPrivateImportFacades.reachable_sources(
-            FlextInfraUtilitiesPrivateImportFacades.source_modules(
-                sources,
-                cross_owner_statements,
-            ),
-            cross_owner_statements,
-        )
-        export_bindings, declared_exports = (
-            FlextInfraUtilitiesPrivateImportFacades.declared_exports(
+        export_bindings: t.MappingKV[str, set[str]] = {}
+        declared_exports: t.MappingKV[str, set[str]] = {}
+        class_bases: t.MappingKV[str, t.VariadicTuple[str]] = {}
+        if cross_owner_statements:
+            discovery_sources = (
+                FlextInfraUtilitiesPrivateImportFacades.reachable_sources(
+                    FlextInfraUtilitiesPrivateImportFacades.source_modules(
+                        sources,
+                        tuple(cross_owner_statements),
+                    ),
+                    tuple(cross_owner_statements),
+                )
+            )
+            facades = FlextInfraUtilitiesPrivateImportFacades.discover(
                 discovery_sources,
             )
-        )
-        ancestry = ImportAncestry.FlextInfraUtilitiesPrivateImportAncestry
-        return (
-            FlextInfraUtilitiesPrivateImportFacades.discover(discovery_sources),
-            (
-                export_bindings,
-                declared_exports,
-                ancestry.class_bases(discovery_sources),
-            ),
-        )
-
-    @staticmethod
-    def _import_target_reference(
-        package: str,
-        qualified: str,
-        imported: ast.alias,
-        facades: t.MappingKV[
-            str,
-            t.VariadicTuple[t.Quad[ast.Module, str, str, str]],
-        ],
-        bindings: t.Triple[
-            t.MappingKV[str, set[str]],
-            t.MappingKV[str, set[str]],
-            t.MappingKV[str, t.VariadicTuple[str]],
-        ],
-    ) -> str | None:
-        """Resolve one imported private name to its public facade reference.
-
-        Returns:
-            The resulting ``str | None``.
-
-        """
-        export_bindings, _declared_exports, class_bases = bindings
-        return FlextInfraUtilitiesPrivateImportFacades.facade_alias_binding(
-            owners=facades.get(package, ()),
-            alias=imported.asname,
-        ) or FlextInfraUtilitiesPrivateImportFacades.public_reference(
-            owners=facades.get(package, ()),
-            package=package,
-            qualified=qualified,
-            bindings=export_bindings,
-            class_bases=class_bases,
-        )
-
-    @classmethod
-    def _finding_import_specs(
-        cls,
-        root: Path,
-        live_findings: t.SequenceOf[m.Infra.ModScanFinding],
-        facades: t.MappingKV[
-            str,
-            t.VariadicTuple[t.Quad[ast.Module, str, str, str]],
-        ],
-        bindings: t.Triple[
-            t.MappingKV[str, set[str]],
-            t.MappingKV[str, set[str]],
-            t.MappingKV[str, t.VariadicTuple[str]],
-        ],
-    ) -> t.Pair[
-        t.MappingKV[Path, list[t.Infra.PrivateImportSpec]],
-        t.MappingKV[Path, t.MappingKV[str, t.Pair[str, str]]],
-    ]:
-        """Resolve every live finding into its per-file import specs.
-
-        Returns:
-            The resulting ``(specs, direct specs)`` mapping pair.
-
-        Raises:
-            ValueError: If ambiguous private star import in; or if no public facade
-                exposes cross-owner private import.
-
-        """
-        export_bindings, declared_exports, _class_bases = bindings
+            export_bindings, declared_exports = (
+                FlextInfraUtilitiesPrivateImportFacades.declared_exports(
+                    discovery_sources,
+                )
+            )
+            class_bases = FlextInfraUtilitiesPrivateImportAncestry.class_bases(
+                discovery_sources,
+            )
         direct_specs: MutableMapping[Path, MutableMapping[str, t.Pair[str, str]]] = {}
         specs: MutableMapping[Path, list[t.Infra.PrivateImportSpec]] = {}
         for finding in live_findings:
@@ -298,12 +188,18 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                 if declared is not None:
                     direct_specs.setdefault(file_path, {})[qualified] = declared
                     continue
-                target_reference = cls._import_target_reference(
-                    package,
-                    qualified,
-                    imported,
-                    facades,
-                    bindings,
+                target_reference = (
+                    FlextInfraUtilitiesPrivateImportFacades.facade_alias_binding(
+                        owners=facades.get(package, ()),
+                        alias=imported.asname,
+                    )
+                    or FlextInfraUtilitiesPrivateImportFacades.public_reference(
+                        owners=facades.get(package, ()),
+                        package=package,
+                        qualified=qualified,
+                        bindings=export_bindings,
+                        class_bases=class_bases,
+                    )
                 )
                 if target_reference is None:
                     msg = (
@@ -318,37 +214,6 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                     package,
                     target_reference,
                 ))
-        return specs, direct_specs
-
-    @classmethod
-    def _private_import_references(
-        cls,
-        root: Path,
-        sources: t.MappingKV[Path, str],
-        findings: t.SequenceOf[m.Infra.ModScanFinding],
-    ) -> t.Infra.PrivateImportReferences:
-        """Resolve every reported cross-owner private import to its public owner.
-
-        Returns:
-            The resulting ``t.Infra.PrivateImportReferences``.
-
-        """
-        live_findings = tuple(
-            finding
-            for finding in findings
-            if cls._finding_is_live(root, sources, finding)
-        )
-        cross_owner_statements = cls._cross_owner_statements(live_findings)
-        facades, bindings = cls._resolved_facades(
-            cross_owner_statements,
-            sources,
-        )
-        specs, direct_specs = cls._finding_import_specs(
-            root,
-            live_findings,
-            facades,
-            bindings,
-        )
         return specs, direct_specs, facades
 
     @classmethod

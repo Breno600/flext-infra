@@ -9,10 +9,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal, Self
 
-from flext_cli import m
+from flext_cli import m, u
 
 from flext_infra import c, t
-from flext_infra._models.mixins import FlextInfraModelsMixins
+from flext_infra._models import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCore:
@@ -100,20 +100,17 @@ class FlextInfraModelsCore:
         counts: Annotated[t.IntMapping, m.Field(description="Violation counts")]
         violations: Annotated[t.StrSequence, m.Field(description="Violations")]
 
-    class StubAnalysisReport(
-        FlextInfraModelsMixins.ProjectNameMixin,
-        m.ArbitraryTypesModel,
-    ):
+    class StubAnalysisReport(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """Structured typed-dependency analysis result for a project."""
 
         mypy_hints: Annotated[
             t.MutableSequenceOf[str],
             m.Field(description="Install-package hints extracted from mypy output"),
-        ] = m.Field(default_factory=list[str])
+        ] = m.Field(default_factory=list)
         internal_missing: Annotated[
             t.MutableSequenceOf[str],
             m.Field(description="Missing internal imports"),
-        ] = m.Field(default_factory=list[str])
+        ] = m.Field(default_factory=list)
         unresolved_missing: Annotated[
             t.MutableSequenceOf[str],
             m.Field(
@@ -121,81 +118,18 @@ class FlextInfraModelsCore:
                     "Missing external imports without an installed typed dependency"
                 ),
             ),
-        ] = m.Field(default_factory=list[str])
+        ] = m.Field(default_factory=list)
         total_missing: Annotated[
             t.NonNegativeInt,
             m.Field(description="Total missing imports"),
         ]
 
-    class PytestMarkdownOrigin(m.Value):
-        """Plugin-defined fence identity independent of rendered test names."""
-
-        source_path: str = m.Field(description="Repository-relative source identity")
-        start_line: int = m.Field(ge=0, description="Plugin first-code-line offset")
-        source_sha256: str = m.Field(
-            pattern=r"^[0-9a-f]{64}$",
-            description="Digest of the exact plugin-defined executable source",
-        )
-        max_retries: int = m.Field(ge=0, description="Plugin-declared retry policy")
-
-    class PytestMarkdownItem(m.Value):
-        """Actual collected node bound to its definition, not its display name."""
-
-        node_id: t.NonEmptyStr = m.Field(description="Actual collected pytest node ID")
-        origin: FlextInfraModelsCore.PytestMarkdownOrigin = m.Field(
-            description="Definition supplied by the installed Markdown collector",
-        )
-
-    class PytestMarkdownCollection(m.ArbitraryTypesModel):
-        """Session-owned public collection-hook observations."""
-
-        eligible: t.MutableSequenceOf[FlextInfraModelsCore.PytestMarkdownOrigin] = (
-            m.Field(
-                default_factory=list["FlextInfraModelsCore.PytestMarkdownOrigin"],
-                description="Independently parsed origins",
-            )
-        )
-        collected: t.MutableSequenceOf[FlextInfraModelsCore.PytestMarkdownItem] = (
-            m.Field(
-                default_factory=list["FlextInfraModelsCore.PytestMarkdownItem"],
-                description="Observed pre-selection items",
-            )
-        )
-        deselected: t.MutableSequenceOf[str] = m.Field(
-            default_factory=list[str],
-            description="Public pytest deselection notifications",
-        )
-
-    class PytestMarkdownAttempt(m.Value):
-        """Native runner-entry count and the first escaping exception evidence."""
-
-        node_id: t.NonEmptyStr = m.Field(description="Actual executed Markdown node")
-        attempts: int = m.Field(ge=0, description="Observed native runner entries")
-        first_exception_type: str | None = m.Field(
-            default=None,
-            description="First exception escaping the SDK runner",
-        )
-        first_exception_traceback: str | None = m.Field(
-            default=None,
-            description="Original first exception traceback",
-        )
-
     class PytestCollectionManifest(m.Value):
         """The selected node IDs after every collection hook has completed."""
 
         node_ids: t.StrTuple = m.Field(description="Unique node IDs in execution order")
-        markdown_eligible: t.VariadicTuple[
-            FlextInfraModelsCore.PytestMarkdownOrigin
-        ] = m.Field(default_factory=tuple, description="Independent plugin eligibility")
-        markdown_collected: t.VariadicTuple[FlextInfraModelsCore.PytestMarkdownItem] = (
-            m.Field(default_factory=tuple, description="Collection before deselection")
-        )
-        markdown_deselected: t.StrTuple = m.Field(
-            default_factory=tuple,
-            description="Explicit Markdown deselection node IDs",
-        )
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def require_unique_node_ids(self) -> Self:
             """Reject incomplete identifiers and ambiguous worker manifests.
 
@@ -210,27 +144,6 @@ class FlextInfraModelsCore:
                 self.node_ids,
             ) != len(set(self.node_ids)):
                 msg = "collection manifest requires nonempty unique node IDs"
-                raise ValueError(msg)
-            origins = tuple(item.origin for item in self.markdown_collected)
-            collected_ids = tuple(item.node_id for item in self.markdown_collected)
-            if (
-                len(set(self.markdown_eligible)) != len(self.markdown_eligible)
-                or len(set(origins)) != len(origins)
-                or len(set(collected_ids)) != len(collected_ids)
-            ):
-                msg = "duplicate Markdown eligible origin or collected identity"
-                raise ValueError(msg)
-            if set(origins) != set(self.markdown_eligible):
-                msg = "Markdown eligible origins differ from collected definitions"
-                raise ValueError(msg)
-            if (
-                len(set(self.markdown_deselected)) != len(self.markdown_deselected)
-                or set(self.markdown_deselected) & set(self.node_ids)
-                or set(collected_ids)
-                != (set(collected_ids) & set(self.node_ids))
-                | set(self.markdown_deselected)
-            ):
-                msg = "Markdown selection omitted or duplicated a deselection receipt"
                 raise ValueError(msg)
             return self
 
@@ -330,12 +243,8 @@ class FlextInfraModelsCore:
             default=None,
             description="TestReport outcome",
         )
-        user_properties: t.VariadicTuple[t.Pair[str, t.JsonValue]] = m.Field(
-            default_factory=tuple,
-            description="Public pytest item properties transported by report-log",
-        )
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def require_event_payload(self) -> Self:
             """Reject incomplete runtime events instead of reporting zero findings.
 
@@ -380,17 +289,6 @@ class FlextInfraModelsCore:
         lineno: int = m.Field(ge=0, description="Warning source line")
         message: str = m.Field(description="Complete warning message")
 
-    class PytestPhaseOutcome(m.Value):
-        """One observed pytest lifecycle phase, never inferred from selection."""
-
-        node_id: t.NonEmptyStr = m.Field(description="Actual TestReport node ID")
-        phase: Literal["setup", "call", "teardown"] = m.Field(
-            description="Observed public pytest runtest phase",
-        )
-        outcome: Literal["passed", "failed", "skipped"] = m.Field(
-            description="Unmodified TestReport outcome",
-        )
-
     class PytestDiagnostics(m.ArbitraryTypesModel):
         """Extracted diagnostics summary from JUnit XML and pytest report-log."""
 
@@ -428,21 +326,6 @@ class FlextInfraModelsCore:
             default_factory=tuple,
             description="Unique node IDs with real TestReport events",
         )
-        phase_outcomes: t.VariadicTuple[FlextInfraModelsCore.PytestPhaseOutcome] = (
-            m.Field(
-                default_factory=tuple,
-                description="Complete observed runtest outcomes, including failures",
-            )
-        )
-        markdown_attempts: t.VariadicTuple[
-            FlextInfraModelsCore.PytestMarkdownAttempt
-        ] = m.Field(
-            default_factory=tuple,
-            description="Observed SDK execution attempts",
-        )
-        markdown_items: t.VariadicTuple[FlextInfraModelsCore.PytestMarkdownItem] = (
-            m.Field(default_factory=tuple, description="Executed call-phase origins")
-        )
         failed_cases: Annotated[
             t.StrSequence,
             m.Field(description="Failed test labels"),
@@ -464,26 +347,6 @@ class FlextInfraModelsCore:
             m.Field(description="Slow test entries"),
         ] = m.Field(default_factory=tuple)
 
-    class PytestMarkdownReconciliation(m.Value):
-        """Origin and phase accounting; deselection is never execution."""
-
-        eligible: t.VariadicTuple[FlextInfraModelsCore.PytestMarkdownOrigin] = m.Field(
-            description="Independent parser eligibility",
-        )
-        selected: t.VariadicTuple[FlextInfraModelsCore.PytestMarkdownItem] = m.Field(
-            description="Actual selected identities",
-        )
-        deselected: t.VariadicTuple[FlextInfraModelsCore.PytestMarkdownItem] = m.Field(
-            description="Origins not executed in this phase",
-        )
-        diagnostics: FlextInfraModelsCore.PytestDiagnostics = m.Field(
-            description="Unmodified observed phases, attempts and first causes",
-        )
-        cache_hit: bool = m.Field(
-            description="Separate typed incremental cache receipt",
-        )
-        violations: t.StrTuple = m.Field(description="Reconciliation failures")
-
     class DiagResult(m.ArbitraryTypesModel):
         """Internal container for extracted diagnostics.
 
@@ -492,54 +355,42 @@ class FlextInfraModelsCore:
         """
 
         reported_phases: t.MutableMappingKV[str, t.MutableStrMapping] = m.Field(
-            default_factory=dict[str, t.MutableStrMapping],
+            default_factory=dict,
             description="Runtest phase outcomes keyed by TestReport node ID",
         )
-        markdown_attempts: t.MutableSequenceOf[
-            FlextInfraModelsCore.PytestMarkdownAttempt
-        ] = m.Field(
-            default_factory=list["FlextInfraModelsCore.PytestMarkdownAttempt"],
-            description="Call-phase attempt observations",
-        )
-        markdown_items: t.MutableSequenceOf[FlextInfraModelsCore.PytestMarkdownItem] = (
-            m.Field(
-                default_factory=list["FlextInfraModelsCore.PytestMarkdownItem"],
-                description="Call-phase origin observations",
-            )
-        )
         collection_failed_cases: t.MutableSequenceOf[str] = m.Field(
-            default_factory=list[str],
+            default_factory=list,
             description="Node IDs with failed collection reports",
         )
         collection_skip_cases: t.MutableSequenceOf[str] = m.Field(
-            default_factory=list[str],
+            default_factory=list,
             description="Node IDs with skipped collection reports",
         )
 
         failed_cases: Annotated[
             t.MutableSequenceOf[str],
             m.Field(description="Collected failed test-case labels"),
-        ] = m.Field(default_factory=list[str])
+        ] = m.Field(default_factory=list)
         error_cases: Annotated[
             t.MutableSequenceOf[str],
             m.Field(description="Collected error test-case labels"),
-        ] = m.Field(default_factory=list[str])
+        ] = m.Field(default_factory=list)
         error_traces: Annotated[
             t.MutableSequenceOf[str],
             m.Field(description="Collected error trace chunks"),
-        ] = m.Field(default_factory=list[str])
+        ] = m.Field(default_factory=list)
         skip_cases: Annotated[
             t.MutableSequenceOf[str],
             m.Field(description="Collected skipped test-case labels"),
-        ] = m.Field(default_factory=list[str])
+        ] = m.Field(default_factory=list)
         warning_lines: Annotated[
             t.MutableSequenceOf[str],
             m.Field(description="Collected warning lines"),
-        ] = m.Field(default_factory=list[str])
+        ] = m.Field(default_factory=list)
         slow_entries: Annotated[
             t.MutableSequenceOf[str],
             m.Field(description="Collected slow-test entries"),
-        ] = m.Field(default_factory=list[str])
+        ] = m.Field(default_factory=list)
 
     class InventoryReport(m.ArbitraryTypesModel):
         """Summary of written inventory report artifacts."""
@@ -551,7 +402,7 @@ class FlextInfraModelsCore:
         reports_written: Annotated[
             t.MutableSequenceOf[str],
             m.Field(description="Written report file paths"),
-        ] = m.Field(default_factory=list[str])
+        ] = m.Field(default_factory=list)
 
     class NamespaceValidateCommand(m.ContractModel):
         """CLI payload for ``flext-infra validate namespace``.

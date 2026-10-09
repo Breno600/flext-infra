@@ -16,7 +16,7 @@ from flext_infra.gates.direnv import FlextInfraDirenvGate
 from flext_infra.workspace.environment_contracts import (
     FlextInfraWorkspaceEnvironmentContracts,
 )
-from tests import u
+from tests import TestsFlextInfraUtilities as u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -121,8 +121,7 @@ class TestsFlextInfraDirenvGate:
             prefix: str,
         ) -> None:
             """resolve_home=False skips ${HOME} targets (generation-time lint)."""
-            contracts = FlextInfraWorkspaceEnvironmentContracts
-            violations = contracts.envrc_contract_violations(
+            violations = FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
                 f'source_env "{prefix}/.config/environment.d/projects/absent.envrc"\n',
                 root=tmp_path,
                 resolve_home=False,

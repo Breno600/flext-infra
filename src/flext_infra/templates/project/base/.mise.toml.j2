@@ -6,13 +6,10 @@
 # Source: template (base/.mise.toml.j2)
 # Free: no
 # End SECTION: header
-# NOTE: mise carries itself, the Python runtime and the native tools from the
-# config SSOT. The self-managed github:jdx/mise entry is the pinned release:
-# `mise install` provisions it from mise.lock and every later `mise` resolved
-# through the mise-managed shims runs exactly that release. Python dependency
-# declarations remain owned by pyproject.toml. Tools are declared `latest`;
-# only `make upg` resolves them and writes the committed mise.lock. Setup
-# installs frozen from that lock and never re-resolves.
+# NOTE: mise carries the Python runtime and native tools from the config SSOT.
+# Python dependency declarations remain owned by pyproject.toml. Tools are declared
+# `latest`; only `make upg` resolves them and writes the committed mise.lock.
+# Setup installs frozen from that lock and never re-resolves.
 
 # === SECTION: settings (managed) ===
 # Source: config:codegen.toolchain.mise_lockfile / mise_locked / mise_lockfile_platforms /
@@ -21,41 +18,46 @@
 minimum_release_age = "{{ dependency_cooldown_days }}d"
 lockfile = {{ "true" if mise_lockfile else "false" }}
 locked = {{ "true" if mise_locked else "false" }}
-# Third-party releases in the manifest (jscpd, qlty) publish no SLSA
-# attestations, so strict lock-time provenance verification can never pass
-# for them. API outages degrade to best-effort instead of failing the lock;
-# release checksums still enforce integrity, and verification resumes
-# automatically wherever attestations exist.
-provenance_api_failures_fatal = false
-locked_verify_provenance = false
 lockfile_platforms = [{% for platform in mise_lockfile_platforms %}"{{ platform }}"{{ ", " if not loop.last }}{% endfor %}]
 [settings.python]
 compile = {{ "true" if python_compile else "false" }}
+[settings.npm]
+# Aube replays the locked dependency graph. Only the configured ast-grep
+# package is approved below to run its native binary-selection lifecycle.
+package_manager = "{{ npm_package_manager }}"
 [tool_config]
 locked = {{ "true" if mise_locked else "false" }}
 # End SECTION: settings
 
 # === SECTION: tools (managed) ===
-# Source: config:python_version + config:codegen.toolchain mise_selector /
-#         mise_version (the self-managed mise entry) + toolchain.tools entries
-#         (name, selector, version, version_prefix, form; entry order is the
-#         projection order, form fixes the rendered shape)
+# Source: config:python_version, config:codegen.scaffold.project.dev native toolchain floors
+#         (kubectl_version, helm_version, kind_version, taplo_version, ast_grep_selector/ast_grep_version,
+#          gitleaks_version, scc_selector/scc_version, kubeconform_version, qlty_selector/qlty_version,
+#          node_version, jscpd_selector/jscpd_version,
+#          prettier_selector/prettier_version, waza_selector/waza_version/waza_version_prefix,
+#          go_version, make_version)
 [tools]
 python = "{{ python_version }}"
-# mise self-management: the [tools] entry pins the release `mise install`
-# provisions from mise.lock; a host bootstrap mise only needs to read that lock.
-"{{ mise_selector }}" = "{{ mise_version }}"
-# Native toolchain (single source: Infra.codegen.toolchain.tools in codegen.yaml).
-{%- for entry in tools %}{% if entry.form == "table" %}
-[tools."{{ entry.selector }}"]
-version = "{{ tool_versions[entry.name] }}"
-{%- if entry.version_prefix %}
-version_prefix = "{{ entry.version_prefix }}"
-{%- endif %}
-{%- elif entry.selector %}
-"{{ entry.selector }}" = "{{ tool_versions[entry.name] }}"
-{%- else %}
-{{ entry.name }} = "{{ tool_versions[entry.name] }}"
-{%- endif %}
-{%- endfor %}
+uv = "{{ uv_version }}"
+# Native toolchain (single source: Infra.codegen.toolchain in codegen.yaml).
+kubectl = "{{ kubectl_version }}"
+helm = "{{ helm_version }}"
+kind = "{{ kind_version }}"
+direnv = "{{ direnv_version }}"
+taplo = "{{ taplo_version }}"
+"{{ ast_grep_selector }}" = { version = "{{ ast_grep_version }}", allow_builds = ["{{ ast_grep_selector.removeprefix('npm:') }}"] }
+gitleaks = "{{ gitleaks_version }}"
+"{{ scc_selector }}" = "{{ scc_version }}"
+kubeconform = "{{ kubeconform_version }}"
+node = "{{ node_version }}"
+"{{ prettier_selector }}" = "{{ prettier_version }}"
+go = "{{ go_version }}"
+make = "{{ make_version }}"
+[tools."{{ qlty_selector }}"]
+version = "{{ qlty_version }}"
+[tools."{{ jscpd_selector }}"]
+version = "{{ jscpd_version }}"
+[tools."{{ waza_selector }}"]
+version = "{{ waza_version }}"
+version_prefix = "{{ waza_version_prefix }}"
 # End SECTION: tools

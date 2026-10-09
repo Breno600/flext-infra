@@ -12,13 +12,11 @@ from urllib.parse import urlsplit
 from flext_cli import u
 
 from flext_infra import c, m, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDocsContract,
-    FlextInfraUtilitiesDocsScope,
-)
 from flext_infra._utilities._docs_scope_build import (
     FlextInfraUtilitiesDocsScopeBuildMixin,
 )
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from collections.abc import Callable

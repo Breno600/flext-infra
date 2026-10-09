@@ -41,6 +41,8 @@ class FlextInfraCodemodSnapshotReconciler:
             The resulting ``m.Infra.ModFixtureDirectories``.
 
         Raises:
+            TypeError: If invalid ast-grep testConfigs contract; or if invalid ast-grep;
+                or if ast-grep testConfig must be a mapping.
             ValueError: If ast-grep config must be a regular file; or if invalid
                 ast-grep; or if ast-grep; or if ast-grep fixture path must not be a
                 symlink.
@@ -51,36 +53,6 @@ class FlextInfraCodemodSnapshotReconciler:
             msg = f"ast-grep config must be a regular file: {config_path}"
             raise ValueError(msg)
         payload = u.Cli.yaml_safe_load(config_path).unwrap()
-        declared = FlextInfraCodemodSnapshotReconciler._declared_directories(
-            config_path,
-            payload,
-        )
-        resolved = FlextInfraCodemodSnapshotReconciler._resolved_directories(
-            config_root,
-            config_path,
-            declared,
-        )
-        return m.Infra.ModFixtureDirectories(
-            rule_dirs=resolved[c.Infra.CODEMOD_RULE_DIRS_KEY],
-            util_dirs=resolved[c.Infra.CODEMOD_UTIL_DIRS_KEY],
-            test_dirs=resolved[c.Infra.CODEMOD_TEST_DIR_KEY],
-        )
-
-    @staticmethod
-    def _declared_directories(
-        config_path: Path,
-        payload: t.MappingKV[str, t.JsonValue],
-    ) -> t.MappingKV[str, Sequence[t.JsonValue]]:
-        """Read every declared fixture directory list from the ast-grep config.
-
-        Returns:
-            The declared rule, utility, and test directory entries.
-
-        Raises:
-            TypeError: If invalid ast-grep testConfigs contract; or if invalid
-                ast-grep; or if ast-grep testConfig must be a mapping.
-
-        """
         declared: MutableMapping[str, Sequence[t.JsonValue]] = {}
         for key in (c.Infra.CODEMOD_RULE_DIRS_KEY, c.Infra.CODEMOD_UTIL_DIRS_KEY):
             raw_value = payload.get(
@@ -105,24 +77,6 @@ class FlextInfraCodemodSnapshotReconciler:
                 raise TypeError(msg)
             test_dirs.append(raw_test_config.get(c.Infra.CODEMOD_TEST_DIR_KEY))
         declared[c.Infra.CODEMOD_TEST_DIR_KEY] = test_dirs
-        return declared
-
-    @staticmethod
-    def _resolved_directories(
-        config_root: Path,
-        config_path: Path,
-        declared: t.MappingKV[str, Sequence[t.JsonValue]],
-    ) -> t.MappingKV[str, t.VariadicTuple[Path]]:
-        """Resolve every declared fixture directory under its config root.
-
-        Returns:
-            The resolved rule, utility, and test directories, deduplicated.
-
-        Raises:
-            ValueError: If invalid ast-grep; or if ast-grep; or if ast-grep
-                fixture path must not be a symlink.
-
-        """
         resolved: MutableMapping[str, t.VariadicTuple[Path]] = {}
         for key, declared_paths in declared.items():
             directories: list[Path] = []
@@ -151,7 +105,11 @@ class FlextInfraCodemodSnapshotReconciler:
                     raise ValueError(msg)
                 directories.append(directory)
             resolved[key] = tuple(dict.fromkeys(directories))
-        return resolved
+        return m.Infra.ModFixtureDirectories(
+            rule_dirs=resolved[c.Infra.CODEMOD_RULE_DIRS_KEY],
+            util_dirs=resolved[c.Infra.CODEMOD_UTIL_DIRS_KEY],
+            test_dirs=resolved[c.Infra.CODEMOD_TEST_DIR_KEY],
+        )
 
     @classmethod
     def stale_snapshots(

@@ -12,7 +12,7 @@ from typing import Annotated
 from flext_cli import m
 
 from flext_infra import c, t
-from flext_infra._models.mixins import FlextInfraModelsMixins
+from flext_infra._models import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCodegenLazyInitModels:
@@ -94,10 +94,7 @@ class FlextInfraModelsCodegenLazyInitModels:
         detail: Annotated[str, m.Field(description="Human-readable check detail")] = ""
         critical: Annotated[bool, m.Field(description="Whether failure is critical")]
 
-    class QualityGateProjectFinding(
-        FlextInfraModelsMixins.ProjectNameMixin,
-        m.ArbitraryTypesModel,
-    ):
+    class QualityGateProjectFinding(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """Per-project quality gate findings."""
 
         violations_total: Annotated[

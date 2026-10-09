@@ -9,7 +9,6 @@ from __future__ import annotations
 import concurrent.futures
 import difflib
 import os
-import sys
 from collections.abc import MutableMapping
 from itertools import islice
 from pathlib import Path
@@ -18,11 +17,9 @@ from typing import ClassVar
 from flext_cli import u
 
 from flext_infra import c, config, m, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDiscovery,
-    FlextInfraUtilitiesProjectDiscovery,
-    FlextInfraUtilitiesResourceLimits,
-)
+from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities.resource_limits import FlextInfraUtilitiesResourceLimits
 
 
 class FlextInfraUtilitiesProtectedEditLinting:
@@ -65,28 +62,23 @@ class FlextInfraUtilitiesProtectedEditLinting:
         )
 
     @staticmethod
-    def _workspace_tool_command(tool_name: str) -> t.StrSequence:
-        """Resolve one fleet lint tool from the active runtime environment.
-
-        The gate protects edits with the fleet's own tools, so it resolves
-        them from the interpreter running the pipeline — never from the lint
-        target, whose environment may not exist (a census target is an
-        arbitrary repository, not necessarily a provisioned workspace).
+    def _workspace_tool_command(workspace: Path, tool_name: str) -> t.StrSequence:
+        """Resolve one tool from the managed external workspace environment.
 
         Returns:
             The resulting ``t.StrSequence``.
 
         Raises:
-            FileNotFoundError: If the active environment lacks the tool.
+            FileNotFoundError: If managed workspace tool is missing.
 
         """
         environment = FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
             workspace,
         )
         executable = tool_name + (".exe" if os.name == "nt" else "")
-        tool_path = environment / executable
+        tool_path = environment / ("Scripts" if os.name == "nt" else "bin") / executable
         if not tool_path.is_file():
-            msg = f"active runtime environment tool is missing: {tool_path}"
+            msg = f"managed workspace tool is missing: {tool_path}"
             raise FileNotFoundError(msg)
         return (str(tool_path),)
 
@@ -199,16 +191,14 @@ class FlextInfraUtilitiesProtectedEditLinting:
         for py_file in paths:
             output = u.Cli.run_raw(
                 [
-                    *cls._workspace_tool_command("ruff"),
+                    *cls._workspace_tool_command(workspace, "ruff"),
                     c.Infra.CHECK,
                     "--fix",
                     str(py_file),
                 ],
                 cwd=cls._command_cwd(py_file, workspace),
-                options=m.Cli.ProcessOptions(
-                    env=cls._command_env(),
-                    remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
-                ),
+                env=cls._command_env(),
+                remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
                 timeout=c.Infra.TIMEOUT_SHORT,
             ).unwrap()
             outcome = output.outcome
@@ -295,7 +285,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
                 ),
             )
         command: t.StrSequence = (
-            *cls._workspace_tool_command(template[0]),
+            *cls._workspace_tool_command(workspace, template[0]),
             *(item.replace("{file}", str(py_file)) for item in template[1:]),
         )
         if (
@@ -488,10 +478,8 @@ class FlextInfraUtilitiesProtectedEditLinting:
         run_result = u.Cli.run_raw(
             cmd,
             cwd=command_cwd,
-            options=m.Cli.ProcessOptions(
-                env=cls._command_env(),
-                remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
-            ),
+            env=cls._command_env(),
+            remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
             timeout=cls._gate_deadline(tool_name),
         )
         if run_result.failure:

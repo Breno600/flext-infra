@@ -12,10 +12,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, r, t
-from flext_infra._utilities import (
+from flext_infra._utilities._docs_command_contract import (
     FlextInfraUtilitiesDocsCommandContractMixin,
+)
+from flext_infra._utilities._docs_generate_plan import (
     FlextInfraUtilitiesDocsGeneratePlanMixin,
-    FlextInfraUtilitiesWorkspaceManifest,
 )
 
 if TYPE_CHECKING:
@@ -81,22 +82,33 @@ class FlextInfraUtilitiesDocsGuidesMixin:
         return re.sub(c.Infra.MARKDOWN_LINK_RE, sanitize_link, content)
 
     @staticmethod
-    def _classified_guide_sources(
+    def docs_project_guides_artifacts(
+        scope: m.Infra.DocScope,
+        *,
+        repository_root: Path,
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
-        source_root: Path,
-        destination_root: Path,
-    ) -> p.Result[
-        t.Pair[
-            t.MutableMappingKV[Path, str],
-            t.MutableMappingKV[Path, str],
-        ]
-    ]:
-        """Split authenticated guide states into source and destination bytes.
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
+        """Plan root-owned guide projections from authenticated snapshot bytes.
 
         Returns:
-            The resulting ``(sources, destinations)`` mapping pair.
+            The resulting
+                ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
+
+        Raises:
+            ValueError: If ``issues``.
 
         """
+        from flext_infra import u
+
+        source_root = repository_root / c.Infra.DIR_DOCS / "guides"
+        destination_root = scope.path / c.Infra.DIR_DOCS / "guides"
+        if source_root == destination_root:
+            # Same-root inputs are authoritative, never their own projections.
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].ok(())
+        if not scope.path.is_relative_to(repository_root):
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
+                f"docs guide scope escapes repository {repository_root}: {scope.path}",
+            )
         sources: MutableMapping[Path, str] = {}
         destinations: MutableMapping[Path, str] = {}
         for state in source_states:
@@ -108,35 +120,14 @@ class FlextInfraUtilitiesDocsGuidesMixin:
             ):
                 continue
             if state.content is None:
-                return r[
-                    t.Pair[
-                        t.MutableMappingKV[Path, str],
-                        t.MutableMappingKV[Path, str],
-                    ]
-                ].fail(f"docs guide source is absent: {path}")
+                return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
+                    f"docs guide source is absent: {path}",
+                )
             content = state.content.decode(c.Cli.ENCODING_DEFAULT)
             if path.parent == source_root:
                 sources[path] = content
             else:
                 destinations[path] = content
-        return r[
-            t.Pair[
-                t.MutableMappingKV[Path, str],
-                t.MutableMappingKV[Path, str],
-            ]
-        ].ok((sources, destinations))
-
-    @staticmethod
-    def _owned_destinations(
-        scope: m.Infra.DocScope,
-        destinations: t.MappingKV[Path, str],
-    ) -> set[Path]:
-        """Collect destination guides still carrying a canonical ownership header.
-
-        Returns:
-            The resulting ``set[Path]``.
-
-        """
         owned: set[Path] = set()
         for path, content in destinations.items():
             lines = content.splitlines()
@@ -179,31 +170,13 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 legacy_ownership + "\n\n",
             )):
                 owned.add(path)
-        return owned
-
-    @classmethod
-    def _rendered_guide_artifacts(
-        cls,
-        scope: m.Infra.DocScope,
-        repository_root: Path,
-        sources: t.MappingKV[Path, str],
-        destinations: t.MappingKV[Path, str],
-        owned: set[Path],
-    ) -> p.Result[list[t.Infra.DocsRenderedArtifactTuple]]:
-        """Render every canonical guide and drop retired owned projections.
-
-        Returns:
-            The resulting ``p.Result[list[t.Infra.DocsRenderedArtifactTuple]]``.
-
-        Raises:
-            ValueError: If issues.
-
-        """
-        loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
-            repository_root,
-        )
+        artifacts: list[t.Infra.DocsRenderedArtifactTuple] = []
+        expected_paths = {destination_root / path.name for path in sources}
+        loaded = u.Infra.load_workspace_manifest(repository_root)
         if loaded.failure:
-            return r[list[t.Infra.DocsRenderedArtifactTuple]].from_failure(loaded)
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
+                loaded,
+            )
         effective_verbs = (
             *config.Infra.codegen.make.verbs,
             *(
@@ -212,18 +185,16 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 for verb in manifest.repository.extra_verbs
             ),
         )
-        destination_root = scope.path / c.Infra.DIR_DOCS / "guides"
-        artifacts: list[t.Infra.DocsRenderedArtifactTuple] = []
         for source_path, source in sorted(sources.items()):
             destination = destination_root / source_path.name
             if destination in destinations and destination not in owned:
-                return r[list[t.Infra.DocsRenderedArtifactTuple]].fail(
+                return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"canonical guide collides with protected custom guide: "
                     f"{destination}",
                 )
             relative_path = source_path.relative_to(repository_root).as_posix()
-            contract_mixin = FlextInfraUtilitiesDocsCommandContractMixin
-            issues = contract_mixin.docs_command_contract_content_issues(
+            contract_issues = FlextInfraUtilitiesDocsCommandContractMixin.docs_command_contract_content_issues
+            issues = contract_issues(
                 source,
                 relative_path=relative_path,
                 effective_verbs=effective_verbs,
@@ -244,60 +215,11 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                     rendered,
                 ),
             ))
-        expected_paths = {destination_root / path.name for path in sources}
         artifacts.extend(
             (scope.path, path, None) for path in sorted(owned - expected_paths)
         )
-        return r[list[t.Infra.DocsRenderedArtifactTuple]].ok(artifacts)
-
-    @classmethod
-    def docs_project_guides_artifacts(
-        cls,
-        scope: m.Infra.DocScope,
-        *,
-        repository_root: Path,
-        source_states: t.SequenceOf[m.Cli.AtomicFileState],
-    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
-        """Plan root-owned guide projections from authenticated snapshot bytes.
-
-        Returns:
-            The resulting
-                ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
-
-        """
-        source_root = repository_root / c.Infra.DIR_DOCS / "guides"
-        destination_root = scope.path / c.Infra.DIR_DOCS / "guides"
-        if source_root == destination_root:
-            # Same-root inputs are authoritative, never their own projections.
-            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].ok(())
-        if not scope.path.is_relative_to(repository_root):
-            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
-                f"docs guide scope escapes repository {repository_root}: {scope.path}",
-            )
-        classified = cls._classified_guide_sources(
-            source_states,
-            source_root,
-            destination_root,
-        )
-        if classified.failure:
-            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
-                classified,
-            )
-        sources, destinations = classified.value
-        owned = cls._owned_destinations(scope, destinations)
-        artifacts = cls._rendered_guide_artifacts(
-            scope,
-            repository_root,
-            sources,
-            destinations,
-            owned,
-        )
-        if artifacts.failure:
-            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
-                artifacts,
-            )
         return FlextInfraUtilitiesDocsGeneratePlanMixin.docs_normalize_artifacts(
-            artifacts.value,
+            artifacts,
         )
 
 

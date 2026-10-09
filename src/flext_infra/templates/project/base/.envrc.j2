@@ -25,18 +25,12 @@ RUNTIME_ROOT="${RUNTIME_ROOT:-${PROJECT_ROOT}}"
 RUNTIME_ROOT="$(cd "${RUNTIME_ROOT}" && pwd -P)"
 watch_file "${PROJECT_ROOT}/pyproject.toml"
 watch_file "${RUNTIME_ROOT}/pyproject.toml"
-watch_file "${RUNTIME_ROOT}/uv.lock"
 watch_file "${RUNTIME_ROOT}/.mise.toml"
-watch_file "${RUNTIME_ROOT}/mise.lock"
+watch_file "${RUNTIME_ROOT}/{{ mise_bootstrap.version_pin_file }}"
+watch_file "${RUNTIME_ROOT}/{{ mise_bootstrap.lock_file }}"
 runtime_parent="$(cd "${RUNTIME_ROOT}/.." && pwd -P)"
 export GIT_CEILING_DIRECTORIES="${runtime_parent}"
 export MISE_CEILING_PATHS="${runtime_parent}"
-# Keep global/system discovery inside the elected runtime's configuration.
-export MISE_CONFIG_DIR="${RUNTIME_ROOT}/.mise"
-export MISE_GLOBAL_CONFIG_FILE="${MISE_CONFIG_DIR}/config.toml"
-export MISE_SYSTEM_CONFIG_DIR="${MISE_CONFIG_DIR}"
-# A file override wins over the system directory in native Mise discovery.
-unset MISE_SYSTEM_CONFIG_FILE
 # A member inside a workspace uses the workspace environment. A linked Git
 # worktree owns a physical sibling environment selected by its Git identity;
 # primary checkouts retain their own local environment.
@@ -62,29 +56,133 @@ export PYTHONUNBUFFERED=1
 # End SECTION: repository environment
 
 # === SECTION: mise activation (managed) ===
-# Source: native mise activation. mise self-manages through the [tools] entry
-# the committed mise.lock pins: `mise install` provisions the pinned release,
-# and the mise-managed shims directory resolves every declared tool — mise
-# included — to exactly that lock. Activation never installs or resolves.
-if ! command -v mise >/dev/null 2>&1; then
-  log_error "mise is not installed; install it (https://mise.run) and run make setup"
+# Source: typed generated Mise storage contract; setup owns installation.
+if [[ -n "${{ '{' }}{{ mise_bootstrap.storage_root_variable }}-}" ]]; then
+  MISE_STORAGE_ROOT="${{ '{' }}{{ mise_bootstrap.storage_root_variable }}{{ '}' }}"
+elif [[ -n "${XDG_DATA_HOME-}" ]]; then
+  MISE_STORAGE_ROOT="${XDG_DATA_HOME}/mise"
+elif [[ -n "${HOME-}" ]]; then
+  MISE_STORAGE_ROOT="${HOME}/.local/share/mise"
+else
+  log_error "{{ mise_bootstrap.storage_root_variable }}, XDG_DATA_HOME, or HOME must identify persistent Mise storage"
   return 1
 fi
-mise_shims_dir="$(mise shims dir 2>/dev/null || true)"
-if [[ -z "${mise_shims_dir}" ]]; then
-  # mise releases without `mise shims dir` publish shims at their own data
-  # root; the documented default keeps activation native and guarded.
-  mise_shims_dir="${XDG_DATA_HOME:-${HOME}/.local/share}/mise/shims"
-fi
-if [[ ! -d "${mise_shims_dir}" ]]; then
-  log_error "mise has no shims directory (${mise_shims_dir}); run make setup"
+case "${MISE_STORAGE_ROOT}" in
+  /*) ;;
+  *) log_error "{{ mise_bootstrap.storage_root_variable }} must be absolute"; return 1 ;;
+esac
+export {{ mise_bootstrap.storage_root_variable }}="${MISE_STORAGE_ROOT}"
+# A killed lock publication may have committed the lock before finishing its
+# launcher and pin files. Its staged, Mise-provisioned Python completes the
+# journal before activation selects any runtime from those files.
+for mise_stage in "${runtime_parent}/.${RUNTIME_ROOT##*/}.mise-lock-stage."*; do
+  [[ -d "${mise_stage}" ]] || continue
+  if [[ ! -f "${mise_stage}/transaction.json" ]]; then
+    log_error "uncommitted Mise stage has no recovery journal: ${mise_stage}"
+    return 1
+  fi
+  if [[ ! -f "${mise_stage}/python-path" ]]; then
+    log_error "Mise transaction lacks its Python receipt: ${mise_stage}"
+    return 1
+  fi
+  IFS= read -r recovery_python < "${mise_stage}/python-path"
+  if [[ ! -x "${recovery_python}" ]]; then
+    log_error "Mise transaction Python is unavailable: ${recovery_python}"
+    return 1
+  fi
+  "${recovery_python}" "${RUNTIME_ROOT}/{{ mise_bootstrap.lock_transaction_script }}" recover "${RUNTIME_ROOT}" "${mise_stage}" || return $?
+done
+mise_pin_file="${RUNTIME_ROOT}/{{ mise_bootstrap.version_pin_file }}"
+if [[ ! -s "${mise_pin_file}" ]]; then
+  log_error "missing or empty ${mise_pin_file}; make upg records the Mise release"
   return 1
 fi
-PATH_add "${mise_shims_dir}"
+mise_release="$(awk '{{ mise_bootstrap.version_pin_reader }}' "${mise_pin_file}")"
+if [[ ! "${mise_release}" =~ ^{{ mise_bootstrap.resolved_release_pattern }}$ ]]; then
+  log_error "${mise_pin_file} must contain a resolved Mise release; make upg writes it"
+  return 1
+fi
+mise_runtime="${MISE_STORAGE_ROOT}/{{ mise_bootstrap.runtime_install_relative_template | replace('{release}', '${mise_release}') }}"
+if [[ "${OS:-}" == "Windows_NT" ]]; then
+  mise_runtime="${mise_runtime}.exe"
+fi
+if [[ ! -x "${mise_runtime}" ]]; then
+  log_error "missing pinned Mise runtime ${mise_runtime}; run make setup"
+  return 1
+fi
+# Read installed tool paths through the pinned runtime. Shared shims can belong
+# to an older host Mise that cannot read this repository's lockfile version.
+# Reuse setup's isolated environment; activation never installs or resolves.
+if mise_bin_paths="$(
+  scratch="$(mktemp -d)" || exit $?
+  trap 'find "${scratch}" -depth -delete' EXIT
+  mkdir -p{% for _name, relative in mise_bootstrap.transient_environment if relative not in mise_bootstrap.empty_files %} "${scratch}/{{ relative }}"{% endfor %} || exit $?
+{% for relative in mise_bootstrap.empty_files -%}
+  : > "${scratch}/{{ relative }}" || exit $?
+{% endfor -%}
+  if env -i \
+{% for name, value in mise_bootstrap.fixed_environment -%}
+    '{{ name }}={{ value }}' \
+{% endfor -%}
+{% for name, relative in mise_bootstrap.transient_environment -%}
+    "{{ name }}=${scratch}/{{ relative }}" \
+{% endfor -%}
+{% for name, relative in mise_bootstrap.persistent_environment -%}
+    "{{ name }}=${MISE_STORAGE_ROOT}{% if relative != '.' %}/{{ relative }}{% endif %}" \
+{% endfor -%}
+    "PATH=${PATH}" \
+    "GIT_CEILING_DIRECTORIES=${runtime_parent}" \
+    "MISE_CEILING_PATHS=${runtime_parent}" \
+    "MISE_TRUSTED_CONFIG_PATHS=${RUNTIME_ROOT}" \
+{% for name, value in mise_bootstrap.offline_environment -%}
+    '{{ name }}={{ value }}' \
+{% endfor -%}
+    "${mise_runtime}" -C "${RUNTIME_ROOT}" bin-paths >"${scratch}/paths" 2>"${scratch}/stderr"; then
+    cat "${scratch}/stderr" >&2
+  else
+    mise_status=$?
+    cat "${scratch}/stderr" >&2
+    cat "${scratch}/paths" >&2
+    exit "${mise_status}"
+  fi
+  if [[ -s "${scratch}/stderr" ]]; then
+    log_error "Mise emitted diagnostics during activation; run make setup"
+    exit 1
+  fi
+  cat "${scratch}/paths"
+)"; then
+  :
+else
+  mise_status=$?
+  return "${mise_status}"
+fi
+if [[ -z "${mise_bin_paths}" ]]; then
+  log_error "Mise returned no installed tool paths; run make setup"
+  return 1
+fi
+mise_paths=()
+while IFS= read -r runtime_bin; do
+  if [[ "${runtime_bin}" != /* || ! -d "${runtime_bin}" ]]; then
+    log_error "Mise returned an unavailable tool directory ${runtime_bin}; run make setup"
+    return 1
+  fi
+  mise_paths+=("${runtime_bin}")
+done <<< "${mise_bin_paths}"
+{% for name, relative in mise_bootstrap.persistent_environment if name == "MISE_SHIMS_DIR" -%}
+export {{ name }}="${MISE_STORAGE_ROOT}{% if relative != "." %}/{{ relative }}{% endif %}"
+PATH_add "${{ '{' }}{{ name }}{{ '}' }}"
+{% endfor -%}
+for ((index={{ '${#mise_paths[@]}' }}-1; index>=0; index--)); do
+  PATH_add "${mise_paths[index]}"
+done
 # End SECTION: mise activation
 
 # === SECTION: configured paths (managed) ===
 # Source: config:environment_path_prepends
+# The tracked bin/mise launcher is reached by the Makefile through its own
+# path, never through PATH: a project bin on PATH made `mise reshim` inside a
+# direnv-loaded checkout bind every shim of the shared MISE_DATA_DIR to that
+# checkout's launcher.
 {%- for extra_path in environment_path_prepends %}
 if [[ -d "${PROJECT_ROOT}/{{ extra_path }}" ]]; then
   PATH_add "${PROJECT_ROOT}/{{ extra_path }}"

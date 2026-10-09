@@ -12,7 +12,7 @@ from flext_tests import tm
 
 from flext_infra import c, config, infra
 from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
-from tests import t, u
+from tests import u
 
 
 class TestsFlextInfraCodegenProjectNewValidation:
@@ -26,7 +26,7 @@ class TestsFlextInfraCodegenProjectNewValidation:
             The resulting ``FlextInfraCodegenProjectNew``.
 
         """
-        defaults: t.StrDict = {
+        defaults: dict[str, str] = {
             "repository_url": "git@github.com:flext-sh/flext-demo.git",
             "repository_branch": "0.12.0-dev",
             "flext_repository_url": u.Tests.repository_ref(config.Infra.name).url,

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraPyprojectModernizer, config, main
+from flext_infra import FlextInfraPyprojectModernizer, config, main, u as infra_u
 from tests import c, m, u
 
 if TYPE_CHECKING:
@@ -53,8 +53,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
         )
         config_path = tmp_path / ".taplo.toml"
         config_path.write_text('include = ["**/*.toml"]\n', encoding="utf-8")
-        formatter = u.Infra.format_toml_source
-        taplo_version = config.Infra.codegen.toolchain.tool_versions["taplo"]
+        formatter = infra_u.Infra.format_toml_source
+        taplo_version = config.Infra.codegen.toolchain.taplo_version
         process_timeout_seconds = (
             config.Infra.tooling.tools.tomlsort.process_timeout_seconds
         )
@@ -97,11 +97,11 @@ class TestsFlextInfraDepsModernizerWorkspace:
         future_root = tmp_path / "future" / "project"
 
         formatted = tm.ok(
-            u.Infra.format_toml_source(
+            infra_u.Infra.format_toml_source(
                 'name="demo"\n',
                 path=future_root / "pyproject.toml",
                 toolchain_root=future_root,
-                taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
+                taplo_version=config.Infra.codegen.toolchain.taplo_version,
                 process_timeout_seconds=(
                     config.Infra.tooling.tools.tomlsort.process_timeout_seconds
                 ),
@@ -137,11 +137,11 @@ class TestsFlextInfraDepsModernizerWorkspace:
             f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}",
         )
 
-        formatted = u.Infra.format_toml_source(
+        formatted = infra_u.Infra.format_toml_source(
             'name="demo"\n',
             path=tmp_path / "pyproject.toml",
             toolchain_root=tmp_path,
-            taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
+            taplo_version=config.Infra.codegen.toolchain.taplo_version,
             process_timeout_seconds=(
                 config.Infra.tooling.tools.tomlsort.process_timeout_seconds
             ),
@@ -153,11 +153,11 @@ class TestsFlextInfraDepsModernizerWorkspace:
     @staticmethod
     def test_taplo_fails_loud_without_a_committed_lock(tmp_path: Path) -> None:
         """No mise.lock above the workspace means no offline generation."""
-        formatted = u.Infra.format_toml_source(
+        formatted = infra_u.Infra.format_toml_source(
             'name="demo"\n',
             path=tmp_path / "pyproject.toml",
             toolchain_root=tmp_path,
-            taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
+            taplo_version=config.Infra.codegen.toolchain.taplo_version,
             process_timeout_seconds=(
                 config.Infra.tooling.tools.tomlsort.process_timeout_seconds
             ),

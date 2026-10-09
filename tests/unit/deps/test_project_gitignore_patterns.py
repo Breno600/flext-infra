@@ -7,16 +7,13 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
 from flext_infra import c, config, m, u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-
-if TYPE_CHECKING:
-    from tests import t
+from tests import t
 
 
 class TestsFlextInfraProjectGitignorePatterns:
@@ -66,12 +63,8 @@ class TestsFlextInfraProjectGitignorePatterns:
         root = self._project(
             tmp_path / "project",
             {
-                "one.yaml": (
-                    "ManagedArtifacts:\n  Gitignore:\n    patterns: [.dmypy/, logs/]\n"
-                ),
-                "two.yaml": (
-                    "ManagedArtifacts:\n  Gitignore:\n    patterns: [logs/, .serena/]\n"
-                ),
+                "one.yaml": "ManagedArtifacts:\n  Gitignore:\n    patterns: [.dmypy/, logs/]\n",
+                "two.yaml": "ManagedArtifacts:\n  Gitignore:\n    patterns: [logs/, .serena/]\n",
             },
         )
 
