@@ -567,6 +567,30 @@ Infra:
               authority: operator-ruling-2026-10-02-mcb-tests-python
               reason: >-
                 mcb tests/python exercises the scripts automation end to end (migrated from the retired project per-file surface: TRY003). Subprocess relief removed by operator-ruling-2026-10-08-subprocess-supersedes-all.
+            - files: "src/flext_cli/_utilities/processes.py"
+              rules: [ suspicious-subprocess-import, subprocess-without-shell-equals-true ]
+              authority: operator-ruling-2026-10-08-subprocess-supersedes-all
+              reason: >-
+                flext-cli owns the child-process lifecycle: this module is the
+                Popen machinery that u.Cli.run itself is built on, so the
+                ruling's "processes go through u.Cli.run" terminates here and
+                cannot apply to the owner without a circular rewire. Bounded
+                to the two owner modules; every other caller is rewired.
+            - files: "src/flext_cli/_utilities/runtime.py"
+              rules: [ suspicious-subprocess-import, subprocess-without-shell-equals-true ]
+              authority: operator-ruling-2026-10-08-subprocess-supersedes-all
+              reason: >-
+                Same owner boundary as processes.py: the streamed-lifecycle
+                raw child spawn lives here by design under the u.Cli.run
+                facade. Bounded to this module.
+            - files: "**/.agents/skills/webapp-testing/scripts/with_server.py"
+              rules: [ suspicious-subprocess-import, subprocess-without-shell-equals-true ]
+              authority: operator-ruling-2026-10-08-subprocess-supersedes-all
+              reason: >-
+                Standalone skill bootstrap (webapp-testing) runs before any
+                workspace venv exists and cannot import the u.Cli facade; it
+                owns its dev-server process lifecycle by design. Bounded to
+                this single skill script.
       mypy:
         # Wall-time bound for the bounded Mypy execution (SSOT). A project
         # config/tooling.yaml overlay may only lower it; no environment
