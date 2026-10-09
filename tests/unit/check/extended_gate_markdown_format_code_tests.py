@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import c, m
@@ -58,23 +59,33 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         )
         return project_dir
 
-    def test_format_gate_reports_unformatted_markdown(self, tmp_path: Path) -> None:
-        """`rumdl fmt --check` names the file it would rewrite."""
+    @pytest.mark.parametrize("force_color", ["0", "1"])
+    def test_format_gate_reports_unformatted_markdown(
+        self,
+        tmp_path: Path,
+        force_color: str,
+    ) -> None:
+        """The real formatter's plain and colored findings name the same file."""
         project_dir = self._project(
             tmp_path,
             "markdown-format-project",
             self.UNFORMATTED_LIST,
         )
 
-        result = u.Tests.check_gate_asserting(
-            FlextInfraMarkdownFormatGate,
-            tmp_path,
-            project_dir,
-            passed=False,
-            issues_len=1,
-        )
+        with tm.scope(env={"FORCE_COLOR": force_color}):
+            result = u.Tests.check_gate_asserting(
+                FlextInfraMarkdownFormatGate,
+                tmp_path,
+                project_dir,
+                passed=False,
+                issues_len=1,
+            )
 
-        tm.that(result.issues[0].code, eq=c.Infra.MARKDOWN_FORMAT)
+        tm.that(
+            result.issues[0].code,
+            eq=c.Infra.MARKDOWN_FORMAT,
+            msg=result.issues[0].message,
+        )
         tm.that(result.issues[0].file, eq="README.md")
 
     def test_format_gate_passes_formatted_markdown(self, tmp_path: Path) -> None:

@@ -7,12 +7,13 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import shutil
+import stat
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import main
+from flext_infra import config, infra, main
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
 from tests import c, u
@@ -25,7 +26,62 @@ class TestsFlextInfraCodegenConformPublicSurface:
     """The conform public surface: docs bootstrap, CLI routing, dependency scope."""
 
     @staticmethod
-    def test_workspace_uv_plan_owns_root_lock_and_editable_repositories(
+    @pytest.mark.parametrize("initial_state", ["invalid", "absent", "wrong-mode"])
+    def test_mise_config_repairs_invalid_toml_without_touching_other_surfaces(
+        infra_git_repo: Path,
+        initial_state: str,
+    ) -> None:
+        """Repair bytes and mode through the leased transaction, then converge."""
+        root = infra_git_repo
+        TestsFlextInfraConformSupport.seed_infra_package_tree(root)
+        destination = root / c.Infra.MISE_TOML_FILENAME
+        desired_mode = next(
+            item.mode
+            for item in config.Infra.codegen.managed_files
+            if item.path == Path(destination.name)
+        )
+        request = u.Tests.conform_request(
+            root,
+            what=c.Infra.CodegenConformSurface.MISE_CONFIG,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        )
+        if initial_state == "invalid":
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    destination, '[tools]\npython="a"\npython="b"\n'
+                )
+            )
+        elif initial_state == "absent" and destination.exists():
+            destination.unlink()
+        if initial_state == "wrong-mode":
+            tm.ok(infra.codegen_conform(request))
+            destination.chmod(desired_mode ^ stat.S_IWGRP)
+        before = TestsFlextInfraConformSupport.project_tree(root)
+        result = tm.ok(infra.codegen_conform(request))
+        tm.that(result.written_files, eq=(destination,))
+        tm.that(stat.S_IMODE(destination.stat().st_mode), eq=desired_mode)
+        payload = u.Cli.toml_mapping_from_text(destination.read_text(encoding="utf-8"))
+        tm.that(payload is not None, eq=True)
+        tools = u.Tests.toml_table_at(destination.read_text(encoding="utf-8"), "tools")
+        tm.that(
+            set(tools),
+            eq={
+                "python",
+                config.Infra.codegen.toolchain.mise_selector,
+                *config.Infra.codegen.toolchain.tool_keys.values(),
+            },
+        )
+        after = TestsFlextInfraConformSupport.project_tree(root)
+        tm.that(
+            tuple(item for item in after if item[0] != destination.name),
+            eq=tuple(item for item in before if item[0] != destination.name),
+        )
+        tm.that(tm.ok(infra.codegen_conform(request)).written_files, eq=())
+        tm.that(stat.S_IMODE(destination.stat().st_mode), eq=desired_mode)
+
+    @staticmethod
+    def test_workspace_uv_plan_owns_root_environment_and_native_member_sources(
         tmp_path: Path,
     ) -> None:
         """Keep workspace setup data complete without Make-side re-derivation."""
@@ -44,13 +100,33 @@ class TestsFlextInfraCodegenConformPublicSurface:
             workspace,
         )
         planned = service.plan(request)
-        tm.ok(planned)
-        environment = planned.value.uv_environments[0]
+        plan = tm.ok(planned)
+        environment = plan.uv_environments[0]
         tm.that(environment.environment_root, eq=root.resolve())
-        tm.that(environment.groups, eq=("dev", "codegen", "workspace"))
+        target = TestsFlextInfraConformSupport.conform_target(
+            root.resolve(),
+            plan.repositories[0],
+            make_profile=workspace.repository.role,
+        )
         tm.that(
-            tuple(item.name for item in environment.editable_repositories),
-            eq=("flext-core",),
+            environment,
+            eq=service.uv_environment_plan(
+                root=root.resolve(),
+                target=target,
+                workspace=workspace,
+                config=config.Infra.codegen,
+            ),
+        )
+        pyproject = u.Tests.codegen_file_text(
+            next(file for file in plan.files if file.path == root / "pyproject.toml"),
+        )
+        tm.that(
+            u.Tests.toml_table_at(pyproject, "tool", "uv", "sources"),
+            eq={
+                repository.distribution: {"workspace": True}
+                for repository in workspace.subprojects
+                if repository.package
+            },
         )
 
     @staticmethod

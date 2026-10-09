@@ -129,6 +129,17 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
     @runtime_checkable
+    class CodegenParticipantPolicyFactory(Protocol):
+        """Composition-root authorization for one generation request."""
+
+        def __call__(
+            self,
+            root: Path,
+        ) -> p.Result[m.Infra.CodegenParticipantPolicy]:
+            """Read the request's physical topology without acquiring a lease."""
+            ...
+
+    @runtime_checkable
     class CandidateBootstrapPlanner(Protocol):
         """Conform plan boundary consumed by the candidate campaign."""
 
@@ -230,8 +241,7 @@ class FlextInfraProtocolsBase(Protocol):
             scope_root: Path,
             roots: t.MappingKV[str, Path],
             analysis: m.Infra.CodegenPhaseAnalysis,
-            directories: t.VariadicTuple[Path],
-            validator: Callable[[], p.Result[bool]],
+            policy: m.Infra.CodegenPhasePublicationPolicy,
         ) -> p.Result[t.VariadicTuple[Path]]:
             """Publish one recoverable multi-root phase and verify before commit."""
             ...

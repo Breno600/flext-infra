@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 from flext_tests import tm
@@ -20,10 +20,6 @@ from flext_infra.codemod import (
     FlextInfraNamespaceRelocationPhase,
 )
 from tests import u
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 _SOURCE_NAME = next(iter(c.ENFORCEMENT_ACCESSOR_RENAMES))
 _REPLACEMENT_NAME = c.ENFORCEMENT_ACCESSOR_RENAMES[_SOURCE_NAME][0]
@@ -59,6 +55,7 @@ def _phase_fixture(tmp_path: Path) -> tuple[Path, Path, Path, Path, Path]:
         tmp_path,
         package_name="flext_core",
     )
+    u.Tests.copy_tracked_mise_seeds(project)
     service_file = pkg / "service.py"
     _ = service_file.write_text(
         "from __future__ import annotations\n"
@@ -99,6 +96,26 @@ def _phase_fixture(tmp_path: Path) -> tuple[Path, Path, Path, Path, Path]:
 
 class TestsFlextInfraCodemodLoopPhases:
     """Behavior contract for test_mod_loop_phases."""
+
+    @staticmethod
+    def test_managed_scanner_keeps_resolution_outside_consumer_cwd(
+        tmp_path: Path,
+    ) -> None:
+        """Resolve at the declared owner, then scan a tree with no Mise declaration."""
+        project = u.Tests.create_codegen_project(
+            tmp_path=tmp_path,
+            name="scan-target",
+            pkg_name="scan_target",
+            files={"module.py": "value = 1\n"},
+        )
+        owner = Path(__file__).resolve().parents[3]
+        binary = tm.ok(u.Infra.managed_mise_binary("ast-grep", owner))
+        tm.that(binary.is_absolute(), eq=True)
+        tm.that((project / c.Infra.MISE_TOML_FILENAME).exists(), eq=False)
+        report = tm.ok(FlextInfraModGateEngine.scan(project, fix=False))
+        tm.that(
+            any(entry.file.name == "module.py" for entry in report.entries), eq=True
+        )
 
     @staticmethod
     def test_namespace_phase_relocates_from_the_loop_scan(

@@ -262,7 +262,13 @@ class TestsFlextInfraFamilyFlatten:
     @staticmethod
     @pytest.mark.parametrize(
         "reference",
-        ["ALIAS = {owner}.Wrapper", 'alias: "{owner}.Wrapper"'],
+        [
+            "ALIAS = {owner}.Wrapper",
+            "different_name = {owner}.Wrapper",
+            "first = {owner}.Wrapper\nsecond = first",
+            "instance = {owner}.Wrapper()",
+            'alias: "{owner}.Wrapper"',
+        ],
     )
     def test_wrapper_used_as_an_entity_is_preserved_without_edits(
         tmp_path: Path,

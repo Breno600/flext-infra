@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c, m, p
-from tests import u
+from flext_infra import FlextInfraWorktreeService
+from tests import c, m, p, u
 
 
 class TestsFlextInfraWorktreeSecurityBoundaries:

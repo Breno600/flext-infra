@@ -125,6 +125,10 @@ candidate campaign adds exact paths only in its worktree lane and removes them b
 landing. An empty list
 fails loud when the verb runs, rather than claiming a completed bootstrap. After
 Makefile bootstrap, run `make setup` and `make gen` in that consumer's worktree.
+The `pyproject` bootstrap regenerates declared tool tables through the existing
+dependency conformance phases before Rope or uv reads the physical document. Project
+metadata, dependency groups, and unowned tables remain live inputs; multiline string
+contents never select a table. Normal generation and all gates still run afterward.
 `docs-config` renders only the declared docs policy template when a conflicted
 generated JSON file prevents ordinary generation from parsing it; afterward run
 `make gen` to verify the full projection. Generated targets are never edited
@@ -137,6 +141,15 @@ project its managed files, including CI. The
 a member checkout has been initialized only partially and still lacks its
 `pyproject.toml`; that is the state the new Make setup must repair. All other conform
 surfaces continue to reject that incomplete member.
+
+The public `codegen conform --what mise-config --scope self` recovery surface
+regenerates only the selected checkout's `.mise.toml` from the canonical toolchain,
+template, and declared project overlay. It snapshots the malformed destination as
+raw bytes rather than parsing it as input. Apply holds the existing file transaction
+lease and validates the journal-owned staged TOML before publication, then verifies
+the live declaration and its fixed point. It installs no tools, changes no lockfile,
+and rejects fleet scopes. Run the read-only `codegen mise-proof` for that checkout
+before invoking a lifecycle command that requires its frozen installed toolchain.
 
 A dedicated integration worktree may stage exact supplier commits in its handwritten
 `config/workspace.yaml` under `candidate_dependencies`. Each entry declares the

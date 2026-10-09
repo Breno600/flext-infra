@@ -17,7 +17,6 @@ from flext_infra.refactor._accessor_report import FlextInfraAccessorMigrationRep
 from flext_infra.refactor._accessor_rewrite import (
     FlextInfraAccessorMigrationRewriteMixin,
 )
-from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -90,6 +89,10 @@ class FlextInfraAccessorMigrationOrchestrator(
             The resulting ``p.Result[m.Infra.AccessorMigrationReport]``.
 
         """
+        from flext_infra.refactor._import_enforcement import (
+            FlextInfraImportNormalization,
+        )
+
         selected_projects: t.StrSequence = (
             self.project_names if self.project_names is not None else ()
         )

@@ -11,7 +11,7 @@ from pathlib import Path
 from git import GitCommandError, Repo
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities import FlextInfraUtilitiesGitRepo
+from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
 
 
 class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
@@ -60,11 +60,12 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         repo_path = request.repo_root.expanduser().resolve()
         try:
             repo = cls._repo(repo_path)
-            lifecycle = cls._lifecycle_porcelain(
-                repo,
-                repo_path,
-                repo.git.status("--porcelain", "--untracked-files=all"),
-            )
+            with repo.git.custom_environment(GIT_OPTIONAL_LOCKS="0"):
+                lifecycle = cls._lifecycle_porcelain(
+                    repo,
+                    repo_path,
+                    repo.git.status("--porcelain", "--untracked-files=all"),
+                )
         except GitCommandError as exc:
             return r[m.Infra.GitStatusReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:

@@ -75,8 +75,8 @@ class TestsFlextInfraBuilder:
             match kwargs.get("projects"):
                 case list() as projects:
                     tm.ok(builder.build(tmp_path, projects=projects))
-                case invalid:
-                    pytest.fail(f"invalid projects test case: {invalid!r}")
+                case invalid_projects:
+                    pytest.fail(f"invalid projects test case: {invalid_projects!r}")
 
     @staticmethod
     @pytest.mark.parametrize("status", ["OK", "FAIL", "SKIP"])

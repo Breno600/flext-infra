@@ -10,9 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import m, r, u
-from flext_infra.codegen._mise_artifacts_candidates import (
-    FlextInfraMiseArtifactsCandidates,
-)
 from flext_infra.codegen._mise_artifacts_process import (
     FlextInfraMiseArtifactsProcess as process,
 )
@@ -40,6 +37,10 @@ class FlextInfraMiseStaging:
                 t.VariadicTuple[m.Cli.AtomicDirectoryState]]]``.
 
         """
+        from flext_infra.codegen._mise_artifacts_candidates import (
+            FlextInfraMiseArtifactsCandidates,
+        )
+
         result_type = r[
             tuple[
                 tuple[m.Infra.CodegenStagedFile, ...],

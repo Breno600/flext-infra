@@ -11,12 +11,13 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_infra import c, t
-from flext_infra._models import FlextInfraModelsWorkspace
+from flext_infra import c, m, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDependencies,
-    FlextInfraUtilitiesDocsScopePathsMixin,
     FlextInfraUtilitiesPyproject,
+)
+from flext_infra._utilities._docs_scope_paths import (
+    FlextInfraUtilitiesDocsScopePathsMixin,
 )
 
 
@@ -26,7 +27,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
     @staticmethod
     def _project_state(
         project_root: Path,
-    ) -> FlextInfraModelsWorkspace.ProjectPyprojectState:
+    ) -> m.Infra.ProjectPyprojectState:
         """Return project state bound to the current authenticated file bytes.
 
         When the pyproject is absent or empty, the returned state carries
@@ -61,11 +62,11 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         root: Path,
         pyproject_path: Path,
         content: bytes | None,
-    ) -> FlextInfraModelsWorkspace.ProjectPyprojectState:
+    ) -> m.Infra.ProjectPyprojectState:
         """Parse once per byte-identical canonical pyproject snapshot.
 
         Returns:
-            The resulting ``FlextInfraModelsWorkspace.ProjectPyprojectState``.
+            The resulting ``m.Infra.ProjectPyprojectState``.
 
         Raises:
             ValueError: If ``recovered.failure``; or if docs pyproject TOML is invalid;
@@ -100,7 +101,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             ),
         )
         if not payload:
-            return FlextInfraModelsWorkspace.ProjectPyprojectState(
+            return m.Infra.ProjectPyprojectState(
                 project_root=root,
                 pyproject_path=pyproject_path,
                 payload=payload,
@@ -109,7 +110,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
                 package_name="",
                 dependency_names=dependency_names,
             )
-        return FlextInfraModelsWorkspace.ProjectPyprojectState(
+        return m.Infra.ProjectPyprojectState(
             project_root=root,
             pyproject_path=pyproject_path,
             payload=payload,
@@ -133,7 +134,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
     @staticmethod
     def project_state(
         project_root: Path,
-    ) -> FlextInfraModelsWorkspace.ProjectPyprojectState:
+    ) -> m.Infra.ProjectPyprojectState:
         """Return one fresh state bound to authenticated pyproject bytes.
 
         Returns:

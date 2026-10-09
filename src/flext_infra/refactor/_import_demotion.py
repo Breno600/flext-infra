@@ -104,13 +104,15 @@ class FlextInfraImportNormalizationDemotionMixin(
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]],
     ) -> None:
         """Record one subject import's demotion plan into insertions/edits."""
-        demotable: list[tuple[str, str | None]] = []
+        demotable: list[tuple[str, str]] = []
         kept: list[str] = []
         for alias in node.names:
             demotes, bound = cls._record_alias_plan(scan, node, alias, insertions)
             if not demotes:
                 if bound is not None:
                     kept.append(bound)
+                continue
+            if bound is None:
                 continue
             demotable.append((alias.name, bound))
         if not demotable:
@@ -191,7 +193,7 @@ class FlextInfraImportNormalizationDemotionMixin(
             (
                 node.lineno,
                 cls._end_line(node),
-                (f"from {node.module} import {clauses}",),
+                (f"from {node.module or ''} import {clauses}",),
             ),
         )
 

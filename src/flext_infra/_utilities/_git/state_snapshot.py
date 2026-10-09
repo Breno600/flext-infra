@@ -13,10 +13,7 @@ from pathlib import Path
 from git import GitCommandError
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGitRepo,
-    FlextInfraUtilitiesGitWorktreeIO,
-)
+from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
 
 
 class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
@@ -38,6 +35,8 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def _state_file(cls, root: Path, relative: Path) -> m.Infra.GitWorktreeFileState:
+
+        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
 
         path = root / relative
         if any((root / parent).is_symlink() for parent in relative.parents):

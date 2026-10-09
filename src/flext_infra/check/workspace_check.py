@@ -26,9 +26,9 @@ class FlextInfraWorkspaceChecker(
 ):
     """Run workspace quality gates and generate reports."""
 
-    _repository_root: Path
-    _registry: FlextInfraGateRegistry
-    _default_reports_dir: Path
+    _repository_root: Path = u.PrivateAttr()
+    _registry: FlextInfraGateRegistry = u.PrivateAttr()
+    _default_reports_dir: Path = u.PrivateAttr()
     model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
         validate_by_name=True,
         validate_by_alias=True,
@@ -101,7 +101,7 @@ class FlextInfraWorkspaceChecker(
         if selected_files_result.failure:
             return r[bool].from_failure(selected_files_result)
         selected_files = selected_files_result.value
-        project_targets_result = self._resolve_project_targets(params)
+        project_targets_result = self._resolve_project_targets(params, selected_files)
         if project_targets_result.failure:
             return r[bool].from_failure(project_targets_result)
         project_targets = project_targets_result.value
@@ -235,17 +235,38 @@ class FlextInfraWorkspaceChecker(
     @staticmethod
     def _resolve_project_targets(
         params: m.Infra.RunCommand,
+        selected_files: t.VariadicTuple[Path],
     ) -> p.Result[t.SequenceOf[m.Infra.CheckProjectTarget]]:
         """Resolve the selected projects; an omitted selection is this repository.
 
         Every repository evaluates only itself: an
         omitted ``--projects`` never widens to the declared members, and a root
         that is not a project fails loud through the topology owner.
+        A literal file selects only its deepest declared project owner.
 
         Returns:
             The resulting ``p.Result[t.SequenceOf[m.Infra.CheckProjectTarget]]``.
 
         """
+        if selected_files:
+            discovered = u.Infra.resolve_projects(params.repository_root, ())
+            if discovered.failure:
+                return r[t.SequenceOf[m.Infra.CheckProjectTarget]].from_failure(
+                    discovered,
+                )
+            owners = [
+                project
+                for project in discovered.value
+                if selected_files[0].is_relative_to(project.path)
+            ]
+            if not owners:
+                return r[t.SequenceOf[m.Infra.CheckProjectTarget]].fail(
+                    f"FILE has no declared project owner: {selected_files[0]}",
+                )
+            owner = max(owners, key=lambda project: len(project.path.parts))
+            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok((
+                m.Infra.CheckProjectTarget(name=owner.name, path=owner.path),
+            ))
         requested = params.project_names
         if requested:
             return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(

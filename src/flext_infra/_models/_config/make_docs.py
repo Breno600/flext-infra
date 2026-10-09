@@ -12,7 +12,7 @@ from typing import Annotated, Self
 from flext_cli import m
 
 from flext_infra import c, t
-from flext_infra._models import FlextInfraConfigModelsContract
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsMakeDocs:

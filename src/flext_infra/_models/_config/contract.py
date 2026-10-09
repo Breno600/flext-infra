@@ -1,4 +1,4 @@
-"""Shared contract base and root aliases for config models.
+"""Shared config contract base and inherited toolchain declarations.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -13,11 +13,11 @@ from typing import Annotated, Self
 from flext_cli import m
 
 from flext_infra import c, t
-from flext_infra._models import FlextInfraModelsMiseToolchain
+from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
 
 
-class FlextInfraConfigModelsContract:
-    """Shared contract base and root aliases for config models."""
+class FlextInfraConfigModelsContract(FlextInfraModelsMiseToolchain):
+    """Shared config contract base and inherited toolchain declarations."""
 
     class ConfigContract(m.ContractModel):
         """Public declarative base for schema-loaded codegen records."""
@@ -87,14 +87,3 @@ class FlextInfraConfigModelsContract:
             for pattern in self.placeholder_patterns:
                 re.compile(pattern)
             return self
-
-    # These four names are runtime re-exports, never PEP 695 aliases: the
-    # ``m.Infra`` flattening composes this class beside
-    # ``FlextInfraModelsMiseToolchain``, so a ``type`` statement here would
-    # bind a ``TypeAliasType`` attribute that shadows the owner's real model
-    # class and breaks every constructor and ``model_fields`` read that goes
-    # through ``m.Infra.*`` (the ``make gen`` render context does exactly
-    # that). A bare assignment keeps the attribute as the class itself.
-    BeadsEndpointSpec = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
-    BeadsToolSpec = FlextInfraModelsMiseToolchain.BeadsToolSpec
-    ToolchainSpec = FlextInfraModelsMiseToolchain.ToolchainSpec

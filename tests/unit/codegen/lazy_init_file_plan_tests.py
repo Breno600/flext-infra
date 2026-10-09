@@ -21,6 +21,78 @@ from tests import c, m, u
 class TestsFlextInfraCodegenLazyInitFilePlans:
     """Prove lazy-init describes effects without owning publication."""
 
+    @pytest.mark.parametrize("family", ["m", "p", "u"])
+    def test_facade_plan_selects_declared_family_and_only_requested_module(
+        self,
+        tmp_path: Path,
+        family: str,
+    ) -> None:
+        """Exact facade selection reuses discovery without rewriting other surfaces."""
+        root, package = u.Tests.create_lazy_init_workspace(tmp_path)
+        workspace = u.Tests.standalone_workspace(root, root.name)
+        destination = package / "selected.py"
+        self._write_facade_selection_fixture(package, family)
+        before = {
+            path: path.read_bytes() for path in package.rglob(c.Infra.EXT_PYTHON_GLOB)
+        }
+        request = m.Infra.CodegenConformRequest(
+            root=root,
+            what=c.Infra.CodegenConformSurface.FACADES,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.CHECK,
+            module=f"{package.name}.{destination.stem}",
+        )
+
+        plan = tm.ok(
+            FlextInfraCodegenConform(
+                repository_root=root,
+                initial_workspace=workspace,
+                request=request,
+            ).plan(request),
+        )
+
+        tm.that(tuple(file.path for file in plan.files), eq=(destination,))
+        tm.that(plan.uv_environments, eq=())
+        file = plan.files[0]
+        source = tm.not_none(file.desired_content).decode(c.Cli.ENCODING_DEFAULT)
+        tm.that(source, has="PayloadOwner")
+        tm.that(source, has="class Sample(ExistingOwner, PayloadOwner)")
+        tm.that(source, has="retained = 'unchanged'")
+        tm.that(
+            {state.path for state in file.source_states},
+            eq=set(before),
+        )
+        tm.that({path: path.read_bytes() for path in before}, eq=before)
+
+    @staticmethod
+    def _write_facade_selection_fixture(package: Path, family: str) -> None:
+        """Declare a nonstandard destination and a local executable consumer."""
+        directory = u.Infra.facade_families()[family].directory
+        owners = package / directory
+        owners.mkdir()
+        payload = (
+            "    @staticmethod\n    def Payload() -> None:\n        pass\n"
+            if family == "u"
+            else "    class Payload:\n        pass\n"
+        )
+        sources = {
+            owners / "payload.py": "class PayloadOwner:\n" + payload,
+            owners / "existing.py": "class ExistingOwner:\n    pass\n",
+            package / "selected.py": (
+                f"from {package.name}.{directory}.existing import ExistingOwner\n\n"
+                "class Facade:\n"
+                "    class Sample(ExistingOwner):\n"
+                "        retained = 'unchanged'\n\n"
+                f"{family} = Facade\n__all__ = ['Facade', '{family}']\n"
+            ),
+            package / "consumer.py": (
+                f"from {package.name} import {family}\n{family}.Sample.Payload()\n"
+            ),
+            package / c.Infra.INIT_PY: f"from .selected import {family}\n",
+        }
+        for path, source in sources.items():
+            tm.ok(u.Cli.atomic_write_text_file(path, source))
+
     @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("scope", tuple(c.Infra.CodegenConformScope))
@@ -143,6 +215,32 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
                 eq=repository.resolve() in expected,
             )
         tm.ok(infra.codegen_conform(request, workspace))
+        if scope is c.Infra.CodegenConformScope.ALL:
+            projections = (
+                *(package / c.Infra.INIT_PY for package in packages),
+                *(repository / c.Infra.MAKEFILE_FILENAME for repository in selected),
+            )
+            converged = {path: path.read_bytes() for path in projections}
+            tm.ok(infra.codegen_conform(applied, workspace))
+            tm.that({path: path.read_bytes() for path in projections}, eq=converged)
+
+            member_makefile = member / c.Infra.MAKEFILE_FILENAME
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    member_makefile,
+                    member_makefile.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+                    + "# managed member drift\n",
+                ),
+            )
+            drifted = {path: path.read_bytes() for path in projections}
+            tm.fail(
+                infra.codegen_conform(request, workspace),
+                has="codegen drift detected",
+            )
+            tm.that({path: path.read_bytes() for path in projections}, eq=drifted)
+            tm.ok(infra.codegen_conform(applied, workspace))
+            tm.that({path: path.read_bytes() for path in projections}, eq=converged)
+            tm.ok(infra.codegen_conform(request, workspace))
 
     @staticmethod
     def test_scope_outside_workspace_is_a_causal_plan_failure(

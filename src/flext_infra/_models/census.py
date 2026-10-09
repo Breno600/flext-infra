@@ -11,7 +11,7 @@ from typing import Annotated, ClassVar
 
 from flext_core import m
 from flext_infra import c, t
-from flext_infra._models import FlextInfraModelsMixins
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsCensus:
@@ -32,6 +32,10 @@ class FlextInfraModelsCensus:
             str,
             m.Field(description="Reference surface (src/tests/examples/scripts)"),
         ] = c.Infra.DEFAULT_SRC_DIR
+        offset: Annotated[
+            t.NonNegativeInt | None,
+            m.Field(description="Rope character offset for exact occurrence evidence"),
+        ] = None
 
     class Object(
         FlextInfraModelsMixins.AbsoluteFilePathTextMixin,
@@ -89,6 +93,21 @@ class FlextInfraModelsCensus:
         script_reference_sites: t.VariadicTuple[
             FlextInfraModelsCensus.ReferenceSite
         ] = m.Field(default_factory=tuple, description="Script reference sites")
+        all_reference_sites: t.VariadicTuple[FlextInfraModelsCensus.ReferenceSite] = (
+            m.Field(
+                default_factory=tuple,
+                description=(
+                    "Qualified indexed occurrences on all surfaces, including reexports; "
+                    "not reachability"
+                ),
+            )
+        )
+        reference_evidence_collected: Annotated[
+            bool,
+            m.Field(
+                description="Whether the indexed Rope occurrence search was performed",
+            ),
+        ] = False
         fingerprint: Annotated[
             str,
             m.Field(description="Normalized Rope-derived semantic fingerprint"),

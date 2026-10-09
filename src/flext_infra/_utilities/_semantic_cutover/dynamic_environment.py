@@ -20,8 +20,10 @@ from libcst.metadata import (
     QualifiedNameSource,
 )
 
-from flext_infra._utilities import (
+from flext_infra._utilities._semantic_cutover.bindings import (
     FlextInfraUtilitiesSemanticCutoverBindings,
+)
+from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
 

@@ -13,7 +13,6 @@ import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider
 
 from flext_infra import m, t
-from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
@@ -139,6 +138,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             The absolute dotted module name.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         suffix = FlextInfraUtilitiesQualifiedNames.dotted_name(node.module) or ""
         if not node.relative:
             return suffix
@@ -157,6 +158,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             The ``as`` name, else the imported dotted name.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         if imported.asname is not None and isinstance(imported.asname.name, cst.Name):
             return imported.asname.name.value
         return FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
@@ -177,6 +180,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             nested modules whose members or owner it already imports.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         if isinstance(node.names, cst.ImportStar):
             return {}, frozenset()
         base = cls._imported_module(
@@ -198,7 +203,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
         return aliases, frozenset(owner_imports)
 
     @classmethod
-    def _import_bindings(
+    def _nested_import_bindings(
         cls,
         node: cst.Import,
         bindings_by_module: t.MappingKV[str, t.StrMapping],
@@ -209,6 +214,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             Local name to nested module.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         bound: t.MutableStrMapping = {}
         for imported in node.names:
             full = FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
@@ -230,6 +237,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             use that still needs the module object.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
             parent,
             node,
@@ -264,7 +273,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             bindings_by_module=bindings_by_module,
             classifiers=(
                 cls._from_import_bindings,
-                cls._import_bindings,
+                cls._nested_import_bindings,
                 cls._reads_moved_member,
             ),
         )

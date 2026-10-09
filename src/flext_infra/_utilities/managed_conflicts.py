@@ -6,14 +6,72 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import u
-
 from flext_infra import c, config, m, p, r, t
-from flext_infra._utilities import FlextInfraUtilitiesBase
 
 
 class FlextInfraUtilitiesManagedConflicts:
     """Recover only merge blocks authorized by the document owner."""
+
+    @staticmethod
+    def _toml_quote_after_line(line: str, quote: str | None) -> str | None:
+        """Track TOML strings so apparent headers inside strings remain data.
+
+        Returns:
+            The delimiter of an open string, or None outside a string.
+        """
+        index = 0
+        while index < len(line):
+            character = line[index]
+            if quote is None:
+                if character == "#":
+                    break
+                if character in {"'", '"'}:
+                    quote = (
+                        character * c.Infra.TOML_MULTILINE_QUOTE_LENGTH
+                        if line.startswith(
+                            character * c.Infra.TOML_MULTILINE_QUOTE_LENGTH,
+                            index,
+                        )
+                        else character
+                    )
+                    index += len(quote)
+                    continue
+            elif quote.startswith('"') and character == "\\":
+                index += 2
+                continue
+            elif line.startswith(quote, index):
+                length = len(quote)
+                if length == c.Infra.TOML_MULTILINE_QUOTE_LENGTH:
+                    while line.startswith(quote[0], index + length):
+                        length += 1
+                index += length
+                quote = None
+                continue
+            index += 1
+        return quote
+
+    @classmethod
+    def pyproject_regeneration_source(cls, source: str) -> p.Result[str]:
+        """Keep custom TOML while declared tool tables regenerate from their owner.
+
+        Returns:
+            Custom source bytes, or the original ownership declaration failure.
+        """
+        spec = cls.pyproject_managed_file()
+        if spec.failure:
+            return r[str].from_failure(spec)
+        owned = tuple(f"tool.{name}" for name in spec.value.managed_tool_tables)
+        preserved: list[str] = []
+        quote: str | None = None
+        managed = False
+        for line in source.splitlines(keepends=True):
+            header = c.Infra.TOML_SECTION_HEADER_RE.match(line)
+            if quote is None and header is not None:
+                managed = cls.toml_section_is_owned(header.group(1), owned)
+            if not managed:
+                preserved.append(line)
+            quote = cls._toml_quote_after_line(line, quote)
+        return r[str].ok("".join(preserved))
 
     @staticmethod
     def recover_managed_assignments(
@@ -26,6 +84,8 @@ class FlextInfraUtilitiesManagedConflicts:
         Returns:
             The resulting ``p.Result[str]``.
         """
+        from flext_cli import u
+
         if u.Cli.toml_mapping_from_text(content) is not None:
             return r[str].ok(content)
         recovered: list[str] = []
@@ -148,6 +208,8 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesBase
+
         if FlextInfraUtilitiesBase.first_merge_conflict_marker(content) is None:
             return FlextInfraUtilitiesManagedConflicts.recover_managed_assignments(
                 content,
@@ -219,6 +281,8 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting index of the separator line.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesBase
+
         while index < len(lines):
             control = FlextInfraUtilitiesBase.merge_conflict_control(lines[index])
             if control == "separator":
@@ -239,6 +303,8 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting ``(current lines, next index)`` pair.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesBase
+
         pair = r[t.Pair[list[str], int]]
         current: list[str] = []
         control = ""
@@ -277,6 +343,8 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting index of the closing ``incoming`` marker line.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesBase
+
         while index < len(lines):
             control = FlextInfraUtilitiesBase.merge_conflict_control(lines[index])
             if control == "incoming":

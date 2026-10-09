@@ -10,9 +10,9 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, main
+from flext_infra import main
 from flext_infra.workspace import FlextInfraWorkspaceDetector
-from tests import t, u
+from tests import c, t, u
 
 
 class TestsFlextInfraWorkspaceMain:

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
+from flext_infra import config
 from flext_infra.__version__ import FlextInfraVersion
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
@@ -91,7 +92,7 @@ class TestsFlextInfraGateErrorReporting:
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """A real formatter configuration error remains visible without issues."""
+        """A formatter error without issues remains available in its raw receipt."""
         project_dir = u.Tests.mk_project(
             tmp_path,
             "p1",
@@ -117,11 +118,114 @@ class TestsFlextInfraGateErrorReporting:
         tm.that(bool(execution.issues), eq=False)
         tm.that(bool(execution.result.errors), eq=False)
         tm.that(execution.raw_output, has="invalid-line-length")
+        assert execution.raw_receipt is not None
+        tm.that(
+            execution.raw_receipt.read_bytes().decode("utf-8"),
+            eq=execution.raw_output,
+        )
         captured = capsys.readouterr()
         tm.that(
             f"{captured.out}\n{captured.err}",
-            has=["TOML parse error", "invalid-line-length"],
+            has=str(execution.raw_receipt),
+            lacks="invalid-line-length",
         )
+
+    @staticmethod
+    @pytest.mark.slow
+    def test_workspace_security_error_publishes_verbatim_receipt(
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Native source excerpts stay in the receipt while issues remain public."""
+        project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
+        source_dir = (
+            project_dir / c.Infra.DEFAULT_SRC_DIR / project_dir.name.replace("-", "_")
+        )
+        source_marker = "native_receipt_source_marker"
+        (source_dir / "finding.py").write_text(
+            f'assert "{source_marker}"\n',
+            encoding="utf-8",
+        )
+        invalid = source_dir / "invalid.py"
+        invalid.write_text("def broken(:\n", encoding="utf-8")
+        u.Tests.initialize_git_repo(project_dir)
+        reports_dir = tmp_path / "reports with spaces"
+
+        projects = tm.ok(
+            FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+                [project_dir.name],
+                [c.Infra.SECURITY],
+                reports_dir=reports_dir,
+            ),
+        )
+
+        execution = projects[0].gates[c.Infra.SECURITY]
+        tm.that(execution.result.passed, eq=False)
+        tm.that(execution.outcome, eq=c.Infra.ToolOutcome.ERROR)
+        assert execution.raw_receipt is not None
+        tm.that(
+            execution.raw_receipt,
+            eq=reports_dir
+            / project_dir.name
+            / (f"{c.Infra.SECURITY}{config.Infra.tooling.raw_check_receipt_suffix}"),
+        )
+        receipt = execution.raw_receipt.read_bytes().decode("utf-8")
+        tm.that(receipt, eq=execution.raw_output, has=source_marker)
+        tm.that(
+            any(
+                issue.code == c.Infra.ToolOutcome.ERROR
+                and issue.file == invalid.relative_to(project_dir).as_posix()
+                for issue in execution.issues
+            ),
+            eq=True,
+        )
+        report = (reports_dir / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        tm.that(
+            report,
+            has=execution.raw_receipt.resolve().as_uri(),
+            lacks=source_marker,
+        )
+        captured = capsys.readouterr()
+        tm.that(
+            f"{captured.out}\n{captured.err}",
+            has=str(execution.raw_receipt),
+            lacks=source_marker,
+        )
+
+    @staticmethod
+    @pytest.mark.slow
+    def test_workspace_receipt_write_failure_escapes(
+        tmp_path: Path,
+    ) -> None:
+        """A real blocked receipt destination cannot yield a successful check."""
+        project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
+        source_file = (
+            project_dir
+            / c.Infra.DEFAULT_SRC_DIR
+            / project_dir.name.replace("-", "_")
+            / "value.py"
+        )
+        source_file.write_text(
+            "value = 1\n",
+            encoding="utf-8",
+        )
+        u.Tests.initialize_git_repo(project_dir)
+        reports_dir = tmp_path / "reports"
+        blocked_receipt = (
+            reports_dir
+            / project_dir.name
+            / (f"{c.Infra.SECURITY}{config.Infra.tooling.raw_check_receipt_suffix}")
+        )
+        blocked_receipt.mkdir(parents=True)
+
+        with pytest.raises(RuntimeError, match=blocked_receipt.name):
+            FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+                [project_dir.name],
+                [c.Infra.SECURITY],
+                reports_dir=reports_dir,
+            )
 
     @staticmethod
     @pytest.mark.slow

@@ -296,7 +296,7 @@ search-path = [{% for item in tooling_runtime.pyrefly_search_path %}{{ item | to
 use-ignore-files = {{ tooling.tools.pyrefly.use_ignore_files | lower }}
 
 [tool.pyrefly.errors]
-{% for item in tooling.tools.pyrefly.strict_errors | sort %}
+{% for item in tooling.tools.pyrefly.strict_errors | sort | unique(case_sensitive=true) %}
 {{ item }} = "error"
 {% endfor %}
 

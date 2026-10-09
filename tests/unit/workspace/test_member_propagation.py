@@ -30,8 +30,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
-# Why: each propagation conforms and relocks real member repositories, the
-# same slow harness the release protocol's version phase already declares.
 pytestmark = pytest.mark.slow
 
 

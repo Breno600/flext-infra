@@ -15,8 +15,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, config, m, u
-from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -70,6 +68,8 @@ class FlextInfraGate:
             The resulting ``t.StrSequence``.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         return u.Infra.discover_python_targets(
             project_dir,
             workspace_excluded_top_dirs=(
@@ -776,6 +776,8 @@ class FlextInfraGate:
     @contextmanager
     def _mutation_lease(project_dir: Path) -> Generator[None]:
         """Serialize direct fixer effects with generation and WIP capture."""
+        from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
+
         with FlextInfraCodegenFileLeases.mutation_lease(project_dir):
             yield
 

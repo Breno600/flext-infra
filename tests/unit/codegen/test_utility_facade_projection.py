@@ -343,6 +343,20 @@ class TestsFlextInfraUtilityFacadeProjection:
             eq=context,
         )
 
+    @staticmethod
+    def test_process_options_is_usable_through_the_inherited_public_model() -> None:
+        """The real process producer exposes its payload through the model MRO."""
+        payload = b"  process input\n"
+        environment = {"FLEXT_PROCESS_FIXTURE": "child value"}
+        options = m.Cli.ProcessOptions(env=environment, input_data=payload)
+
+        tm.that(options.input_data, eq=payload)
+        tm.that(options.env, eq=environment)
+        tm.that(
+            m.Cli.ProcessOptions.model_validate(options.model_dump()),
+            eq=options,
+        )
+
     def test_model_projection_preserves_inherited_family_order_at_runtime(
         self,
         tmp_path: Path,

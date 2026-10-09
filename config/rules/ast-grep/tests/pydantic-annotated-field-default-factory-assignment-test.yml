@@ -1,0 +1,31 @@
+id: pydantic-annotated-field-default-factory-assignment
+# `valid` MUST NOT match: the factory is already assigned, the field is
+# required, or the construct is text.
+valid:
+  - |
+    class Spec:
+        docs_audit: Annotated[Audit, m.Field(description="d")] = m.Field(
+            default_factory=Audit,
+        )
+  - |
+    class Spec:
+        name: Annotated[t.NonEmptyStr, m.Field(description="d")]
+  - |
+    """A docstring mentioning x: Annotated[X, m.Field(default_factory=X)]."""
+# `invalid` MUST match: the factory lives inside the Annotated metadata.
+invalid:
+  - |
+    class Spec:
+        docs_audit: Annotated[
+            Audit,
+            m.Field(
+                default_factory=Audit,
+                description="Repository-owned documentation audit declarations",
+            ),
+        ]
+  - |
+    class Spec:
+        bindings: Annotated[
+            t.MappingKV[str, t.StrSequence],
+            m.Field(default_factory=lambda: MappingProxyType({}), description="d"),
+        ]

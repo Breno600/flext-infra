@@ -115,12 +115,17 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         tm.that(recipe.count("-m flext_infra._pytest_entry"), eq=2)
         tm.that(recipe, has=["_pytest_entry file;", "_pytest_entry file-slow;"])
         tm.that(
+            recipe.index("_pytest_entry file;")
+            < recipe.index("_pytest_entry file-slow"),
+            eq=True,
+        )
+        tm.that(
             recipe.count(f'{cache.database_environment_variable}="$$database"'),
             eq=2,
         )
         tm.that(recipe.count("set -eu;"), eq=1)
         tm.that(recipe.count("' EXIT;"), eq=1)
-        tm.that(recipe, lacks="_pytest_entry full")
+        tm.that(recipe, lacks=["_pytest_entry slow", "_pytest_entry full"])
 
     @staticmethod
     def test_conform_owns_repository_root_makefile() -> None:

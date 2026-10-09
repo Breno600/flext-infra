@@ -111,7 +111,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
             )
 
     @staticmethod
-    def _seed_existing_tree(root: Path, seeded: t.JsonMapping) -> None:
+    def _seed_existing_tree(root: Path, seeded: t.StrMapping) -> None:
         """Copy the externally managed extras and commit the seeded tree."""
         vscode_settings = root / ".vscode" / "settings.json"
         vscode_settings.parent.mkdir()

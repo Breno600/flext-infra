@@ -11,7 +11,9 @@ from typing import Annotated, Self
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import FlextInfraModelsDepsToolConfigProjectMise
+from flext_infra._models.deps_tool_config_project_mise import (
+    FlextInfraModelsDepsToolConfigProjectMise,
+)
 
 
 class FlextInfraModelsDepsToolConfigProjectGitignore(

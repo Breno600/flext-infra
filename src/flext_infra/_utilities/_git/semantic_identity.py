@@ -17,9 +17,7 @@ from git import (
 )
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGitRemote,
-    FlextInfraUtilitiesGitRepo,
+from flext_infra._utilities._git.semantic_lane import (
     FlextInfraUtilitiesGitSemanticLaneMixin,
 )
 
@@ -77,11 +75,15 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
 
         Raises:
             GitCommandError: If ``status``.
+            TypeError: If symbolic-ref returned a non-text reference.
 
         """
         if repo.head.is_valid():
             return False
         branch_ref = repo.git.symbolic_ref("--quiet", "HEAD")
+        if not isinstance(branch_ref, str):
+            msg = "symbolic-ref returned a non-text reference"
+            raise TypeError(msg)
         status, stdout, stderr = repo.git.show_ref(
             "--exists",
             branch_ref,
@@ -154,6 +156,8 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             Whether ``repo_root`` sits inside a Git work tree.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGitRepo
+
         refreshed = FlextInfraUtilitiesGitRepo.refresh_binary()
         if refreshed.failure:
             return r[m.Infra.GitBoolReport].from_failure(refreshed)
@@ -189,6 +193,8 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             The resulting ``(origin, upstream)`` redacted remote URL pair.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGitRemote
+
         remotes = {remote.name: remote.url for remote in repo.remotes}
         origin = remotes.get("origin")
         upstream = remotes.get("upstream")

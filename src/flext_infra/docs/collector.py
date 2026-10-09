@@ -10,8 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, r, t, u
-from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
-from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -28,6 +26,9 @@ class FlextInfraDocCollector:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         authenticated = cls._authenticated_configuration(request)
         if authenticated.failure:
             return r[bool].from_failure(authenticated)
@@ -87,12 +88,14 @@ class FlextInfraDocCollector:
                 scope_root,
                 roots,
                 analysis,
-                tuple(
-                    path
-                    for path in bundle.required_directories
-                    if path not in roots.values()
+                m.Infra.CodegenPhasePublicationPolicy(
+                    directories=tuple(
+                        path
+                        for path in bundle.required_directories
+                        if path not in roots.values()
+                    ),
+                    validator=validate,
                 ),
-                validate,
             )
             if published.failure:
                 return r[bool].from_failure(published)

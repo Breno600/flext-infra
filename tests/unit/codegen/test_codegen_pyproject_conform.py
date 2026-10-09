@@ -12,7 +12,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m
+from flext_core import e
+from flext_infra import c, config, m, p
 from tests import t, u
 
 
@@ -59,7 +60,7 @@ class TestsFlextInfraCodegenPyprojectConform:
 
     @staticmethod
     def _uv_resolution(
-        toolchain: m.Infra.ToolchainSpec,
+        toolchain: p.Infra.ToolchainSpec,
         exclusions: t.VariadicTuple[m.Infra.UvScopedDependencyExclusionSpec] = (),
     ) -> m.Infra.UvResolutionSpec:
         """Route the toolchain's uv resolver keys the way conform declares them.
@@ -204,6 +205,24 @@ class TestsFlextInfraCodegenPyprojectConform:
             eq="sample.plugin:main",
         )
 
+    @pytest.mark.parametrize("invalid_surface", ["rendered", "live"])
+    def test_overlay_retains_native_toml_failure_context(
+        self,
+        invalid_surface: str,
+    ) -> None:
+        """A parse failure identifies its input and retains the native cause."""
+        valid = "[project]\n"
+        invalid = "[project]\nkey =\n"
+        result = u.Infra.overlay_preserved(
+            invalid if invalid_surface == "rendered" else valid,
+            invalid if invalid_surface == "live" else valid,
+        )
+        tm.fail(result, has=f"{invalid_surface} pyproject is not valid TOML")
+        native = tm.not_none(result.exception)
+        tm.that(type(native).__name__, eq="TOMLDecodeError")
+        tm.that(result.error, has=str(native))
+        tm.that(result.error, has=f"line {len(invalid.splitlines())}")
+
     @staticmethod
     def test_overlay_defaults_only_the_omitted_policy() -> None:
         """Explicit empty policies survive default resolution of the other policy."""
@@ -328,8 +347,10 @@ class TestsFlextInfraCodegenPyprojectConform:
                 '[project]\nname = "consumer"\ndependencies = []\n',
                 workspace=workspace,
                 required_dev_dependencies=floors,
-                flext_line=dependency_source,
                 uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+                options=u.Infra.PyprojectConformOptions(
+                    flext_line=dependency_source,
+                ),
             ),
         )
         dev = u.Tests.toml_strings_at(first, "dependency-groups", "dev")
@@ -340,7 +361,14 @@ class TestsFlextInfraCodegenPyprojectConform:
         # or standalone, it carries git-sourced floors and no fleet source, so
         # it installs from a clone. Only the workspace root redirects members.
         for name in internal:
-            expected = name if is_root else u.Tests.flext_source(name)
+            expected = (
+                name
+                if is_root
+                else (
+                    f"{name} @ git+{dependency_source.base_url}/{name}.git"
+                    f"@{dependency_source.branch}"
+                )
+            )
             tm.that(expected in dev, eq=True)
             tm.that(name in sources, eq=is_root)
             if is_root:
@@ -350,8 +378,10 @@ class TestsFlextInfraCodegenPyprojectConform:
                 first,
                 workspace=workspace,
                 required_dev_dependencies=floors,
-                flext_line=dependency_source,
                 uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+                options=u.Infra.PyprojectConformOptions(
+                    flext_line=dependency_source,
+                ),
             ),
         )
         tm.that(second, eq=first)
@@ -370,10 +400,12 @@ class TestsFlextInfraCodegenPyprojectConform:
                 ),
             ),
             required_dev_dependencies=(),
-            flext_line=m.Infra.WorkspaceIntegrationSpec(
-                provider=provider.name,
-                branch=u.Tests.provider_branch(),
-                base_url=provider.base_url,
+            options=u.Infra.PyprojectConformOptions(
+                flext_line=m.Infra.WorkspaceIntegrationSpec(
+                    provider=provider.name,
+                    branch=u.Tests.provider_branch(),
+                    base_url=provider.base_url,
+                ),
             ),
             uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
         )
@@ -399,10 +431,12 @@ class TestsFlextInfraCodegenPyprojectConform:
                     ),
                 ),
                 required_dev_dependencies=(floor,),
-                flext_line=m.Infra.WorkspaceIntegrationSpec(
-                    provider=provider.name,
-                    branch=u.Tests.provider_branch(),
-                    base_url=provider.base_url,
+                options=u.Infra.PyprojectConformOptions(
+                    flext_line=m.Infra.WorkspaceIntegrationSpec(
+                        provider=provider.name,
+                        branch=u.Tests.provider_branch(),
+                        base_url=provider.base_url,
+                    ),
                 ),
                 uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
             ),
@@ -421,7 +455,7 @@ class TestsFlextInfraCodegenPyprojectConform:
         unattached = config.Infra.codegen.infra_repository.distribution
         result = u.Infra.pyproject_conform(
             f'[project]\nname = "external-consumer"\ndependencies = ["{unattached}"]\n',
-            workspace=self._workspace(),
+            workspace=self._workspace(role=c.Infra.MakeProfile.STANDALONE),
             required_dev_dependencies=(),
             uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
         )
@@ -473,7 +507,7 @@ constraint-dependencies = ["uv>=0"]
 
     def test_standalone_rejects_non_https_manifest_provenance(self) -> None:
         """Test standalone rejects non https manifest provenance."""
-        workspace = self._workspace()
+        workspace = self._workspace(role=c.Infra.MakeProfile.STANDALONE)
         member = workspace.subprojects[0]
         declared = (
             f"{member.distribution} @ git+{member.url}@{u.Tests.provider_branch()}"
@@ -619,7 +653,7 @@ dev = ["rumdl>=0.2.46", "custom-tool>=1"]
 
     def test_exclude_dependencies_emit_for_standalone_without_project_key(self) -> None:
         """Standalone member CI needs scoped excludes without the routing key."""
-        workspace = self._workspace()
+        workspace = self._workspace(role=c.Infra.MakeProfile.STANDALONE)
         exclusion = m.Infra.UvScopedDependencyExclusionSpec(
             project="flext-infra",
             package=m.Infra.UvPackageSelectorSpec(name="flext-tests"),
@@ -704,6 +738,63 @@ dependencies = []
             u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME, what=surface),
             eq=first,
         )
+
+    @staticmethod
+    @pytest.mark.parametrize("members", [(), ("fixture-member",)])
+    def test_scaffold_pyrefly_policy_matches_ssot_and_converges(
+        tmp_path: Path,
+        members: t.StrSequence,
+    ) -> None:
+        """Both repository roles render each declared diagnostic exactly once."""
+        root = tmp_path / "fixture-project"
+        surface = c.Infra.CodegenConformSurface.PYPROJECT
+        first = u.Tests.scaffold_text(
+            root,
+            c.PYPROJECT_FILENAME,
+            members=members,
+            what=surface,
+        )
+        policy = config.Infra.tooling.tools.pyrefly
+        tm.that(
+            u.Tests.toml_table_at(first, "tool", "pyrefly", "errors"),
+            eq=dict.fromkeys(policy.strict_errors, "error"),
+        )
+        tm.that(
+            u.Tests.scaffold_text(
+                root,
+                c.PYPROJECT_FILENAME,
+                members=members,
+                what=surface,
+            ),
+            eq=first,
+        )
+
+    @staticmethod
+    def test_pyrefly_policy_rejects_duplicate_diagnostic_declarations() -> None:
+        """Ambiguous SSOT input fails before the TOML template can emit it."""
+        payload = config.Infra.tooling.tools.pyrefly.model_dump(by_alias=True)
+        payload["strict-errors"] = ("bad-argument-count", "bad-argument-count")
+        with pytest.raises(e.PydanticValidationError, match="duplicate diagnostic"):
+            m.Infra.PyreflyConfig.model_validate(payload)
+
+    @staticmethod
+    @pytest.mark.parametrize("selection", ["reordered", "subset", "empty"])
+    def test_pyrefly_policy_preserves_valid_diagnostic_selections(
+        selection: str,
+    ) -> None:
+        """Validation does not freeze the selected diagnostic set or its order."""
+        policy = config.Infra.tooling.tools.pyrefly
+        errors = tuple(policy.strict_errors)
+        if selection == "reordered":
+            selected = tuple(reversed(errors))
+        elif selection == "subset":
+            selected = errors[::2]
+        else:
+            selected = ()
+        payload = policy.model_dump(by_alias=True)
+        payload["strict-errors"] = selected
+        validated = m.Infra.PyreflyConfig.model_validate(payload)
+        tm.that(tuple(validated.strict_errors), eq=selected)
 
     @staticmethod
     def _assert_unmanaged_tool_tables_survive(

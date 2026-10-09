@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra import main
-from tests import c
+from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -61,6 +61,7 @@ class TestsFlextInfraValidateCli:
             "dependencies = []\n",
             encoding="utf-8",
         )
+        u.Tests.copy_tracked_mise_seeds(project)
         config_path.write_text(
             f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n",
             encoding="utf-8",
@@ -84,6 +85,8 @@ class TestsFlextInfraValidateCli:
             '"""Namespace contract fixture."""\n\n'
             "from __future__ import annotations\n\nVALUE = 1\n",
         )
+        # The consumer cannot select a Mise shim; resolution belongs to Make.
+        tm.that((project / c.Infra.MISE_TOML_FILENAME).exists(), eq=False)
 
         exit_code = main([
             "validate",

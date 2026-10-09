@@ -172,11 +172,11 @@ def infra_test_workspace(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def infra_subprocess() -> u.Cli:
+def infra_subprocess() -> p.Cli.CommandRunner:
     """Provide the public CLI utility facade for subprocess tests.
 
     Returns:
-        The resulting ``u.Cli``.
+        The public command runner implemented by ``u.Cli``.
 
     """
     return u.Cli()
@@ -187,7 +187,7 @@ def infra_toml() -> u.Cli:
     """Provide the public CLI utility facade for TOML tests.
 
     Returns:
-        The resulting ``u.Cli``.
+        The declaring CLI utility class exposed through ``u.Cli``.
 
     """
     return u.Cli()
@@ -250,7 +250,7 @@ def infra_selection() -> u.Infra:
 
 @pytest.fixture
 def infra_safe_command_output(
-    infra_subprocess: u.Cli,
+    infra_subprocess: p.Cli.CommandRunner,
     infra_test_workspace: Path,
 ) -> str:
     """Capture successful public command output inside the test workspace.

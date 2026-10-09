@@ -72,8 +72,9 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
     @staticmethod
     def _svc(ws: Path) -> FlextInfraPythonVersionEnforcer:
         class _TestEnforcer(FlextInfraPythonVersionEnforcer):
+            @staticmethod
             @override
-            def _repository_root_from_file(self, file: str | Path) -> Path:
+            def _repository_root_from_file(file: str | Path) -> Path:
                 _ = file
                 return ws
 

@@ -12,17 +12,16 @@ from importlib.resources import files
 from pathlib import Path
 from types import MappingProxyType
 
-from flext_cli import u
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities import FlextInfraUtilitiesPyproject
+from flext_infra._utilities import FlextInfraUtilitiesDependencyRequirements
 
 
-class FlextInfraUtilitiesDependencies:
-    """Dependency parsing and inspection helpers for flext-infra utilities."""
+class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependencyRequirements):
+    """Workspace dependency policy composed over independent requirement parsing."""
 
     @staticmethod
     def project_dev_groups_from_payload(
@@ -34,6 +33,8 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``t.MappingKV[str, t.StrSequence]``.
 
         """
+        from flext_cli import u
+
         project = u.Cli.json_as_mapping(payload.get(c.Infra.PROJECT, None))
         optional = u.Cli.json_as_mapping(
             project.get(c.Infra.OPTIONAL_DEPENDENCIES, None),
@@ -57,6 +58,8 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``t.MappingKV[str, t.StrSequence]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             # Keep the empty mapping immutable and fully typed.
@@ -74,6 +77,8 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``t.StrSequence``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             return ()
@@ -108,6 +113,8 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``t.StrSequence``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             return ()
@@ -126,6 +133,8 @@ class FlextInfraUtilitiesDependencies:
         """
         # FLEXT dependencies are first-party contracts even
         # when their uv source declaration is owned by an enclosing workspace.
+
+        from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
         normalized = FlextInfraUtilitiesPyproject.validate_infra_payload(payload)
         return tuple(
@@ -272,113 +281,6 @@ class FlextInfraUtilitiesDependencies:
             },
         )
 
-    @staticmethod
-    def raw_requirement_values(raw: p.AttributeProbe) -> list[str]:
-        """Collect requirement strings from dependency arrays or group tables.
-
-        Returns:
-            Requirement strings retained from the declared arrays.
-        """
-        if isinstance(raw, Mapping):
-            values: list[str] = []
-            for group in raw.values():
-                values.extend(
-                    FlextInfraUtilitiesDependencies.raw_requirement_values(
-                        group,
-                    ),
-                )
-            return values
-        if isinstance(raw, (list, tuple)):
-            return [item for item in raw if isinstance(item, str)]
-        return []
-
-    @staticmethod
-    def active_requirement(
-        requirement: str,
-        *,
-        environment: t.StrMapping,
-    ) -> str | None:
-        """Evaluate a strictly parsed requirement on the consumer interpreter.
-
-        Returns:
-            The resulting ``str | None``.
-
-        """
-        parsed = Requirement(requirement)
-        return (
-            str(parsed)
-            if parsed.marker is None
-            or parsed.marker.evaluate(environment=dict(environment))
-            else None
-        )
-
-    @staticmethod
-    def dependency_extras(requirements: t.StrSequence, name: str) -> str:
-        """Retain the union of requested extras for one selected distribution.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        extras: set[str] = set()
-        for requirement in requirements:
-            parsed = Requirement(requirement)
-            if canonicalize_name(parsed.name) == name:
-                extras.update(parsed.extras)
-        return f"[{','.join(sorted(extras))}]" if extras else ""
-
-    @staticmethod
-    def dependency_constraint(requirement: str, *, replace_source: bool) -> str:
-        """Keep version bounds while installation inputs own extras and sources.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        parsed = Requirement(requirement)
-        source = (
-            f" @ {parsed.url}"
-            if parsed.url and not replace_source
-            else str(parsed.specifier)
-        )
-        marker = f"; {parsed.marker}" if parsed.marker is not None else ""
-        return f"{parsed.name}{source}{marker}"
-
-    @staticmethod
-    def dep_name(requirement: str, *, active_only: bool = False) -> str | None:
-        """Extract one normalized dependency name, optionally evaluating markers.
-
-        Returns:
-            The resulting ``str | None``.
-
-        """
-        text = requirement.strip()
-        if not text:
-            return None
-        try:
-            parsed = Requirement(text)
-        except InvalidRequirement:
-            parsed = None
-        if parsed is not None:
-            if (
-                active_only
-                and parsed.marker is not None
-                and not parsed.marker.evaluate()
-            ):
-                return None
-            return canonicalize_name(parsed.name)
-        if ";" in text:
-            text = text.split(";", maxsplit=1)[0].strip()
-        if " @ " in text:
-            text = text.split(" @ ", maxsplit=1)[0].strip()
-        for separator in ("[", "==", ">=", "<=", "~=", "!=", ">", "<"):
-            if separator in text:
-                text = text.split(separator, maxsplit=1)[0].strip()
-        if "/" in text:
-            text = text.rsplit("/", maxsplit=1)[-1].strip()
-        normalized = text.lower()
-        return normalized or None
-
     @classmethod
     def project_dependency_names_from_payload(
         cls,
@@ -505,7 +407,7 @@ class FlextInfraUtilitiesDependencies:
                 "dependency graph references names outside the graph: "
                 + ", ".join(unknown),
             )
-        pending = {name: set(deps) for name, deps in edges.items()}
+        pending: dict[str, set[str]] = {name: set(deps) for name, deps in edges.items()}
         waves: list[t.StrSequence] = []
         while pending:
             ready = frozenset(name for name, deps in pending.items() if not deps)
@@ -536,6 +438,10 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``t.SequenceOf[Path]``.
 
         """
+        from flext_cli import u
+
+        from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
         pyproject = project_root / c.PYPROJECT_FILENAME
         payload = u.Cli.toml_read_json(pyproject).unwrap()
         project_name = canonicalize_name(
@@ -633,9 +539,11 @@ class FlextInfraUtilitiesDependencies:
                 Invalid installed distribution name; or if Ambiguous installed version.
 
         """
+        from flext_cli import u
+
         versions: MutableMapping[str, str] = {}
         for distribution in u.installed_distributions():
-            if distribution.read_text("direct_url.json") is not None:
+            if distribution.read_text(c.Infra.DISTRIBUTION_DIRECT_URL_FILE) is not None:
                 continue
             name = distribution.metadata.get("Name")
             if name is None:
@@ -756,27 +664,6 @@ class FlextInfraUtilitiesDependencies:
         )
         return head_match.group("head").strip() if head_match is not None else ""
 
-    @staticmethod
-    def dedupe_specs(specs: t.StrSequence) -> t.StrSequence:
-        """Return deterministic unique dependency specs keyed by normalized name.
-
-        Returns:
-            Deterministic unique dependency specs keyed by normalized name.
-
-        """
-        selected_by_name: MutableMapping[str, str] = {}
-        for raw in specs:
-            item = raw.strip()
-            if not item:
-                continue
-            dependency_name = FlextInfraUtilitiesDependencies.dep_name(
-                item,
-            )
-            if dependency_name is None or dependency_name in selected_by_name:
-                continue
-            selected_by_name[dependency_name] = item
-        return tuple(selected_by_name[name] for name in sorted(selected_by_name))
-
     @classmethod
     def declared_dependency_names(
         cls,
@@ -788,6 +675,8 @@ class FlextInfraUtilitiesDependencies:
             Normalized dependency names from one TOML document.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             return ()

@@ -13,13 +13,6 @@ from functools import lru_cache
 from pathlib import Path
 
 from flext_infra import c, config, m, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesIterationWorkspace,
-    FlextInfraUtilitiesProjectDiscovery,
-    FlextInfraUtilitiesRopeCore,
-    FlextInfraUtilitiesRopeSourceBases,
-    FlextInfraUtilitiesRopeSourceBasesAliases,
-)
 
 
 class FlextInfraUtilitiesRopeAnalysisWorkspace:
@@ -229,6 +222,11 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             The declared roots and the derived bases, by qualified name.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeSourceBases,
+        )
+
         root = project_root.resolve()
         sources = {
             cls.module_name_for_file(path, project_root=root): (path, source)
@@ -257,7 +255,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             for (
                 alias,
                 absolute,
-            ) in FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases(
+            ) in FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
                 init_module,
                 init_path,
                 init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
@@ -313,6 +311,8 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             Each source by resolved path.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesIterationWorkspace
+
         sources: MutableMapping[Path, str] = {}
         if root.is_dir():
             files = FlextInfraUtilitiesIterationWorkspace.iter_python_files(
@@ -354,6 +354,8 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             Every declared governed project root, resolved.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+
         return frozenset(
             FlextInfraUtilitiesProjectDiscovery.discover_rope_project_roots(
                 repository_root,
@@ -481,43 +483,39 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         rope_project: t.Infra.RopeProject,
         resolved_root: Path,
     ) -> t.VariadicTuple[Path]:
-        """Return indexed sources, declared wrapper modules, and typing stubs.
+        """Return Python and stub sources in the canonical declared source scope.
 
         Returns:
-            Indexed sources, declared wrapper modules, and typing stubs.
+            Python and stub sources in the canonical declared source scope.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+
+        rope_root = Path(rope_project.address).resolve()
         governed_roots = cls._governed_roots(resolved_root)
-        python_paths = {
-            path.resolve()
-            for path in FlextInfraUtilitiesRopeCore.python_file_paths(rope_project)
-            if not set(path.relative_to(resolved_root).parts) & cls._excluded_parts()
-            and not cls._inside_nested_repository(
-                path,
-                resolved_root,
-                governed_roots=governed_roots,
+        source_paths = (
+            (resolved_root / relative).resolve()
+            for relative in (
+                FlextInfraUtilitiesProjectDiscovery.ast_grep_scan_targets(resolved_root)
             )
-        }
-        # Rope's source roots omit tests/examples/scripts;
-        # index those declared wrapper surfaces so explicitly targeted codegen
-        # can update their generated initializers without textual fallbacks.
-        wrapper_paths = {
-            path.resolve()
-            for wrapper_name in c.Infra.ROOT_WRAPPER_SEGMENTS
-            for wrapper_root in (resolved_root / wrapper_name,)
-            if wrapper_root.is_dir()
-            for path in wrapper_root.rglob("*.py")
-            if path.is_file()
-            and not set(path.relative_to(resolved_root).parts) & cls._excluded_parts()
-            and not cls._inside_nested_repository(
-                path,
-                resolved_root,
-                governed_roots=governed_roots,
-            )
-        }
-        stub_paths = cls._pruned_stub_file_paths(resolved_root)
+        )
         return tuple(
-            sorted(python_paths | wrapper_paths | stub_paths, key=Path.as_posix),
+            sorted(
+                {
+                    path
+                    for path in source_paths
+                    if path.is_relative_to(resolved_root)
+                    and path.is_relative_to(rope_root)
+                    and not set(path.relative_to(resolved_root).parts)
+                    & cls._excluded_parts()
+                    and not cls._inside_nested_repository(
+                        path,
+                        resolved_root,
+                        governed_roots=governed_roots,
+                    )
+                },
+                key=Path.as_posix,
+            ),
         )
 
     @classmethod
@@ -540,6 +538,8 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 MutableMapping[str, Path], MutableMapping[str, str], set[Path]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+
         modules_by_path: MutableMapping[str, m.Infra.RopeModuleIndexEntry] = {}
         modules_by_dir: MutableMapping[Path, list[m.Infra.RopeModuleIndexEntry]] = {}
         package_dir_by_name: MutableMapping[str, Path] = {}

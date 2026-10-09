@@ -10,12 +10,44 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Annotated, ClassVar, Literal
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import t
 
 
 class FlextInfraModelsCodemod:
     """Typed contracts for native codemod scans and mutation reports."""
+
+    class AstGrepCapture(m.ContractModel):
+        """Authenticate an occurrence against native UTF-8 capture coordinates."""
+
+        text: Annotated[str, m.Field(description="Exact captured source text")]
+        start_byte: Annotated[
+            int,
+            m.Field(
+                ge=0,
+                validation_alias=m.AliasPath("range", "byteOffset", "start"),
+                description="Inclusive UTF-8 byte offset",
+            ),
+        ]
+        end_byte: Annotated[
+            int,
+            m.Field(
+                ge=0,
+                validation_alias=m.AliasPath("range", "byteOffset", "end"),
+                description="Exclusive UTF-8 byte offset",
+            ),
+        ]
+
+    class CodemodBindingSnapshot(m.ArbitraryTypesModel):
+        """Closed descriptor-authenticated sources used by occurrence admission."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        states: Annotated[
+            tuple[m.Cli.AtomicFileState, ...],
+            m.Field(description="Consumer and resolved Python import-owner inputs"),
+        ]
 
     class AstGrepDiagnostic(m.FlexibleModel):
         """Required native RuleMatch fields, with zero-based source coordinates.

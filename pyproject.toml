@@ -142,6 +142,9 @@ exclude_also = [
   "if _t.TYPE_CHECKING:",
   "if TYPE_CHECKING:",
   "if typing.TYPE_CHECKING:",
+  "if _t.TYPE_CHECKING:",
+  "if TYPE_CHECKING:",
+  "if typing.TYPE_CHECKING:",
 ]
 precision = 2
 show_missing = true
@@ -150,6 +153,9 @@ skip_covered = false
 [tool.coverage.run]
 source = ["src"]
 omit = [
+  "*/dependency_injector/providers.pyx",
+  "*/protocols.py",
+  "*/_protocols/*",
   "*/dependency_injector/providers.pyx",
   "*/protocols.py",
   "*/_protocols/*",
@@ -370,6 +376,10 @@ addopts = [
   "--strict-markers",
   "--markdown-docs",
   "--durations=10",
+  "--benchmark-disable",
+  "--strict-markers",
+  "--markdown-docs",
+  "--durations=10",
   "--timeout=10",
 ]
 flext_slow_timeout_seconds = "30"
@@ -380,6 +390,22 @@ filterwarnings = [
   "once::pytest.PytestAssertRewriteWarning",
 ]
 markers = [
+  "smoke: public-interface smoke tests",
+  "unit: unit tests",
+  "integration: integration tests",
+  "functional: functional behavior tests",
+  "performance: performance and benchmark tests",
+  "slow: slow-running tests",
+  "docker: tests requiring Docker",
+  "oracle: tests requiring the shared Oracle database",
+  "remote: tests requiring remote/external network services",
+  "e2e: end-to-end integration tests",
+  "edge_cases: edge case tests",
+  "stress: stress tests",
+  "resilience: resilience tests",
+  "discovery: catalog and stream discovery tests",
+  "singer: Singer protocol contract tests",
+  "requires_engine: native check engine required by this test",
   "smoke: public-interface smoke tests",
   "unit: unit tests",
   "integration: integration tests",
@@ -431,7 +457,10 @@ skip-magic-trailing-comma = false
 [tool.ruff.lint]
 extend-safe-fixes = [
   "camelcase-imported-as-lowercase",
+  "camelcase-imported-as-lowercase",
   "relative-imports",
+  "relative-imports",
+  "typing-only-first-party-import",
   "typing-only-first-party-import",
 ]
 ignore = [
@@ -444,16 +473,25 @@ ignore = [
   "typing-only-standard-library-import",
   "typing-only-third-party-import",
 ]
-select = ["ALL"]
+select = ["ALL", "ALL"]
 unfixable = [
   "duplicate-value",
+  "duplicate-value",
+  "multi-value-repeated-key-literal",
   "multi-value-repeated-key-literal",
   "multi-value-repeated-key-variable",
+  "multi-value-repeated-key-variable",
+  "outdated-version-block",
   "outdated-version-block",
   "p-print",
+  "p-print",
+  "print",
   "print",
   "pytest-duplicate-parametrize-test-cases",
+  "pytest-duplicate-parametrize-test-cases",
   "redefined-while-unused",
+  "redefined-while-unused",
+  "unused-variable",
   "unused-variable",
 ]
 
@@ -469,26 +507,45 @@ runtime-evaluated-base-classes = [
   "flext_cli.m.BaseSettings",
   "flext_cli.m.ContractModel",
   "flext_cli.m.FlexibleModel",
+  "flext_cli.m.RootModel",
   "flext_cli.m.Value",
   "flext_core.FlextService",
   "flext_core.FlextSettings",
   "flext_core.m.ArbitraryTypesModel",
   "flext_core.m.ContractModel",
   "flext_core.m.FlexibleModel",
+  "flext_core.m.ImmutableValueModel",
   "flext_core.m.RootModel",
   "flext_core.m.StrictBoundaryModel",
-  "flext_infra._models.FlextInfraConfigModelsContract.ConfigContract",
-  "flext_infra._models.FlextInfraExternalCacheDirectorySpec",
   "flext_infra._models._codegen.fix.BulkFixItem",
   "flext_infra._models._codegen.pipeline.CodegenCommand",
   "flext_infra._models._config.contexts.MakeCommandContext",
   "flext_infra._models._config.contexts.MakeRenderContext",
   "flext_infra._models._config.contract.ConfigContract",
   "flext_infra._models._config.contract.DocsAuditOverridesSpec",
+  "flext_infra._models._config.contract.FlextInfraConfigModelsContract.ConfigContract",
+  "flext_infra._models._config.external_cache.FlextInfraExternalCacheDirectorySpec",
   "flext_infra._models.codegen_render.MkdocsRenderContext",
   "flext_infra._models.git.GitRemoteRequest",
+  "flext_infra._models.git.GitRepoRequest",
   "flext_infra._models.layout._LayoutContract",
   "flext_infra._models.mise_toolchain._ConfigContract",
+  "flext_infra._models.mixins.FilePathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.AbsoluteFilePathTextMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ErrorDetailMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.FilePathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.NestedClassPathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.NonNegativeLineMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.PositiveLineMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ProjectEntryNameMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ProjectNameMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ProjectNamesListMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.RepositoryRootPathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.RequiredNonNegativeLineMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.VersionTagMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.WriteMixin",
+  "flext_infra._models.mixins.PositiveLineMixin",
+  "flext_infra._models.mixins.ScopeMixin",
   "flext_infra.base.FlextInfraServiceBase",
   "flext_infra.base.s",
   "flext_infra.base_selection.FlextInfraProjectSelectionServiceBase",
@@ -499,6 +556,7 @@ runtime-evaluated-base-classes = [
   "flext_infra.codegen._conform.bootstrap.FlextInfraCodegenConformBootstrap",
   "flext_infra.codegen._conform.context_render.FlextInfraCodegenConformContextRender",
   "flext_infra.codegen._conform.docs_ownership.FlextInfraCodegenConformDocsOwnership",
+  "flext_infra.codegen._conform.execute_directed.FlextInfraCodegenConformExecuteDirected",
   "flext_infra.codegen._conform.execute_scaffold.FlextInfraCodegenConformExecuteScaffold",
   "flext_infra.codegen._conform.existing_plan.FlextInfraCodegenConformExistingPlan",
   "flext_infra.codegen._conform.file_plans.FlextInfraCodegenConformFilePlans",
@@ -511,6 +569,7 @@ runtime-evaluated-base-classes = [
   "flext_infra.docs.base.FlextInfraDocServiceBase",
   "flext_infra.m.ArbitraryTypesModel",
   "flext_infra.m.FrozenModel",
+  "flext_infra.m.ImmutableValueModel",
   "flext_infra.maintenance.sonarcloud_client.FlextInfraSonarcloudClient",
   "flext_infra.release._release_artifact.FlextInfraReleaseArtifactMixin",
   "flext_infra.release._release_boundary.FlextInfraReleaseBoundaryMixin",
@@ -558,10 +617,6 @@ split-on-trailing-comma = false
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["line-too-long", "non-empty-init-module", "unused-import"]
 "**/_config.py" = ["invalid-function-name"]
-"**/_utilities/credential.py" = [
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
-]
 "**/bin/**" = [
   "docstring-missing-exception",
   "docstring-missing-returns",
@@ -570,16 +625,9 @@ split-on-trailing-comma = false
   "magic-value-comparison",
   "missing-copyright-notice",
   "print",
-  "start-process-with-partial-path",
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
   "type-check-without-type-error",
   "undocumented-public-method",
   "unused-class-method-argument",
-]
-"**/bootstrap.py" = [
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
 ]
 "**/docx.py" = ["import-outside-top-level"]
 "**/file_test_helpers.py" = ["line-too-long"]
@@ -603,12 +651,7 @@ split-on-trailing-comma = false
   "pytest-fixture-autouse",
   "too-many-public-methods",
 ]
-"**/tests/python/**" = [
-  "raise-vanilla-args",
-  "start-process-with-partial-path",
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
-]
+"**/tests/python/**" = ["raise-vanilla-args"]
 "**/xlsx.py" = ["import-outside-top-level"]
 "scripts/**" = [
   "any-type",
@@ -648,9 +691,6 @@ split-on-trailing-comma = false
   "repeated-append",
   "runtime-cast-value",
   "shebang-not-executable",
-  "start-process-with-partial-path",
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
   "undocumented-public-class",
   "undocumented-public-function",
   "undocumented-public-init",

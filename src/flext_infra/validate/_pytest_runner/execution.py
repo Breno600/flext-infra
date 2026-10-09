@@ -18,7 +18,6 @@ import pytest
 from flext_infra import c, config, m, r, t, u
 from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
 from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
-from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -41,6 +40,8 @@ class FlextInfraPytestRunnerExecution(
             The resulting ``p.Result[m.Infra.TestmonCacheState]``.
 
         """
+        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
         return FlextInfraTestmonDbInspector(
             repository_root=self.root,
             db_path=self.testmon_db,
@@ -591,9 +592,6 @@ class FlextInfraPytestRunnerExecution(
         Returns:
             The resulting ``p.Result[int]``.
 
-        Raises:
-            RuntimeError: If testmon database changed after the checkpoint receipt.
-            ValueError: If testmon publication path cannot contain output delimiters.
         """
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
@@ -635,6 +633,19 @@ class FlextInfraPytestRunnerExecution(
                 execution_mode=execution_mode,
             )
         # Only the parent publishes, after SQLite closure and lease release.
+        self._publish_cache_output()
+        return result
+
+    def _publish_cache_output(self) -> None:
+        """Publish the checkpoint produced by the completed leased operation.
+
+        Raises:
+            RuntimeError: If the database changed after the checkpoint receipt.
+            ValueError: If the database path contains output delimiters.
+
+        """
+        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
         publication = self._cache_publication
         output = self._optional_environment_path("GITHUB_OUTPUT")
         if publication is not None and output is not None:
@@ -653,7 +664,6 @@ class FlextInfraPytestRunnerExecution(
                     f"testmon_digest={publication.digest}\n"
                     f"testmon_saveable={str(publication.saveable).lower()}\n",
                 )
-        return result
 
     def _execute_testmon_leased(
         self,
@@ -672,6 +682,8 @@ class FlextInfraPytestRunnerExecution(
                 cache.
 
         """
+        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
         report_dir = self._report_directory()
         self._write_run_context(
             report_dir,
@@ -799,6 +811,8 @@ class FlextInfraPytestRunnerExecution(
             RuntimeError: If completed testmon run has no checkpointed database.
 
         """
+        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
         accounting = m.Infra.TestmonRunAccounting.model_validate_json(
             (report_dir / "run-accounting.json").read_text(encoding="utf-8"),
         )

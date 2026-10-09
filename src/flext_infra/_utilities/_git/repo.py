@@ -81,6 +81,56 @@ class FlextInfraUtilitiesGitRepo:
         return tuple(entries)
 
     @classmethod
+    def _worktree_registry(
+        cls,
+        repo: Repo,
+        porcelain: str,
+    ) -> t.VariadicTuple[m.Infra.GitWorktreeEntry]:
+        """Bind a storage-only primary row to Git-proven checkout identity.
+
+        Returns:
+            Typed registry entries with the primary checkout authenticated by Git.
+
+        Raises:
+            ValueError: If shared storage cannot be bound to a real primary checkout.
+
+        """
+        entries = cls._registered_worktree_entries(porcelain)
+        common_dir = Path(
+            repo.git.rev_parse(
+                c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS,
+                "--git-common-dir",
+            ).strip(),
+        ).resolve()
+        if not entries:
+            msg = "Git worktree registry is empty"
+            raise ValueError(msg)
+        if entries[0].bare or entries[0].path != common_dir:
+            return entries
+        git_dir = Path(
+            repo.git.rev_parse(
+                c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS,
+                "--git-dir",
+            ).strip(),
+        ).resolve()
+        if git_dir != common_dir:
+            msg = (
+                "primary checkout is unproven for storage-only registry row: "
+                f"{common_dir}"
+            )
+            raise ValueError(msg)
+        checkout = Path(repo.git.rev_parse("--show-toplevel").strip()).resolve()
+        if (
+            repo.working_tree_dir is None
+            or checkout == common_dir
+            or Path(repo.working_tree_dir).resolve() != checkout
+            or repo.git.rev_parse("--is-inside-work-tree").strip() != "true"
+        ):
+            msg = f"Git checkout identity disagrees with shared storage: {common_dir}"
+            raise ValueError(msg)
+        return (entries[0].model_copy(update={"path": checkout}), *entries[1:])
+
+    @classmethod
     def refresh_binary(cls) -> p.Result[bool]:
         """Point GitPython at the absolute path of the canonical git binary.
 
@@ -184,7 +234,9 @@ class FlextInfraUtilitiesGitRepo:
         """
         try:
             git_dir = Path(
-                repo.git.rev_parse("--path-format=absolute", "--git-dir").strip(),
+                repo.git.rev_parse(
+                    c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS, "--git-dir"
+                ).strip(),
             ).resolve()
             caller_root = Path(
                 repo.git.rev_parse("--show-toplevel").strip(),
@@ -261,7 +313,7 @@ class FlextInfraUtilitiesGitRepo:
             repo = cls._repo(repository_path)
             common_dir = Path(
                 repo.git.rev_parse(
-                    "--path-format=absolute",
+                    c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS,
                     "--git-common-dir",
                 ).strip(),
             ).resolve()
