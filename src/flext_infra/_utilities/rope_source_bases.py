@@ -6,146 +6,39 @@ SPDX-License-Identifier: MIT.
 
 from __future__ import annotations
 
-import ast
 from collections.abc import MutableMapping
-from importlib.util import resolve_name
 from pathlib import Path
 
-from flext_infra import c, m, p, t
-from flext_infra._utilities._rope_analysis.sourcescan import (
-    FlextInfraUtilitiesRopeAnalysisSourceScan,
+from flext_infra import m, t
+from flext_infra._utilities._rope_source_bases_aliases import (
+    FlextInfraUtilitiesRopeSourceBasesAliases,
 )
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities._rope_source_bases_inventory import (
+    FlextInfraUtilitiesRopeSourceBasesInventory,
+)
+from flext_infra._utilities._rope_source_bases_runtime import (
+    FlextInfraUtilitiesRopeSourceBasesRuntime,
+)
 
 
 class FlextInfraUtilitiesRopeSourceBases:
-    """Index captured lexical bindings and resolve their qualified runtime bases."""
+    """Source-bases composite facade over the inventory, aliases, and runtime parts."""
 
     @classmethod
     def inventory(
         cls,
         request: m.Infra.SourceBindingInventoryRequest,
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition],
-        *,
-        provider: t.Infra.RopePyModule | None = None,
     ) -> t.MappingKV[str, m.Infra.SourceClassReference | None]:
         """Index lexical bindings without installing a cross-module Rope overlay.
 
         Returns:
             The module's explicit lexical bindings, including value shadowing.
 
-        Raises:
-            TypeError: If Rope returned a non-module AST for.
-            ValueError: If Unresolved declared lazy import mapping in; or if Provider
-                does not match captured source.
         """
-        if provider is not None:
-            resource = provider.get_resource()
-            if (
-                resource is None
-                or resource.real_path != str(request.path)
-                or provider.source_code != request.source
-            ):
-                message = f"Provider does not match captured source: {request.path}"
-                raise ValueError(message)
-            parsed = provider.get_ast()
-        else:
-            resource = (
-                FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                    request.project,
-                    request.path,
-                )
-                if request.path.is_file()
-                else None
-            )
-            parsed = FlextInfraUtilitiesRopeRuntime.build_string_module(
-                request.project,
-                request.source,
-                resource=resource,
-            ).get_ast()
-        if not isinstance(parsed, ast.Module):
-            message = f"Rope returned a non-module AST for {request.path}"
-            raise TypeError(message)
-        package = (
-            request.module
-            if request.path.name == "__init__.py"
-            else request.module.rpartition(".")[0]
-        )
-        bindings: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
-        spec = m.Infra.SourceBindingCollectorSpec(
-            module=request.module,
-            package=package,
-            required_line=request.required_line,
-            allow_conditional=request.allow_conditional,
-            definitions=definitions,
-            lexical=bindings,
-        )
-        cls._collect(spec, parsed.body, bindings, "")
-        targets, references = (
-            FlextInfraUtilitiesRopeAnalysisSourceScan.lazy_import_mapping_source(
-                request.source,
-            )
-        )
-        if references and not request.module.startswith("tests."):
-            message = (
-                f"Unresolved declared lazy import mapping in {request.module}: "
-                f"{references}"
-            )
-            raise ValueError(message)
-        for target, exports in targets:
-            destination = (
-                resolve_name(target, package) if target.startswith(".") else target
-            )
-            for name in exports:
-                bindings[name] = m.Infra.SourceClassReference(
-                    target=destination,
-                    attributes=(name,),
-                    qualified_base=f"{request.module}.{name}",
-                )
-        return bindings
-
-    @staticmethod
-    def _reference(
-        expression: ast.expr,
-        bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
-        module: str,
-    ) -> m.Infra.SourceClassReference:
-        """Capture the binding visible when a class base is evaluated.
-
-        Returns:
-            The resulting ``m.Infra.SourceClassReference``.
-
-        Raises:
-            TypeError: If Unsupported class reference in.
-            ValueError: If Non-class binding used as a base in.
-        """
-        attributes: list[str] = []
-        while isinstance(expression, ast.Subscript | ast.Attribute):
-            if isinstance(expression, ast.Attribute):
-                attributes.insert(0, expression.attr)
-            expression = expression.value
-        if not isinstance(expression, ast.Name):
-            message = (
-                f"Unsupported class reference in {module}: {ast.unparse(expression)}"
-            )
-            raise TypeError(message)
-        name = expression.id
-        if name in bindings:
-            binding = bindings[name]
-            if binding is None:
-                message = f"Non-class binding used as a base in {module}: {name}"
-                raise ValueError(message)
-        else:
-            binding = m.Infra.SourceClassReference(
-                target="builtins",
-                attributes=(name,),
-                qualified_base=f"{module}.{name}",
-            )
-        return m.Infra.SourceClassReference(
-            target=binding.target,
-            attributes=(*binding.attributes, *attributes),
-            qualified_base=".".join((binding.qualified_base, *attributes)),
+        return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(
+            request,
+            definitions,
         )
 
     @staticmethod
@@ -474,55 +367,11 @@ class FlextInfraUtilitiesRopeSourceBases:
             The module's facade alias names routed to their lazy module paths.
 
         """
-        parsed = ast.parse(source, filename=str(path))
-        package = module if path.name == "__init__.py" else module.rpartition(".")[0]
-        aliases: dict[str, str] = {}
-        for node in ast.walk(parsed):
-            if not (
-                isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Name)
-                and node.func.id == "install_lazy_exports"
-            ):
-                continue
-            mapping = next(
-                (
-                    arg
-                    for arg in (
-                        *node.args,
-                        *(keyword.value for keyword in node.keywords),
-                    )
-                    if isinstance(arg, ast.Dict)
-                    or (
-                        isinstance(arg, ast.Call)
-                        and isinstance(arg.func, ast.Name)
-                        and arg.func.id == "MappingProxyType"
-                    )
-                ),
-                None,
-            )
-            if isinstance(mapping, ast.Call):
-                mapping = mapping.args[0] if mapping.args else None
-            if not isinstance(mapping, ast.Dict):
-                continue
-            for key_node, value_node in zip(mapping.keys, mapping.values, strict=False):
-                if not (
-                    isinstance(key_node, ast.Constant)
-                    and isinstance(key_node.value, str)
-                    and isinstance(value_node, ast.Constant)
-                    and isinstance(value_node.value, str)
-                ):
-                    continue
-                value = value_node.value
-                if value.startswith("."):
-                    parts = package.split(".") if package else []
-                    depth = len(value) - len(value.lstrip("."))
-                    remainder = value.lstrip(".")
-                    if depth > len(parts):
-                        continue
-                    base = ".".join(parts[: len(parts) - depth + 1])
-                    value = ".".join(part for part in (base, remainder) if part)
-                aliases[key_node.value] = value
-        return aliases
+        return FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases(
+            module,
+            path,
+            source,
+        )
 
     @classmethod
     def runtime_bases(
@@ -543,10 +392,6 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         Returns:
             Sorted configured roots and derived Ruff-qualified base expressions.
-
-        Raises:
-            TypeError: If Rope resolves a required base to a non-class.
-            ValueError: If a source binding or inheritance order is invalid.
 
         """
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition] = {}

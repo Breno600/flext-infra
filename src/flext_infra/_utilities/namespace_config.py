@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config
+from flext_infra._utilities import FlextInfraUtilitiesGit, FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -30,8 +31,6 @@ class FlextInfraUtilitiesNamespaceConfig:
             TypeError: If [tool.flext.namespace] must be a table in.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         flext_meta = FlextInfraUtilitiesPyproject.tool_flext_meta(project_root)
         if "namespace" not in flext_meta:
             return {}
@@ -94,8 +93,6 @@ class FlextInfraUtilitiesNamespaceConfig:
                 ``declared.failure``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGit
-
         meta = FlextInfraUtilitiesNamespaceConfig.namespace_meta(project_root)
         if "scan_dirs" in meta:
             configured = meta["scan_dirs"]
@@ -120,7 +117,7 @@ class FlextInfraUtilitiesNamespaceConfig:
             return frozenset(item.strip() for item in scan_dirs)
         tracked = FlextInfraUtilitiesGit.git_tracked_top_level_dir_names(project_root)
         if tracked is not None:
-            declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(project_root)
+            declared = FlextInfraUtilitiesGit.git_submodule_declarations(project_root)
             if declared.failure:
                 raise ValueError(declared.error)
             # A declared submodule is another repository, consumed as an
@@ -128,7 +125,11 @@ class FlextInfraUtilitiesNamespaceConfig:
             excluded = (
                 c.Infra.COMMON_EXCLUDED_DIRS
                 | {name for name in tracked if name.startswith(".")}
-                | {path.as_posix() for path in declared.value if len(path.parts) == 1}
+                | {
+                    item.path.as_posix()
+                    for item in declared.value
+                    if len(item.path.parts) == 1
+                }
             )
             dynamic = frozenset(
                 name

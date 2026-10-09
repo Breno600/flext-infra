@@ -476,6 +476,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraMypyDarwinSupervisor",
     "FlextInfraMypyProfiler",
     "FlextInfraRopeProject",
+    "FlextInfraRopeRuleLoaderService",
     "FlextInfraUtilitiesBase",
     "FlextInfraUtilitiesCodegen",
     "FlextInfraUtilitiesCodegenFacades",

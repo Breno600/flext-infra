@@ -1,0 +1,23 @@
+# Module-level facts stay module-level: a dynamic `importlib.import_module(...)`
+# call hides a dependency from the module graph the import law
+# (operator-ruling-2026-10-08-import-law) orders. Function-body imports are
+# owned by Ruff `import-outside-top-level` and repaired by the import-law engine
+# (`make fix` recipe normalize-imports, `make mod` import normalization), so this
+# rule detects only the dynamic form Ruff cannot see.
+#
+# Package initialisers and the lazy-export owner (`flext_core/lazy.py`) load
+# modules by design and are out of scope.
+id: ban-dynamic-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/__init__.py"
+  - "**/flext_core/lazy.py"
+  - "**/beartype/**"
+rule:
+  matches: dynamic-import
+message: >-
+  Dynamic import: declare the dependency as a module-level import so the
+  import law and the module graph can see it.

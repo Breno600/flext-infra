@@ -3,13 +3,7 @@
 # run the project's canonical generation surface (`make gen`).
 version: 3
 name: flext-infra
-candidate_bootstrap_targets:
-  - path: ../../flext-worktrees/api-bootstrap-fjum8-20261006
-    what: pyproject
-  - path: ../adopt-mro-1674
-    what: makefile
-  - path: ../api-rope-handoff-fjum8-20261006
-    what: makefile
+candidate_bootstrap_targets: []
 # Production sources are the namespace validator's declared scope — tests host pytest conventions and
 # scripts/examples are thin command and documentation surfaces. Lint, type,
 # constant, and magic-value rules stay fleet-tree-wide.

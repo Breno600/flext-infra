@@ -12,7 +12,13 @@ from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
+from flext_cli import u
+
 from flext_infra import c, config, m
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGit,
+    FlextInfraUtilitiesWorkspaceManifest,
+)
 from flext_infra._utilities._project_discovery_candidates import (
     FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
 )
@@ -35,10 +41,6 @@ class FlextInfraUtilitiesProjectDiscovery(
             The resulting ``m.Infra.RefactorConfigSpec``.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
-
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,
         )
@@ -81,10 +83,6 @@ class FlextInfraUtilitiesProjectDiscovery(
             Every manifest-relative path that is not a generation participant.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
-
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,
         )
@@ -190,11 +188,9 @@ class FlextInfraUtilitiesProjectDiscovery(
             Project roots sorted by their ``.gitmodules`` declaration order.
 
         Raises:
-            ValueError: If ``declared_paths.failure``.
+            ValueError: If ``declared.failure``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGit
-
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
             repository_root,
         )
@@ -246,16 +242,14 @@ class FlextInfraUtilitiesProjectDiscovery(
             ValueError: If ``declared_paths.failure``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGit
-
         resolved_root = repository_root.resolve()
-        declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
+        declared_paths = FlextInfraUtilitiesGit.git_submodule_declarations(
             resolved_root,
         )
         if declared_paths.failure:
             raise ValueError(declared_paths.error or "invalid .gitmodules")
         submodules = frozenset(
-            (resolved_root / path).resolve() for path in declared_paths.value
+            (resolved_root / item.path).resolve() for item in declared_paths.value
         )
         declared = cls.discover_project_candidates(resolved_root)
         nonparticipants = cls.manifest_nonparticipant_paths(resolved_root)
@@ -385,8 +379,6 @@ class FlextInfraUtilitiesProjectDiscovery(
             The resulting ``Path``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGit
-
         if runtime_root is None:
             runtime = FlextInfraUtilitiesGit.git_repository_root(
                 m.Infra.GitRepoRequest(repo_root=project_root),

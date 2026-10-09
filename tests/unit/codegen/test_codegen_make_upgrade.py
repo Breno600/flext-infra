@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import re
+import shutil
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -404,3 +405,85 @@ class TestsFlextInfraCodegenMakeUpgrade:
             halves["PUBLIC"].split(),
             eq=[*halves["PRODUCE"].split(), *halves["ACTIVATE"].split()],
         )
+
+    def test_ci_setup_refuses_a_drifted_lock(
+        self,
+        generated_make_template: t.Pair[c.Infra.MakeProfile, Path],
+    ) -> None:
+        """Law 14: under CI a lock that no longer satisfies its manifests is RED.
+
+        Locally the drift is reported and the committed lock installs
+        ``--frozen``; under the CI contract the same drift exits before any
+        sync, so CI never installs the old pins green.
+        """
+        _profile, project_root = generated_make_template
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        setup_recipe = makefile.split("SETUP_ENVIRONMENT_RECIPE = ", 1)[1].split(
+            "\n\n",
+            1,
+        )[0]
+        drift = setup_recipe.split("lock --check", 1)[1].split(
+            "uv_lock_mode=--frozen",
+            1,
+        )[0]
+        ci = config.Infra.codegen.make.ci
+        tm.that(
+            drift,
+            has=[
+                f'if [ "$(strip $({ci.variable}))" = "{ci.value}" ]; then',
+                "ERROR[setup]",
+                "exit 2",
+            ],
+        )
+
+    @pytest.mark.parametrize(
+        "generated_make_template",
+        [c.Infra.MakeProfile.STANDALONE],
+        indirect=True,
+    )
+    def test_attached_member_upg_stops_before_any_lock(
+        self,
+        tmp_path: Path,
+        generated_make_template: t.Pair[c.Infra.MakeProfile, Path],
+    ) -> None:
+        """`make upg` in an attached member fails loud and writes no lock.
+
+        Inside a workspace the member resolves the workspace runtime, where
+        `uv lock` rewrites the workspace lock and never the member's own.
+        """
+        _profile, template = generated_make_template
+        workspace = tmp_path / "workspace"
+        member = workspace / "member"
+        shutil.copytree(
+            template,
+            member,
+            symlinks=True,
+            ignore=shutil.ignore_patterns(".venv", ".git"),
+        )
+        u.Tests.initialize_git_repo(member)
+        workspace_lock = workspace / c.Infra.UV_LOCK_FILENAME
+        u.Tests.initialize_git_repo(workspace)
+        head = u.Tests.git_capture(member, "rev-parse", c.Infra.GIT_HEAD)
+        u.Tests.git_run(
+            workspace,
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            f"160000,{head.strip()},member",
+        )
+        u.Tests.commit_git_changes(workspace, "attach member")
+        previous = {lock.name: lock.read_bytes() for lock in member.glob("*.lock")}
+
+        upgraded = tm.ok(
+            u.Tests.run_isolated_make(["--no-print-directory", "upg"], cwd=member),
+        )
+
+        tm.that(u.Cli.process_succeeded(upgraded.outcome), eq=False)
+        tm.that(upgraded.stderr, has=["ERROR[upg]", str(workspace.resolve())])
+        tm.that(
+            {lock.name: lock.read_bytes() for lock in member.glob("*.lock")},
+            eq=previous,
+        )
+        tm.that(workspace_lock.exists(), eq=False)

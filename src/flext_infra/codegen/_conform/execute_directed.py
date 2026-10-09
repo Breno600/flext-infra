@@ -13,6 +13,10 @@ from flext_infra.codegen import FlextInfraCodegenTransaction
 from flext_infra.codegen._conform.execute_scaffold import (
     FlextInfraCodegenConformExecuteScaffold,
 )
+from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+from flext_infra.codegen.staged_package import FlextInfraStagedPackage
+from flext_infra.validate import FlextInfraValidateFreshImport
 
 
 class FlextInfraCodegenConformExecuteDirected(FlextInfraCodegenConformExecuteScaffold):
@@ -28,9 +32,6 @@ class FlextInfraCodegenConformExecuteDirected(FlextInfraCodegenConformExecuteSca
             The checked or atomically published initializer plan.
 
         """
-        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-        from flext_infra.codegen.staged_package import FlextInfraStagedPackage
-
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=request.root),
         )
@@ -180,11 +181,6 @@ class FlextInfraCodegenConformExecuteDirected(FlextInfraCodegenConformExecuteSca
             The phase analysis and optional staged plan, or a planning failure.
 
         """
-        from flext_infra.codegen.codegen_preconditions import (
-            FlextInfraCodegenPreconditions,
-        )
-        from flext_infra.codegen.staged_package import FlextInfraStagedPackage
-
         result_type = r[
             t.Pair[m.Infra.CodegenPhaseAnalysis, m.Infra.StagePackagePlan | None]
         ]
@@ -228,8 +224,6 @@ class FlextInfraCodegenConformExecuteDirected(FlextInfraCodegenConformExecuteSca
             The materialized session after consumer validation, or its first failure.
 
         """
-        from flext_infra.validate import FlextInfraValidateFreshImport
-
         result_type = r[m.Infra.CodegenTransactionSession]
         if stage_plan is None or len(publications) != 1:
             return result_type.fail(

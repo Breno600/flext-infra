@@ -1,0 +1,18 @@
+id: ban-settings-config-own-facade-import
+valid:
+  - |
+    from flext_infra import config
+  - |
+    from flext_infra import settings
+  - |
+    from flext_infra._settings import FlextInfraSettings
+  - |
+    import typing
+
+    if typing.TYPE_CHECKING:
+        from flext_infra import t
+invalid:
+  - |
+    from flext_infra import c, t
+  - |
+    from flext_infra import settings, u

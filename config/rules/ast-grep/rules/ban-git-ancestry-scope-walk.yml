@@ -1,6 +1,6 @@
 # A hand-rolled `while` loop that walks `path.parent` testing `(P / ".git")`
 # to decide repository/scope boundaries duplicates the typed git-scope owner
-# (u.Infra.git_declared_submodule_paths / repository-root resolution from the
+# (u.Infra.git_submodule_declarations / repository-root resolution from the
 # typed git context). Current instance: _utilities/_git/scope.py::_git_repo_root.
 #
 # LIMITATION (stated, not silently dropped): ast-grep cannot express "any loop
@@ -36,6 +36,6 @@ message: >-
   [ban-git-ancestry-scope-walk] Hand-rolled while-loop walks path.parent
   testing (P / ".git") to decide scope — fix: resolve the repository root /
   submodule scope through the typed git owner
-  (u.Infra.git_declared_submodule_paths or the equivalent typed
+  (u.Infra.git_submodule_declarations or the equivalent typed
   repository-root read) instead of re-walking the filesystem · ref: rule
   coordination--shared-venv-guard
