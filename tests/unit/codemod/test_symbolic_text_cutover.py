@@ -212,8 +212,10 @@ class TestsFlextInfraSymbolicTextCutover:
             '\npayload = \'{"status": "TOOL_ERROR"}\'\n'
             'spelling = "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"\n'
             'tag: Literal["utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"]\n'
-            'meta: Annotated[str, "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"]\n'
-            "identity_metadata: Annotated[str, utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci]\n"
+            "meta: Annotated[str, "
+            '"utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"]\n'
+            "identity_metadata: Annotated[str, "
+            "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci]\n"
             "owned = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.value\n"
             'outcome = c.Infra.ToolOutcome.ERROR == "TOOL_ERROR"\n'
             "class Other:\n"
@@ -222,8 +224,10 @@ class TestsFlextInfraSymbolicTextCutover:
             "            class Ci:\n"
             "                value = 'independent'\n"
             "def independent(utilities):\n"
-            "    return utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.value\n"
-            "print(json.dumps([json.loads(payload), owned, independent(Other), spelling, __doc__, outcome]))\n"
+            "    return utilities.TestsFlextInfraUtilities."
+            "CodegenTestSupport.Ci.value\n"
+            "print(json.dumps([json.loads(payload), owned, independent(Other), "
+            "spelling, __doc__, outcome]))\n"
         )
         consumer.write_text(source, encoding="utf-8")
         u.Tests.git_bootstrap(mod_workspace, ("add", "tests"))
@@ -281,7 +285,9 @@ class TestsFlextInfraSymbolicTextCutover:
         consumer = mod_workspace / "tests" / "payload.py"
         consumer.parent.mkdir(exist_ok=True)
         consumer.write_text(
-            "import json\npayload = '{\"status\": \"TOOL_ERROR\"}'\nprint(json.loads(payload)['status'])\n",
+            "import json\n"
+            'payload = \'{"status": "TOOL_ERROR"}\'\n'
+            "print(json.loads(payload)['status'])\n",
             encoding="utf-8",
         )
         original = consumer.read_bytes()

@@ -39,8 +39,8 @@ class TestsFlextInfraCodegenMakeAuthentication:
         tm.ok(u.Tests.create_python_environment(project_root))
         (project_root / "auth_probe.py").write_text(
             "import os\n"
-            "assert all(os.environ[name] == os.environ['EXPECTED_CREDENTIAL'] for name in "
-            "('GITHUB_TOKEN', 'GH_TOKEN', 'MISE_GITHUB_TOKEN'))\n"
+            "assert all(os.environ[name] == os.environ['EXPECTED_CREDENTIAL'] "
+            "for name in ('GITHUB_TOKEN', 'GH_TOKEN', 'MISE_GITHUB_TOKEN'))\n"
             "assert 'GITHUB_API_TOKEN' not in os.environ\n"
             "print('environment-authenticated')\n",
             encoding="utf-8",
@@ -80,7 +80,10 @@ class TestsFlextInfraCodegenMakeAuthentication:
         )
         tm.that(
             process.stdout,
-            has="github-auth source=GITHUB_TOKEN extraction-exit=not-selected present=yes",
+            has=(
+                "github-auth source=GITHUB_TOKEN "
+                "extraction-exit=not-selected present=yes"
+            ),
         )
         tm.that(process.stdout + process.stderr, lacks=expected)
         return process
