@@ -372,8 +372,8 @@ class FlextInfraUtilitiesProjectDiscovery(
         owns the environment. Undeclared, the owner derives it: a subproject
         checked out inside a workspace uses the workspace environment; a
         standalone checkout owns its local environment. A linked Git worktree
-        uses the environment of its primary worktree, wherever Git places it,
-        exactly as the generated Makefile and ``.envrc`` resolve it.
+        uses the environment its primary worktree uses, wherever Git places
+        the lane, exactly as the generated Makefile and ``.envrc`` resolve it.
 
         Returns:
             The resulting ``Path``.
@@ -390,7 +390,9 @@ class FlextInfraUtilitiesProjectDiscovery(
                 m.Infra.GitRepoRequest(repo_root=owner),
             ).unwrap()
             if identity.is_worktree:
-                return identity.primary_root / c.Infra.ENVIRONMENT_DIRECTORY
+                return FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
+                    identity.primary_root,
+                )
         return owner / c.Infra.ENVIRONMENT_DIRECTORY
 
     @classmethod

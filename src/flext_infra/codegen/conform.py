@@ -110,9 +110,6 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
         project = payload.get("project")
         if not isinstance(project, dict):
             return ()
-        dependencies = project.get("dependencies")
-        if not isinstance(dependencies, list):
-            return ()
         declared = project.get("dependencies")
         if not isinstance(declared, list):
             return ()

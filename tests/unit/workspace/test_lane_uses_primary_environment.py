@@ -1,7 +1,7 @@
 """Lane provisioning uses the environment of its primary worktree.
 
-Premise (operator ruling 2026-10-09): a linked worktree's environment is the
-``.venv`` of its primary worktree, located through Git wherever the lane lives.
+Premise (operator ruling 2026-10-09): a linked worktree uses the environment
+its primary worktree uses, located through Git wherever the lane lives.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
