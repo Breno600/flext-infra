@@ -198,7 +198,9 @@ Infra:
           # name; the notice from the project's declared author and copyright
           # year; a method that never reads its instance becomes a static
           # method, its signature and decorators edited and its body kept
-          # byte for byte).
+          # byte for byte; an inline import runs through the import-law engine,
+          # operator-ruling-2026-10-08-import-law; a long string literal or
+          # comment Ruff format cannot wrap is split without changing the AST).
           fix-recipes:
             missing-copyright-notice: copyright-notice
             undocumented-public-class: summary-docstring
@@ -208,6 +210,32 @@ Infra:
             docstring-missing-yields: yields-section
             docstring-missing-exception: raises-section
             no-self-use: static-method
+            import-outside-top-level: normalize-imports
+            line-too-long: wrap-long-line
+          # Phases run in order and Ruff re-reads the tree after each: imports
+          # settle first (their rewrite can shorten or lengthen lines), a new
+          # summary exposes the sections its function needs, and line wrapping
+          # runs last over the final text.
+          fix-recipe-phases:
+            - [normalize-imports]
+            - [summary-docstring, copyright-notice, static-method]
+            - [returns-section, yields-section, raises-section]
+            - [wrap-long-line]
+          # The import law keeps a reverse import read at runtime in place for
+          # manual repair, and a line holding no splittable literal or comment
+          # keeps its length; those findings stay visible in make check instead
+          # of failing make fix (operator ruling 2026-10-01: fix never fails on
+          # a residual violation).
+          fix-recipe-residual: [normalize-imports, wrap-long-line]
+          # Pydantic evaluates model field annotations at runtime, so an
+          # import used only in a model annotation is runtime, not typing-only.
+          # Ruff follows imported bases only by qualified name: codegen derives
+          # every project class base that subclasses a root below into
+          # runtime-evaluated-base-classes (tooling_runtime), never a list here.
+          flake8-type-checking:
+            runtime-evaluated-roots:
+              - pydantic.BaseModel
+              - pydantic.BaseModel
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -710,12 +738,25 @@ Infra:
         explicit_start: false
 
     lazy-init:
-      # Canonical import layer order for the lazy-init engine. Lower
-      # index = lower layer.
-      # Runtime imports target equal-or-lower layers (relative-dot
-      # within package); reverse (higher) imports are emitted under
-      # ``if TYPE_CHECKING:`` per ``reverse_import_mode``.
+      # Canonical import layer order of the FLEXT import law
+      # (operator-ruling-2026-10-08-import-law). Lower index = lower layer;
+      # ``other`` holds every module whose path names no declared layer.
+      # Runtime imports target equal-or-lower layers; a reverse (higher)
+      # import is emitted under ``if TYPE_CHECKING:`` per
+      # ``reverse_import_mode``, and a reverse runtime use stays a finding.
       import-layer-order:
+        - settings
+        - config
+        - c
+        - t
+        - p
+        - m
+        - u
+        - other
+        - base
+        - services
+        - api
+        - cli
         - settings
         - config
         - c

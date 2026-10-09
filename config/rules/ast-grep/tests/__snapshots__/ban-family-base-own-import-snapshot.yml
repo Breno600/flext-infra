@@ -1,0 +1,35 @@
+id: ban-family-base-own-import
+snapshots:
+  ? |
+    from flext_infra import c, t
+  : labels:
+    - source: from flext_infra import c, t
+      style: primary
+      start: 0
+      end: 28
+    - source: flext_infra
+      style: secondary
+      start: 5
+      end: 16
+  ? |
+    from flext_infra._constants.make import FlextInfraConstantsMake
+  : labels:
+    - source: from flext_infra._constants.make import FlextInfraConstantsMake
+      style: primary
+      start: 0
+      end: 63
+    - source: flext_infra._constants.make
+      style: secondary
+      start: 5
+      end: 32
+  ? |
+    from flext_infra._settings import FlextInfraSettings
+  : labels:
+    - source: from flext_infra._settings import FlextInfraSettings
+      style: primary
+      start: 0
+      end: 52
+    - source: flext_infra._settings
+      style: secondary
+      start: 5
+      end: 26

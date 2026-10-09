@@ -1,23 +1,5 @@
-id: ban-inline-import
+id: ban-dynamic-import
 snapshots:
-  ? |
-    def build() -> object:
-        from pathlib import Path
-        return Path()
-  : labels:
-    - source: from pathlib import Path
-      style: primary
-      start: 27
-      end: 51
-  ? |
-    def load() -> object:
-        import json
-        return json.loads("{}")
-  : labels:
-    - source: import json
-      style: primary
-      start: 26
-      end: 37
   ? |
     from importlib import import_module
     module = import_module("json")

@@ -225,6 +225,7 @@ project-excludes = [
   "vendor/**",
 ]
 project-includes = ["src/**/*.py*", "tests/**/*.py*"]
+project-includes = ["src/**/*.py*", "tests/**/*.py*"]
 python-version = "3.13"
 search-path = ["src", "."]
 use-ignore-files = false
@@ -442,6 +443,97 @@ unfixable = [
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = "Copyright \\(c\\) \\d{4} \\S[^\\n]*\\. All rights reserved\\."
 
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = [
+  "flext_cli.FlextCli",
+  "flext_cli.config.FlextCliConfig",
+  "flext_cli.m.ArbitraryTypesModel",
+  "flext_cli.m.BaseModel",
+  "flext_cli.m.BaseSettings",
+  "flext_cli.m.ContractModel",
+  "flext_cli.m.FlexibleModel",
+  "flext_cli.m.RootModel",
+  "flext_cli.m.Value",
+  "flext_core.FlextService",
+  "flext_core.FlextSettings",
+  "flext_core.m.ArbitraryTypesModel",
+  "flext_core.m.ContractModel",
+  "flext_core.m.FlexibleModel",
+  "flext_core.m.RootModel",
+  "flext_core.m.StrictBoundaryModel",
+  "flext_infra._models._codegen.fix.BulkFixItem",
+  "flext_infra._models._codegen.pipeline.CodegenCommand",
+  "flext_infra._models._config.contexts.MakeCommandContext",
+  "flext_infra._models._config.contexts.MakeRenderContext",
+  "flext_infra._models._config.contract.ConfigContract",
+  "flext_infra._models._config.contract.DocsAuditOverridesSpec",
+  "flext_infra._models._config.contract.FlextInfraConfigModelsContract.ConfigContract",
+  "flext_infra._models._config.external_cache.FlextInfraExternalCacheDirectorySpec",
+  "flext_infra._models.codegen_render.MkdocsRenderContext",
+  "flext_infra._models.git.GitRemoteRequest",
+  "flext_infra._models.git.GitRepoRequest",
+  "flext_infra._models.layout._LayoutContract",
+  "flext_infra._models.mise_toolchain._ConfigContract",
+  "flext_infra._models.mixins.FilePathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.AbsoluteFilePathTextMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ErrorDetailMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.FilePathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.NestedClassPathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.NonNegativeLineMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.PositiveLineMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ProjectEntryNameMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ProjectNameMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ProjectNamesListMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.RepositoryRootPathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.RequiredNonNegativeLineMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.VersionTagMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.WriteMixin",
+  "flext_infra._models.mixins.PositiveLineMixin",
+  "flext_infra._models.mixins.ScopeMixin",
+  "flext_infra.base.FlextInfraServiceBase",
+  "flext_infra.base.s",
+  "flext_infra.base_selection.FlextInfraProjectSelectionServiceBase",
+  "flext_infra.codegen.FlextInfraCodegenConform",
+  "flext_infra.codegen._conform.FlextInfraCodegenConformExecute",
+  "flext_infra.codegen._conform.artifact_render.FlextInfraCodegenConformArtifactRender",
+  "flext_infra.codegen._conform.beads_routes.FlextInfraCodegenConformBeadsRoutes",
+  "flext_infra.codegen._conform.bootstrap.FlextInfraCodegenConformBootstrap",
+  "flext_infra.codegen._conform.context_render.FlextInfraCodegenConformContextRender",
+  "flext_infra.codegen._conform.docs_ownership.FlextInfraCodegenConformDocsOwnership",
+  "flext_infra.codegen._conform.execute_directed.FlextInfraCodegenConformExecuteDirected",
+  "flext_infra.codegen._conform.execute_scaffold.FlextInfraCodegenConformExecuteScaffold",
+  "flext_infra.codegen._conform.existing_plan.FlextInfraCodegenConformExistingPlan",
+  "flext_infra.codegen._conform.file_plans.FlextInfraCodegenConformFilePlans",
+  "flext_infra.codegen._conform.gitignore.FlextInfraCodegenConformGitignore",
+  "flext_infra.codegen._conform.plan.FlextInfraCodegenConformPlan",
+  "flext_infra.codegen._conform.pyproject_policy.FlextInfraCodegenConformPyprojectPolicy",
+  "flext_infra.codegen._conform.scaffold_plan.FlextInfraCodegenConformScaffoldPlan",
+  "flext_infra.codegen._execution.FlextInfraCodegenExecutionBase",
+  "flext_infra.deps._modernizer.base.FlextInfraPyprojectModernizerBase",
+  "flext_infra.docs.base.FlextInfraDocServiceBase",
+  "flext_infra.m.ArbitraryTypesModel",
+  "flext_infra.m.FrozenModel",
+  "flext_infra.m.ImmutableValueModel",
+  "flext_infra.maintenance.sonarcloud_client.FlextInfraSonarcloudClient",
+  "flext_infra.release._release_artifact.FlextInfraReleaseArtifactMixin",
+  "flext_infra.release._release_boundary.FlextInfraReleaseBoundaryMixin",
+  "flext_infra.release._release_build.FlextInfraReleaseBuildMixin",
+  "flext_infra.release._release_metadata.FlextInfraReleaseMetadataMixin",
+  "flext_infra.release._release_plan.FlextInfraReleasePlanMixin",
+  "flext_infra.release._release_project.FlextInfraReleaseProjectMixin",
+  "flext_infra.release._release_publish.FlextInfraReleasePublishMixin",
+  "flext_infra.release._release_source.FlextInfraReleaseSourceMixin",
+  "flext_infra.s",
+  "flext_infra.services.cli_dispatch.FlextInfraCliDispatchService",
+  "flext_infra.validate._pytest_runner.base.FlextInfraPytestRunnerBase",
+  "flext_infra.validate._pytest_runner.command.FlextInfraPytestRunnerCommand",
+  "flext_infra.validate._pytest_runner.execution.FlextInfraPytestRunnerExecution",
+  "flext_infra.validate._pytest_runner.reports.FlextInfraPytestRunnerReports",
+  "flext_tests.FlextTestsServiceBase",
+  "flext_tests.FlextTestsUtilities.Tests",
+  "pydantic.BaseModel",
+]
+
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
@@ -467,11 +559,23 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"**/__init__.py" = [
-  "non-empty-init-module",
-  "runtime-import-in-type-checking-block",
-  "typing-only-first-party-import",
-  "unused-import",
+"**/.agents/skills/webapp-testing/scripts/with_server.py" = [
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
+]
+"**/__init__.py" = ["line-too-long", "non-empty-init-module", "unused-import"]
+"**/_config.py" = ["invalid-function-name"]
+"**/bin/**" = [
+  "docstring-missing-exception",
+  "docstring-missing-returns",
+  "import-outside-top-level",
+  "line-too-long",
+  "magic-value-comparison",
+  "missing-copyright-notice",
+  "print",
+  "type-check-without-type-error",
+  "undocumented-public-method",
+  "unused-class-method-argument",
 ]
 "**/tests/python/**" = [
   "raise-vanilla-args",
@@ -537,6 +641,14 @@ split-on-trailing-comma = false
   "commented-out-code",
   "line-too-long",
   "typing-only-first-party-import",
+]
+"src/flext_cli/_utilities/processes.py" = [
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
+]
+"src/flext_cli/_utilities/runtime.py" = [
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
 ]
 "tests/**/*.py" = ["assert"]
 

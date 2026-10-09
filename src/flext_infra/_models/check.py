@@ -145,6 +145,18 @@ class FlextInfraModelsCheck:
     class FixPyreflyConfigCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-pyrefly-settings``."""
 
+    class LineWrapLiteral(m.ContractModel):
+        """One single-line string literal the line-length repair may split."""
+
+        start: Annotated[int, m.Field(ge=0, description="Start column of the literal")]
+        end: Annotated[int, m.Field(ge=0, description="End column of the literal")]
+        prefix: Annotated[str, m.Field(description="String prefix such as f or r")]
+        quote: Annotated[str, m.Field(description="Single-character quote")]
+        bracketed: Annotated[
+            bool,
+            m.Field(description="Whether the literal already sits inside brackets"),
+        ]
+
     class Issue(m.ContractModel):
         """Single issue reported by a quality gate tool."""
 

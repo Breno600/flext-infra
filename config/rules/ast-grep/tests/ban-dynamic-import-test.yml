@@ -1,4 +1,4 @@
-id: ban-inline-import
+id: ban-dynamic-import
 valid:
   - |
     import json
@@ -6,23 +6,10 @@ valid:
     def load() -> object:
         return json.loads("{}")
   - |
-    from typing import TYPE_CHECKING
-
-    if TYPE_CHECKING:
-        from pathlib import Path
-  - |
-    def typed() -> None:
-        if TYPE_CHECKING:
-            from pathlib import Path
-invalid:
-  - |
     def load() -> object:
         import json
         return json.loads("{}")
-  - |
-    def build() -> object:
-        from pathlib import Path
-        return Path()
+invalid:
   - |
     module = importlib.import_module("json")
   - |

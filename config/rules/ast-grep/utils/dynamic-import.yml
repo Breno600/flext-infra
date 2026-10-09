@@ -1,19 +1,9 @@
-# An import statement inside a function body outside an `if TYPE_CHECKING:`
-# guard, or a dynamic `importlib.import_module(...)` call in any of its
-# spellings (module attribute, aliased module, imported function).
-id: inline-or-dynamic-import
+# A dynamic `importlib.import_module(...)` call in any of its spellings
+# (module attribute, aliased module, imported function).
+id: dynamic-import
 language: python
 rule:
   any:
-    - all:
-        - any:
-            - kind: import_statement
-            - kind: import_from_statement
-        - inside:
-            kind: function_definition
-            stopBy: end
-        - not:
-            matches: inside-type-checking-guard
     - pattern: importlib.import_module($$$ARGS)
     - all:
         - pattern: $ALIAS.import_module($$$ARGS)

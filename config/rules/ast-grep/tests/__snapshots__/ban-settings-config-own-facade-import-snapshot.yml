@@ -1,0 +1,32 @@
+id: ban-settings-config-own-facade-import
+snapshots:
+  ? |
+    from flext_infra import c, t
+  : labels:
+    - source: c
+      style: primary
+      start: 24
+      end: 25
+    - source: flext_infra
+      style: secondary
+      start: 5
+      end: 16
+    - source: from flext_infra import c, t
+      style: secondary
+      start: 0
+      end: 28
+  ? |
+    from flext_infra import settings, u
+  : labels:
+    - source: u
+      style: primary
+      start: 34
+      end: 35
+    - source: flext_infra
+      style: secondary
+      start: 5
+      end: 16
+    - source: from flext_infra import settings, u
+      style: secondary
+      start: 0
+      end: 35

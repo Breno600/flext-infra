@@ -67,6 +67,39 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         )
 
     @classmethod
+    def instance_object(
+        cls,
+        value: p.AttributeProbe,
+    ) -> TypeGuard[t.Infra.RopePyObject]:
+        """Return whether ``value`` is a Rope inferred instance of a class.
+
+        Rope infers a typed value (``facade: Facade = Facade()``) as an exact
+        ``PyObject`` whose type is the declared class; classes, functions and
+        modules are ``PyObject`` subclasses and never match.
+
+        Returns:
+            Whether ``value`` is a Rope inferred class instance.
+
+        """
+        return type(value) is cls.runtime_type("rope.base.pyobjects", "PyObject")
+
+    @classmethod
+    def py_class(cls, value: t.Infra.RopePyObject) -> bool:
+        """Return whether ``value`` is a Rope class declared in Python source.
+
+        Builtin classes (``Exception``, ``object``) are abstract classes too,
+        but they have no source scope.
+
+        Returns:
+            Whether ``value`` is a Rope source-declared class object.
+
+        """
+        return isinstance(
+            value,
+            cls.runtime_type("rope.base.pyobjectsdef", "PyClass"),
+        )
+
+    @classmethod
     def py_function(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:
         """Return whether ``value`` is a Rope Python function object.
 
