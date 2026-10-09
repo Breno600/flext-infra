@@ -17,6 +17,11 @@ from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 from tests import u
 
+# Shared fixture line: the owned-constant read every receiver scenario asserts on.
+_OWNED_CI_LINE = (
+    "owned = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.value\n"
+)
+
 
 @pytest.fixture
 def symbolic_workspace(mod_workspace: Path) -> Path:
@@ -65,22 +70,21 @@ class TestsFlextInfraSymbolicBindingPublication:
         )
         if receiver == "source":
             before += (
-                "utilities = Independent\n"
-                "owned = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.value\n"
-                "utilities = canonical\n"
+                "utilities = Independent\n" + _OWNED_CI_LINE + "utilities = canonical\n"
             )
         elif receiver == "replacement":
             before += (
                 "u = Independent.TestsFlextInfraUtilities\n"
-                "owned = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.value\n"
-                "u = canonical.TestsFlextInfraUtilities\n"
+                + _OWNED_CI_LINE
+                + "u = canonical.TestsFlextInfraUtilities\n"
             )
         else:
             before += (
                 "original = utilities.TestsFlextInfraUtilities\n"
-                "utilities.TestsFlextInfraUtilities = Independent.TestsFlextInfraUtilities\n"
-                "owned = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.value\n"
-                "utilities.TestsFlextInfraUtilities = original\n"
+                "utilities.TestsFlextInfraUtilities = "
+                "Independent.TestsFlextInfraUtilities\n"
+                + _OWNED_CI_LINE
+                + "utilities.TestsFlextInfraUtilities = original\n"
             )
         before += "print(owned)\n"
         consumer.write_text(before, encoding="utf-8")
@@ -189,11 +193,7 @@ class TestsFlextInfraSymbolicBindingPublication:
             root / "tests" / "unit" / "codegen" / name
             for name in ("consumer.py", "peer.py")
         )
-        source = (
-            "from tests import u, utilities\n"
-            "owned = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.value\n"
-            "print(owned)\n"
-        )
+        source = "from tests import u, utilities\n" + _OWNED_CI_LINE + "print(owned)\n"
         for path in consumers:
             path.write_text(source, encoding="utf-8")
         u.Tests.git_bootstrap(root, ("add", "tests"))
@@ -245,8 +245,10 @@ class TestsFlextInfraSymbolicBindingPublication:
             "from tests import u, utilities\n"
             "class Result:\n    code = 'TOOL_ERROR'\n"
             "result = Result()\n"
-            "type Pep = Annotated[str, utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci]\n"
-            "Assigned = Annotated[str, utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci]\n"
+            "type Pep = Annotated[str, "
+            "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci]\n"
+            "Assigned = Annotated[str, "
+            "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci]\n"
             "type Actual = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci\n"
             "type LiteralData = Literal['TOOL_ERROR']\n"
             "type ComparedMetadata = Annotated[str, result.code == 'TOOL_ERROR']\n"
