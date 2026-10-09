@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING
 
 import pytest
@@ -19,6 +20,22 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@dataclasses.dataclass(frozen=True)
+class DiagExtractorOptions:
+    """Optional extractor fixture knobs grouped into one contract."""
+
+    failed: Path | None = None
+    errors: Path | None = None
+    warnings: Path | None = None
+    slowest: Path | None = None
+    skips: Path | None = None
+    events: str = (
+        '{"$report_type":"SessionStart"}\n'
+        '{"$report_type":"SessionFinish","exitstatus":0}\n'
+    )
+    identities: str = ""
+
+
 class TestsFlextInfraPytestDiag:
     """Tests for ``FlextInfraPytestDiag``."""
 
@@ -27,30 +44,24 @@ class TestsFlextInfraPytestDiag:
         junit: Path,
         log: Path,
         *,
-        failed: Path | None = None,
-        errors: Path | None = None,
-        warnings: Path | None = None,
-        slowest: Path | None = None,
-        skips: Path | None = None,
-        events: str = '{"$report_type":"SessionStart"}\n'
-        '{"$report_type":"SessionFinish","exitstatus":0}\n',
-        identities: str = "",
+        options: DiagExtractorOptions | None = None,
     ) -> FlextInfraPytestDiagExtractor:
+        resolved = DiagExtractorOptions() if options is None else options
         report_log = log.with_suffix(".jsonl")
-        report_log.write_text(events, encoding="utf-8")
+        report_log.write_text(resolved.events, encoding="utf-8")
         report_log.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX).write_text(
-            identities,
+            resolved.identities,
             encoding="utf-8",
         )
         return FlextInfraPytestDiagExtractor(
             junit=junit,
             log=log,
             report_log=report_log,
-            failed=failed,
-            errors=errors,
-            warnings=warnings,
-            slowest=slowest,
-            skips=skips,
+            failed=resolved.failed,
+            errors=resolved.errors,
+            warnings=resolved.warnings,
+            slowest=resolved.slowest,
+            skips=resolved.skips,
         )
 
     @staticmethod
@@ -248,10 +259,12 @@ class TestsFlextInfraPytestDiag:
             self._extractor(
                 junit,
                 log,
-                events='{"$report_type":"WarningMessage",'
-                '"category":"DeprecationWarning","filename":"test_case.py",'
-                '"lineno":10,"message":"test warning","when":"runtest"}\n',
-                identities=self._identity("DeprecationWarning", "test warning"),
+                options=DiagExtractorOptions(
+                    events='{"$report_type":"WarningMessage",'
+                    '"category":"DeprecationWarning","filename":"test_case.py",'
+                    '"lineno":10,"message":"test warning","when":"runtest"}\n',
+                    identities=self._identity("DeprecationWarning", "test warning"),
+                ),
             ).extract(junit, log, report_log=log.with_suffix(".jsonl")),
         )
 
@@ -280,8 +293,10 @@ class TestsFlextInfraPytestDiag:
             self._extractor(
                 junit,
                 log,
-                events=event * 2,
-                identities=self._identity("DomainNotice", "first\nsecond") * 2,
+                options=DiagExtractorOptions(
+                    events=event * 2,
+                    identities=self._identity("DomainNotice", "first\nsecond") * 2,
+                ),
             ).extract(junit, log, report_log=log.with_suffix(".jsonl")),
         )
 
@@ -328,15 +343,17 @@ class TestsFlextInfraPytestDiag:
         extractor = self._extractor(
             junit,
             log,
-            failed=tmp_path / "failed.txt",
-            errors=tmp_path / "errors.txt",
-            warnings=tmp_path / "warnings.txt",
-            slowest=tmp_path / "slow.txt",
-            skips=tmp_path / "skips.txt",
-            events='{"$report_type":"WarningMessage",'
-            '"category":"DeprecationWarning","filename":"test_case.py",'
-            '"lineno":10,"message":"test warning"}\n',
-            identities=self._identity("DeprecationWarning", "test warning"),
+            options=DiagExtractorOptions(
+                failed=tmp_path / "failed.txt",
+                errors=tmp_path / "errors.txt",
+                warnings=tmp_path / "warnings.txt",
+                slowest=tmp_path / "slow.txt",
+                skips=tmp_path / "skips.txt",
+                events='{"$report_type":"WarningMessage",'
+                '"category":"DeprecationWarning","filename":"test_case.py",'
+                '"lineno":10,"message":"test warning"}\n',
+                identities=self._identity("DeprecationWarning", "test warning"),
+            ),
         )
 
         tm.ok(extractor.execute())
@@ -360,13 +377,15 @@ class TestsFlextInfraPytestDiag:
         extractor = self._extractor(
             junit,
             log,
-            events='{"$report_type":"WarningMessage",'
-            f'"category":"{category}","filename":"test_case.py",'
-            '"lineno":10,"message":"enforcement evidence"}\n',
-            identities=self._identity(
-                category,
-                "enforcement evidence",
-                module=c.FlextSmellViolation.__module__,
+            options=DiagExtractorOptions(
+                events='{"$report_type":"WarningMessage",'
+                f'"category":"{category}","filename":"test_case.py",'
+                '"lineno":10,"message":"enforcement evidence"}\n',
+                identities=self._identity(
+                    category,
+                    "enforcement evidence",
+                    module=c.FlextSmellViolation.__module__,
+                ),
             ),
         )
         report = tm.ok(extractor.extract(junit, log, report_log=extractor.report_log))
@@ -397,7 +416,11 @@ class TestsFlextInfraPytestDiag:
         junit.write_text('<testsuites><testsuite name="t"/></testsuites>')
         log = tmp_path / "pytest.log"
         log.write_text("consumer output")
-        extractor = self._extractor(junit, log, events=events)
+        extractor = self._extractor(
+            junit,
+            log,
+            options=DiagExtractorOptions(events=events),
+        )
         with pytest.raises(ValueError, match=r"contains no events|validation error"):
             extractor.extract(junit, log, report_log=extractor.report_log)
 
@@ -423,8 +446,10 @@ class TestsFlextInfraPytestDiag:
         extractor = self._extractor(
             junit,
             log,
-            events='{"$report_type":"WarningMessage","category":"DomainNotice",'
-            '"filename":"test_case.py","lineno":10,"message":"evidence"}\n',
+            options=DiagExtractorOptions(
+                events='{"$report_type":"WarningMessage","category":"DomainNotice",'
+                '"filename":"test_case.py","lineno":10,"message":"evidence"}\n',
+            ),
         )
         with pytest.raises(ValueError, match="zip"):
             extractor.extract(junit, log, report_log=extractor.report_log)

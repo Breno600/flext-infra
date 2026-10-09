@@ -6,7 +6,7 @@
 - [Environment activation](#environment-activation)
 - [Dependency locks](#dependency-locks)
 - [Runtime environment](#runtime-environment)
-- [Mise launchers](#mise-launchers)
+- [Mise toolchain](#mise-toolchain)
 - [SonarCloud exclusions](#sonarcloud-exclusions)
 - [Bootstrap credentials](#bootstrap-credentials)
 - [Evidence and checkpoints](#evidence-and-checkpoints)
@@ -47,12 +47,13 @@ without another writer outside the journal. Initial provisioning remains the
 responsibility of `make setup`. Real commands work without wrapping each call in
 `direnv exec`.
 
-Activation queries `bin-paths` from the installed, pinned Mise and prepends the real
-tool directories to the host's shared shims. The query is isolated, offline, and
-frozen: it neither installs tools nor changes locks. The `.envrc` also watches
-`mise.version` and `mise.lock` to reload paths after `make upg`. A missing pin
-requires `make upg`; a runtime that is not yet installed requires `make setup`, whose
-provisioning happens before activation.
+Activation exposes the native Mise shims and watches `.mise.toml` and `mise.lock`.
+The installed release is selected by the self-management entry in that lock, not
+by a separate launcher or pin file. Make and direnv restrict global and system
+configuration discovery to the elected runtime's `.mise` directory; unrelated
+host tool declarations never belong to project provisioning. A missing pin
+requires `make upg`; missing installed tools require `make setup`, which
+provisions before activation. Activation itself neither installs nor resolves.
 
 When Beads tracking is configured, the generated `.envrc.local` carries its environment:
 `AGENTS_GAS_CITY_ROOT` selects the Gas City root, the Gas City runtime publication
@@ -67,10 +68,18 @@ by hand.
 ## Dependency locks
 
 Configuration declares `latest`. `make upg` is the only verb that resolves newer
-releases and writes the committed `uv.lock` and `mise.lock`. `make setup`, `make gen`,
-and `make fmt` never upgrade: they install frozen from those locks, which is the CI
-path. Git dependencies follow the tips of their declared integration branches, and `APPLY`
-stays removed.
+releases and writes the committed `uv.lock` and `mise.lock`. `make setup` installs
+from committed locks; `make gen` and `make fmt` neither install nor upgrade tools.
+Git dependencies follow their declared integration branches, and `APPLY` stays removed.
+
+One `make upg` run converges. It resolves the Mise lock before provisioning,
+upgrades `uv.lock`, installs the upgraded generator and conforms dependency floors.
+It runs generation's producer half, relocks the projected manifests, reinstalls
+and verifies the resulting runtime before generation's activation half. A
+requirement or Mise self-management release that only the upgraded generator
+declares therefore reaches the lock and environment in the same run. The declared
+lock platforms and release cooldown come from the typed toolchain; never edit
+native lock payloads or substitute manual installation commands.
 
 Each internal `flext-*` requirement declares its integration line in `pyproject.toml`,
 never a commit: the resolved commit exists only in `uv.lock`, and only `make upg` moves
@@ -80,105 +89,92 @@ When the projection carries no line, a hand-written `project.flext_source` in th
 manifest declares it, and a commit in a hand-written source fails. Fix the setup or
 `upg` owner and regenerate through `make gen`; manual installs do not replace the cycle.
 
-A workspace root declares each attached member, of any family, as an inline Git source
-on the workspace's own integration line, the same line the governed `.gitmodules` requires
-of that member. Only `flext-*` dependencies that are not members follow the FLEXT line.
-The root `uv.lock` therefore resolves every member without a `[tool.uv.workspace]`
-overlay.
+A workspace root declares local-member requirements as bare distribution names and
+resolves them through `[tool.uv.sources]` entries with `workspace = true`. The root
+alone owns `[tool.uv.workspace]`; member manifests never declare a nested workspace.
+Publishable members retain their declared inline Git provenance and, while attached,
+redirect local sibling requirements through their own workspace-source overlay.
+Standalone conformance removes that overlay without removing the declared Git
+requirements. Dependencies outside the declared workspace retain their governed
+integration source rather than becoming local members.
 
 ## Runtime environment
 
 Code in a checkout runs in the environment of its `RUNTIME_ROOT`. The generated Makefile
 exports `RUNTIME_ROOT`, and flext-infra reads it as a typed declaration: the
-`fresh-import` validation runs its probes with the platform-specific Python interpreter in the derived `RUNTIME_VENV`, never
+`fresh-import` validation runs its probes with the platform-specific
+Python interpreter in the derived `RUNTIME_VENV`, never
 with the interpreter hosting the tool. Without a declaration, the owner derives the
 checkout's Git root; a declaration without an interpreter fails.
 
 The environment belongs to the `RUNTIME_ROOT`. A member attached as a submodule uses
 its containing Git superproject's environment. A primary standalone checkout keeps
-`<RUNTIME_ROOT>/.venv`. A linked Git worktree owns a physical sibling environment at
-`<RUNTIME_ROOT>/../<toolchain.worktree_environment_directory>/<worktree-name>`.
+`<RUNTIME_ROOT>/.venv`. A linked Git worktree must use the sibling environment at
+`<RUNTIME_ROOT>/../.venv>`.
 The directory component is declared in `config/codegen.yaml`; Git's distinct worktree
 and common directories identify the linked checkout. The generated Makefile, generated
 `.envrc`, and `runtime_environment_dir` derive the same path. Neither a caller
 variable nor a checkout-local symlink may redirect the environment.
 
-## Mise launchers
+## Mise toolchain
 
-`make upg` is also the only writer of `mise.version`, `bin/mise`, and `bin/mise.cmd`. It
-resolves the Mise release once, through Mise itself (`mise latest` of
-`toolchain.mise_selector`, narrowed to `toolchain.mise_version` when
-`flext-infra/config/codegen.yaml` holds a release, authenticated by `GITHUB_TOKEN` and
-subject to Mise's `minimum_release_age`), and generates both launchers with
-`mise generate install-script --version <release> --windows`, run by that release. A
-held release carries its reason beside it in the configuration and returns to `latest`
-when the newest release outside the cooldown works. Each launcher embeds the release and its checksums, so
-direct, PATH, or shim calls never query the network to choose a version.
-`mise.version` holds a generated header followed by the single release line.
+Mise manages itself: the generated `.mise.toml` declares the `toolchain.mise_selector`
+release as a `[tools]` entry, and `mise.lock` pins it like every other tool. One host
+Mise capable of reading the committed lock provisions that entry; setup verifies
+the installed release and enters the recursive Make lifecycle through it. Every
+later `mise` resolved through the shims is the pinned release, and
+`_builtin_require_mise` fails when the running Mise differs from the lock.
+Separate `mise.version`, bootstrap launchers and staged lock-convergence scripts
+are not lifecycle owners.
 
-`make gen`, `make check`, and CI only verify offline that the launchers embed the pinned
-release. A workspace member receives an exact copy of that trio from the root
-`make gen`, and only the runtime root runs `make upg`. The `flext_infra` package ships
-its own trio under `templates/bootstrap/`, used only by a repository that has none or
-still carries a projection whose launchers resolve `releases/latest` at run time: that
-repository's `make gen` publishes the packaged, baked copy, and the next `make upg`
-rewrites it for the resolved release. Never edit these files; the fix is `make upg`.
+`toolchain.tools` in `config/codegen.yaml` declares every fleet tool. Each comes from a
+native, checksum-locked owner (aqua, GitHub releases, conda, or a Mise core backend);
+the toolchain model rejects an `npm:` selector at load (ADR-025). A tool whose upstream
+release metadata publishes no checksum declares `lock_checksum: false`.
+
+`make setup` and `make upg` pass the explicit declared key list
+(`toolchain.mise_install_keys`) to `mise install`. A bare `mise install` would also
+provision every tool of the operator's global Mise registry, so no generated recipe
+runs one. After the environment is provisioned, `make setup` runs the reality proof
+(`flext-infra codegen mise-proof`) before `post-setup`. For each declared tool, in
+order, it stops at the first defect:
+
+1. the `mise.lock` entry exists, names a version the toolchain selector accepts, and
+   carries a checksum for the current platform when `lock_checksum` requires one;
+2. `mise where <key>@<version>` names the install root;
+3. `mise which <binary>`, and every symlink hop it resolves through, stays inside that
+   root;
+4. the tool's declared `version_probe` reports the locked version.
+
+The proof has no fallback, retry, or warning-only mode.
 
 A project `bin/` never enters PATH (shell, `BASH_ENV`, or CI `GITHUB_PATH`): Mise binds
-the shared shims to the first `mise` on PATH. Version the pin, `mise.lock`, and the
-native graphs referenced under `.mise/locks/` together; for npm tools the graph contains
-`package.json` and `aube-lock.yaml`. These files also enter the Docker context and
-checkout fixtures. Frozen setup requires the graph and a valid digest, per the
-[official Mise sidecar contract](https://mise.jdx.dev/dev-tools/mise-lock.html#native-dependency-sidecars).
-Caches, installations, and local lock graphs stay out of Git. Never format or edit the
-native payload: a byte change requires a new resolution through `make upg`.
+the shared shims to the first `mise` on PATH. Caches and installations stay out of Git.
 
-During `make upg`, Mise resolves and installs in a sibling directory on the checkout's
-filesystem. The generated `bin/mise-lock-transaction.py` verifies the staged native
-graphs, publishes them before replacing `mise.lock`, and records a durable journal.
-If publication stops after a graph moves, the next upgrade restores the committed
-graph before starting its own publication. The lock rename is the commit point; a
-failed upgrade leaves the previous lock usable without a live `.bak` copy.
-When a broken upstream release fails the staged install, the generated
-`bin/mise-lock-converge.py` holds each failing tool at its newest installable release
-inside the stage only, under the same isolated environment the bootstrap declares; the
-committed `.mise.toml` never changes, so the next upgrade retries the newest release.
-When Git leaves the generated `mise.lock` unmerged, the publisher reads the exact
-stage-2 lock from that repository's index solely to authenticate the existing
-sidecars. It still derives the replacement lock from `.mise.toml` through `make upg`
-and publishes that replacement transactionally. A malformed lock without a Git
-conflict, or sidecars that no longer match stage 2, fails without changing the lock.
+Mise reaches GitHub to install a tool missing from its cache and to resolve
+releases during `make upg`. Only `make upg` writes `mise.lock` and `uv.lock`;
+`make setup` never writes either. A missing or incompatible Mise lock entry fails
+with its original diagnostic and exit status, without disabling lockfiles or
+retrying. Setup checks whether `uv.lock` agrees with the manifests. A matching lock uses
+`--locked`; a drifted lock emits its diagnostic and installs the committed lock
+with `--frozen`, without rewriting it. Drift and any resulting dependency
+incompatibility remain red until `make upg` produces matching locks. A missing
+lock fails with an actionable diagnostic. A failed native resolver or installer
+retains its original failure; no downgrade, retry or disabled lock policy masks it.
+Only successful resolution, installation and generation establish alignment.
+The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock
+together with the platform of the machine running the upgrade, which Mise always
+includes.
 
-Mise reaches GitHub only to install a tool missing from the persistent cache and inside
-`make upg`. Only `make upg` writes `mise.lock` and `uv.lock`; `make setup` never writes
-either and always runs. Every Mise call except `install --yes` runs with the offline
-settings declared once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`. An offline
-`install --dry-run` checks that the committed lock satisfies `.mise.toml`. When it does
-not, setup prints a `WARN`, installs from `.mise.toml` with `MISE_LOCKFILE=false` and
-`MISE_LOCKED=false` for the rest of that setup (the lifecycle inherits
-`SETUP_MISE_LOCK_DRIFT`), and leaves `mise.lock` untouched. On the uv side, setup syncs
-`--locked`; when `uv.lock` drifts from `pyproject.toml` it prints a `WARN` and syncs the
-committed lock `--frozen`, which never writes it. The next `make upg` rewrites both
-locks. `make upg` resolves once
-per manifest: when the `.mise.toml` that its `gen` renders is byte-identical to the
-manifest its first half locked, the relock half installs from the published lock instead
-of resolving again. Wherever a lock runs, the bootstrap forwards the GitHub credential
-it selected (`GITHUB_TOKEN`, else the declared `github_credential_commands`) to Mise.
-
-The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock together
-with the platform of the machine running the upgrade, which Mise always includes.
-Because `MISE_SAFE` ignores local settings, bootstrap forwards `MISE_LOCKFILE`,
-`MISE_LOCKED`, and `MISE_LOCKFILE_PLATFORMS`, derived from the same typed owner.
-`MISE_LOCKED` also enables the global guard against rewrites during installation;
-`tool_config.locked` alone does not protect that boundary. The setup proof uses empty
-Mise storage and verifies the bytes of the locks, the pin, and the whole native graph
-after installation.
-
-After resolving the Mise release, bootstrap keeps that version for every call of the
-same operation and the recursive lifecycle. `upg` initializes the declared gitlinks
-before resolving the Python locks. Other runtime-dependent verbs reject a missing or
-unresolved pin before activation; `help` and `clean` remain local operations without
-that dependency.
+The default `make gen` handler passes explicit `--scope all` to conform at
+`PROJECT_ROOT`: a workspace invocation covers its root and every declared member,
+while a standalone repository has only itself. The request model's default remains
+`SELF` for callers that do not select a scope, including file-only surfaces.
+Generation owns one transaction for ordinary projections, Mise artifacts, lazy
+exports and docs; no additional writer runs before or after its journal.
+A planned deletion has no staged replacement, but its successful result still
+carries a journal receipt: absence belongs inside the typed receipt, never in
+`r.ok(None)`. Repeated unchanged generation must converge before publication.
 
 ## SonarCloud exclusions
 
@@ -189,21 +185,29 @@ non-empty list through the `settings/set` API; an empty list uses
 [`settings/reset`](https://sonarcloud.io/web_api/api/settings/reset) with `component`
 and `keys`. The command rereads `settings/values` and requires the exact effective
 value, including inherited exclusions. If the reset reveals an exclusion from a higher
-level, the divergence remains a failure. A false positive on the native
-`aube-lock.yaml` format requires individual adjudication with frozen-install proof; it
-never authorizes broad exclusions or changes to the native payload.
+level, the divergence remains a failure.
 
 ## Bootstrap credentials
 
-The GitHub credential is optional and is selected once, in the generated Makefile
-preamble, for every verb: the first non-empty of the caller's `GITHUB_TOKEN`,
-`GH_TOKEN`, `MISE_GITHUB_TOKEN`, then `gh auth token` when gh is installed and
-authenticated. Make exports that one value as `GITHUB_TOKEN`, `GH_TOKEN`, and
-`MISE_GITHUB_TOKEN`, so gh, uv, and mise read the same credential and no inherited
-alias can shadow it; `GITHUB_API_TOKEN` is unexported. The network bootstrap passes
-the three names into its isolated `env -i` Mise environment. With no token, public
-GitHub requests use the upstream tool's native unauthenticated behavior. The value
-is never printed. An invalid token preserves the backend's native error, without an
+The GitHub credential is selected in the generated Makefile preamble, for every
+Make entry: the first non-empty of the caller's `GITHUB_TOKEN`, `GH_TOKEN`,
+`MISE_GITHUB_TOKEN`, then the existing `gh auth token` producer in the declared
+local or unset CI context. Make exports that one value as `GITHUB_TOKEN`, `GH_TOKEN`,
+and `MISE_GITHUB_TOKEN`, so gh, uv, and mise read the same credential and no inherited
+alias can shadow it; `GITHUB_API_TOKEN` is unexported. Native Mise inherits those
+exports. The generated Make and direnv owners isolate global/system configuration
+discovery, not all process variables; other caller environment values remain
+inherited. `status` reports the selected source, extraction exit status, credential
+presence, and CI classification without printing the value or credential-command
+stderr. Its initial entry reports the producer; a recursive entry can report the
+normalized inherited `GITHUB_TOKEN` instead. Caller credentials report extraction
+as `not-selected`, not as a successful credential-command invocation.
+
+Optional credentials do not block offline verbs. In `setup` and `upg`, a selected
+gh producer's failure is reported and its exit status propagated before the first
+Mise lock or install; success with an empty credential also fails before provisioning.
+CI classification and caller precedence are unchanged. An invalid supplied token
+preserves the backend's native error, without an
 anonymous retry or source switch. CI jobs inject `GITHUB_TOKEN`; containers receive
 the variable or a BuildKit secret explicitly.
 
@@ -223,25 +227,120 @@ the batch. Structural refactors go through `make mod`.
 
 ## Check gate partitions
 
-No check gate is suspendable: every finding of every selected gate blocks. The
-namespace laws are rule data of the codemod catalog and block through the codemod
-gate. `make check` fails when the selection
+`make file-gate FILE=<repository-relative path>` delegates to the existing
+`check run --file` owner, never bare analyzers or a second gate engine. The raw
+Make value travels through an exported environment value, not interpolated shell
+source. Selection rejects empty, absolute, traversal, missing, non-Python and
+symlink-component paths before creating reports or invoking tools. Only the literal
+file reaches each gate's existing `check_files`; no mutation is permitted.
+The Make pre-gate explicitly selects registered lint, format, Pyrefly, Mypy,
+Pyright and codemod gates through the existing typed `RunCommand.gates` owner and
+`resolve_gates`; no separate gate vocabulary or configuration is introduced.
+The public `check run --file` requires explicit `--gates`, never silently falls
+back to whole-project gates, and rejects unknown names before scanner execution.
+Mypy and Pyright findings retain the existing informative SSOT policy; native
+errors, missing tools/configuration and malformed reports remain blocking.
+Codemod uses its elected, staged provider configurations and native report owner.
+
+The former bare `typos` hook existed only in the Make recipe, help and tests,
+always under `|| true`. This branch declares no canonical typos runner,
+configuration or provisioned toolchain capability. Removing that ownerless
+best-effort advertisement removes no supported acceptance capability: it never
+contributed a truthful verdict. Registered rule diagnostics remain unchanged;
+no dictionary, installation, provider or suppression replaces the hook.
+The pre-gate remains bounded; full `make check` is still required acceptance.
+
+Trailing comma layout has one owner: Ruff's formatter. The tooling SSOT records
+the removal of redundant `missing-trailing-comma` (COM812) lint enforcement using
+its official rule name and rationale. This must be regenerated before runtime
+validation; changing the SSOT alone does not update existing projections.
+
+Selected functional gates remain blocking. `make check` fails when the selection
 contains no projects or when a selected project has no `pyproject.toml`; no project is
 skipped silently.
 
-Local runs, CI, and hooks derive their gates from the same active set, preserving the
-declared typing partition: `CI=N make check` runs the intersection with
-`make.ci.local_check_gates`, `CI=Y make check` runs the complement, and `make check`
-without `CI` runs the union. The `check` pre-push hook drops the inherited `CI` to run
-every active gate; the hook's other verbs keep the local token. The CI workflow runs
-both partitions without overlap. Validators keep their severity, and active functional
-gates still require execution without warnings or residual findings.
+Local runs, CI, and hooks derive their gates from the same active set: `CI=N make check`
+runs the intersection with `make.ci.local_check_gates`, `CI=Y make check` runs the
+complement, and `make check` without `CI` runs the union. The configuration excludes
+Mypy, Pyright, codemod and smells from CI, including advisory execution. Lint and
+remaining type findings follow `make.ci.informative_check_gates`: native `FINDINGS`
+remain reported without stopping tests; native `ERROR`, malformed reports, runtime
+failures and functional findings remain blocking. The `check` pre-push hook drops
+the inherited `CI` to run every active gate.
+
+Every workspace and standalone projection exposes `make pre-commit`. CI and the
+generated pre-commit hook invoke that same approval owner. Its typed workflow is
+`setup -> audit -> check -> test`, with the configured CI token enforced before
+topology or activation, even when the caller supplied a local token. Help, dry-run,
+question, touch and custom approval replacements cannot yield an approval receipt.
+Audit is read-only conformance and installed-lock provenance, not generation or a
+dirty-tree check; legitimate staged changes are not rejected simply for being staged.
+
+CI setup always reconciles the owned physical environment through locked,
+noneditable installation, including an existing venv. It does not initialize,
+activate or operate on members, and uses root-declared topology rather than reading
+sibling manifests. Local setup without the CI token retains local source routing.
+Only local upgrade resolves or writes locks; setup preserves the first install error
+without retrying under a different lock mode.
+
+Normal test verbs remain incremental testmon only and omit the configured slow
+markers. The filesystem cache lives at the typed XDG/HOME-derived project path.
+Actions restores only that project database and saves only on an allowed integration
+push with a fresh completed-run path/digest/saveability receipt. The SQLite owner
+checkpoints and checks integrity before the runner releases its lease and exports
+the receipt. PRs, forks, cancelled or incomplete runs cannot publish cache state;
+a completed failing test run may save without changing its failing status.
 
 `smells` is not part of the `make check` partitions. The selector-free `make smells`
 verb runs only the qlty smell scan and fails when it finds defects. The
 `runtime-census` gate stays in `make check` and grades every runtime enforcement
 finding, including rules that qlty also classifies as smells. An empty or
 malformed qlty SARIF response is a failed scan, not a zero-finding receipt.
+Native primary source spans and all `relatedLocations` pass through the typed issue
+and SARIF report contracts without dropping comparison locations outside the primary
+project. Coordinates are emitted only when the scanner supplies them, including explicit
+zeros; line-only and regionless native locations do not acquire invented coordinates.
+Point-only diagnostics from other gates remain point-only. The Markdown summary still
+uses the primary location, while the SARIF artifact carries the comparison evidence.
+
+## Census consumer evidence
+
+The public refactor census report retains `Object.all_reference_sites` separately
+from `runtime_reference_sites` and `script_reference_sites`. Each evidence site
+includes the Rope character offset, path, line and surface. Exact path/offset
+identities are deduplicated and sorted deterministically; distinct references on
+the same line remain distinct. Every hit's absolute path and nonnegative character
+offset are validated before definition filtering. Evidence excludes a definition only by
+its exact normalized path/offset; the older line/path fallback remains confined
+to reachability counts. Indexed source, script, test and example consumers and
+static `__init__.py` reexports are retained,
+including occurrences of private names and facade members.
+
+This is report-only migration evidence, not a change to production reachability.
+The existing reachability resource eligibility, line-level deduplication, private
+and facade exclusions, test/example exclusions and reexport exclusions still own
+the old counts and unused/removal classification. All-surface evidence must never
+be interpreted as permission to delete a helper or as a dynamic closure proof.
+
+`reference_evidence_collected` distinguishes an empty collected result from a
+disabled search (`include_references=False`, or census rule selection without
+`unused`). Evidence covers only the active Rope workspace's indexed files and its
+existing name-index candidate selection. Untracked files in indexed wrapper
+surfaces participate; ignored paths, nested ungoverned repositories, files outside
+the workspace, alias-only downstream files without the original identifier, and
+reflection/dynamic imports are not proven covered. Lazy export strings are not
+semantic reexport occurrences. Source and reference-resolution failures propagate;
+definition-token candidates are checked against the inventoried Rope binding using
+the existing Rope identity comparator, not selected by spelling order. Separate
+function/parameter bindings on a declaration line remain separate. If multiple
+tokens on that line resolve to the same binding (for example, a one-line declaration
+and use), the search fails with explicit ambiguity instead of guessing the
+definition. An unlocatable definition identifier or occurrence without an absolute
+path/valid offset fails instead of producing an apparently complete empty report.
+A collected result is therefore bounded static evidence, never a whole-program
+absence proof. Collecting
+private/facade evidence expands reference-resolution work but adds no scanner or
+registry.
 
 ## Bounded Mypy failure status
 
@@ -285,6 +384,13 @@ and rejects extra output from the
 Timeouts, forwarded signals, other exit codes, malformed JSON, and disagreement between
 exit code and diagnostic severities remain failures, even when stdout exists. Both
 whole-project checks and `check_files` scan every elected provider rule.
+
+AST replacements publish through the authenticated file-plan boundary, then reuse
+the import normalizer on only the rewritten files. Unused imports and formatting
+are normalized before the next mod check; normalization failures remain blocking.
+The root facade export rule preserves literal tuple values and order while removing
+an unnecessary type-only annotation dependency. It does not change classes, aliases
+or inheritance, and it does not rewrite initializer projections.
 
 `GateExecution.issues` retains each finding's original file, position, rule, message,
 and severity. SARIF reports each finding at its native level; raw scanner output remains

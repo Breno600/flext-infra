@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import dataclasses
 import sys
 from pathlib import Path
 from types import CodeType
@@ -13,12 +14,22 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import main as infra_main, r
+from flext_infra import main, r
 from flext_infra.refactor.census import FlextInfraRefactorCensus
 from tests import t, u
 
 if TYPE_CHECKING:
     from flext_infra import p
+
+
+@dataclasses.dataclass(frozen=True)
+class CensusViolationExpectation:
+    """One dry-run violation expectation bundle shared by the census twins."""
+
+    kind: str
+    rule: str
+    count_attr: str
+    expected_object_name: str
 
 
 class TestsFlextInfraRefactorMainCli:
@@ -238,7 +249,7 @@ class TestsFlextInfraRefactorMainCli:
 
     @staticmethod
     def _refactor_main(*args: str) -> int:
-        return infra_main(["refactor", *args])
+        return main(["refactor", *args])
 
     @staticmethod
     def _write(path: Path, content: str) -> None:
@@ -520,7 +531,6 @@ class TestsFlextInfraRefactorMainCli:
         # including when its observed consumer is a test. Census must not delete
         # it or rewrite the generator-owned facade behind the consumer's back.
         tm.that(init_source, has="install_lazy_exports(")
-        tm.that(init_source, has="build_lazy_import_map(")
         tm.that(init_source, has="helper_used")
         tm.that(helpers_source, has="helper_used")
         tm.ok(self._parse_source_ast(init_source))
@@ -603,13 +613,8 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(clone_helpers.read_text(encoding="utf-8"), has="only_for_tests")
         tm.that(clone_init.read_text(encoding="utf-8"), has="only_for_tests")
         tm.that(clone_test.read_text(encoding="utf-8"), has="only_for_tests")
-        # Why: e75d5aa6f retired the named `_LAZY_IMPORTS` variable for
-        # generated inits in favor of an inlined build_lazy_import_map(...)
-        # argument — align to the proven runtime (see the sibling assertion
-        # above in test_refactor_census_apply_cascades_through_init_lazy_map_and_all).
         clone_init_source = clone_init.read_text(encoding="utf-8")
         tm.that(clone_init_source, has="install_lazy_exports(")
-        tm.that(clone_init_source, has="build_lazy_import_map(")
 
         report = u.Tests.census_report(clone, kinds=("function",), rules=("unused",))
         tm.that(report.unused_count, eq=0)
@@ -668,8 +673,10 @@ class TestsFlextInfraRefactorMainCli:
             workspace,
             kinds=("function",),
             rules=("unused",),
-            apply_changes=True,
-            dry_run=True,
+            options=u.Tests.CensusOptions(
+                apply_changes=True,
+                dry_run=True,
+            ),
         )
 
         tm.that(report.unused_count, eq=1)
@@ -682,10 +689,7 @@ class TestsFlextInfraRefactorMainCli:
         workspace: Path,
         *,
         impact_map_path: Path,
-        kind: str,
-        rule: str,
-        count_attr: str,
-        expected_object_name: str,
+        expectation: CensusViolationExpectation,
     ) -> None:
         """Assert one violation detected with no removal candidate.
 
@@ -694,19 +698,21 @@ class TestsFlextInfraRefactorMainCli:
         """
         report = u.Tests.census_report(
             workspace,
-            kinds=(kind,),
-            rules=(rule,),
-            include_local_scopes=True,
-            impact_map_output=str(impact_map_path),
+            kinds=(expectation.kind,),
+            rules=(expectation.rule,),
+            options=u.Tests.CensusOptions(
+                include_local_scopes=True,
+                impact_map_output=str(impact_map_path),
+            ),
         )
         violations = u.Tests.census_violations(report)
-        tm.that(getattr(report, count_attr), eq=1)
+        tm.that(getattr(report, expectation.count_attr), eq=1)
         tm.that(report.removal_candidate_count, eq=0)
         tm.that(len(report.removal_candidates), eq=0)
         tm.that(len(violations), eq=1)
-        tm.that(violations[0].kind, eq=rule)
-        tm.that(violations[0].object_kind, eq=kind)
-        tm.that(violations[0].object_name, eq=expected_object_name)
+        tm.that(violations[0].kind, eq=expectation.rule)
+        tm.that(violations[0].object_kind, eq=expectation.kind)
+        tm.that(violations[0].object_name, eq=expectation.expected_object_name)
         tm.that(len(self._impact_map_entries(impact_map_path)), eq=0)
 
     def test_refactor_census_dry_run_excludes_unsupported_method_candidate(
@@ -717,10 +723,12 @@ class TestsFlextInfraRefactorMainCli:
         self._assert_dry_run_one_violation_no_candidate(
             self._build_test_only_method_workspace(tmp_path),
             impact_map_path=tmp_path / "method-impact-map.json",
-            kind="method",
-            rule="unused",
-            count_attr="unused_count",
-            expected_object_name="only_for_tests",
+            expectation=CensusViolationExpectation(
+                kind="method",
+                rule="unused",
+                count_attr="unused_count",
+                expected_object_name="only_for_tests",
+            ),
         )
 
     def test_refactor_census_dry_run_excludes_unsupported_nested_unused_function(
@@ -731,17 +739,19 @@ class TestsFlextInfraRefactorMainCli:
         self._assert_dry_run_one_violation_no_candidate(
             self._build_unused_nested_function_workspace(tmp_path),
             impact_map_path=tmp_path / "nested-unused-impact-map.json",
-            kind="function",
-            rule="unused",
-            count_attr="unused_count",
-            expected_object_name="only_for_cleanup",
+            expectation=CensusViolationExpectation(
+                kind="function",
+                rule="unused",
+                count_attr="unused_count",
+                expected_object_name="only_for_cleanup",
+            ),
         )
 
     def test_refactor_census_dry_run_validates_unused_candidate_after_import_cleanup(
         self,
         tmp_path: Path,
     ) -> None:
-        """Test refactor census dry run validates unused candidate after import cleanup."""
+        """Test census dry run validates unused candidate after import cleanup."""
         workspace, service_file = (
             self._build_unused_top_level_workspace_with_source_import(tmp_path)
         )
@@ -751,7 +761,9 @@ class TestsFlextInfraRefactorMainCli:
             workspace,
             kinds=("function",),
             rules=("unused",),
-            impact_map_output=str(impact_map_path),
+            options=u.Tests.CensusOptions(
+                impact_map_output=str(impact_map_path),
+            ),
         )
 
         tm.that(report.unused_count, eq=1)
@@ -783,10 +795,12 @@ class TestsFlextInfraRefactorMainCli:
         self._assert_dry_run_one_violation_no_candidate(
             self._build_unused_local_workspace(tmp_path),
             impact_map_path=tmp_path / "local-unused-impact-map.json",
-            kind="local",
-            rule="unused",
-            count_attr="unused_count",
-            expected_object_name="only_for_cleanup",
+            expectation=CensusViolationExpectation(
+                kind="local",
+                rule="unused",
+                count_attr="unused_count",
+                expected_object_name="only_for_cleanup",
+            ),
         )
 
     def test_refactor_census_writes_impact_map_for_removal_candidates(
@@ -801,7 +815,9 @@ class TestsFlextInfraRefactorMainCli:
             workspace,
             kinds=("function",),
             rules=("unused",),
-            impact_map_output=str(impact_map_path),
+            options=u.Tests.CensusOptions(
+                impact_map_output=str(impact_map_path),
+            ),
         )
         entries = self._impact_map_entries(impact_map_path)
 
@@ -852,8 +868,10 @@ class TestsFlextInfraRefactorMainCli:
             workspace,
             kinds=("function",),
             rules=("unused",),
-            apply_changes=True,
-            impact_map_output=str(impact_map_path),
+            options=u.Tests.CensusOptions(
+                apply_changes=True,
+                impact_map_output=str(impact_map_path),
+            ),
         )
 
         tm.that(report.unused_count, eq=0)

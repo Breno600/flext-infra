@@ -13,8 +13,9 @@ from flext_tests import tm
 
 from flext_infra import c
 from flext_infra.check.gate_registry import FlextInfraGateRegistry
+from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.smells import FlextInfraSmellsGate
-from tests import m, u
+from tests import m, t, u
 
 
 @pytest.fixture
@@ -36,6 +37,176 @@ def smells_project(tmp_path: Path) -> Path:
 
 class TestsFlextInfraSmellsGate:
     """Exercise observable gate behavior with the real setup-provisioned tool."""
+
+    @staticmethod
+    def _detector_config(root: Path) -> m.ConfigDocument:
+        """Read the same merged native configuration that the scanner loads.
+
+        Returns:
+            The resulting ``m.ConfigDocument``.
+        """
+        output = tm.ok(u.Cli.run([c.Infra.QLTY_BINARY, "config", "show"], cwd=root))
+        path = root / "effective-qlty.yaml"
+        path.write_text(output.stdout, encoding=c.Cli.ENCODING_DEFAULT)
+        return tm.ok(u.Cli.config_load(path, expand_env=False))
+
+    @staticmethod
+    def _comparison_rule(config: m.ConfigDocument, rule: str) -> t.JsonMapping:
+        """Follow Qlty's language override, enablement, then global precedence.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+        """
+        override = u.Cli.json_deep_mapping(
+            config.data,
+            "language",
+            "python",
+            "smells",
+            rule,
+        )
+        if override and (
+            override["enabled"] is False or override["threshold"] is not None
+        ):
+            return override
+        return u.Cli.json_deep_mapping(config.data, "smells", rule)
+
+    @classmethod
+    def _comparison_config(cls, root: Path, variation: str) -> m.ConfigDocument:
+        """Vary only temporary input, deriving every threshold from native config.
+
+        Returns:
+            The resulting ``m.ConfigDocument``.
+        """
+        config = cls._detector_config(root)
+        if variation == "current":
+            return config
+        overrides: t.JsonDict = {}
+        for rule in ("identical_code", "similar_code"):
+            selected = cls._comparison_rule(config, rule)
+            changed: t.JsonDict = {
+                "enabled": selected["enabled"]
+                if variation == "raised"
+                or (variation == "similar-only" and rule == "similar_code")
+                else False,
+            }
+            if variation == "raised" and selected["enabled"] is True:
+                tm.that(type(selected["threshold"]) is int, eq=True)
+                changed["threshold"] = tm.ok(u.parse(selected["threshold"], int)) * 2
+            overrides[rule] = changed
+        if variation == "raised":
+            nodes = u.Cli.json_walk_path(
+                config.data,
+                ("language", "python", "smells", "duplication", "nodes_threshold"),
+            )
+            if nodes is None:
+                nodes = u.Cli.json_walk_path(
+                    config.data,
+                    ("smells", "duplication", "nodes_threshold"),
+                )
+            tm.that(type(nodes) is int, eq=True)
+            overrides["duplication"] = {
+                "nodes_threshold": tm.ok(u.parse(nodes, int)) * 2,
+            }
+        path = root / c.Infra.QLTY_CONFIG_DIRNAME / c.Infra.QLTY_CONFIG_FILENAME
+        tm.ok(
+            u.Cli.toml_write_mapping(
+                path,
+                u.config_merge(
+                    tm.ok(u.Cli.toml_read_json(path)),
+                    {
+                        "smells": overrides,
+                        "language": {"python": {"smells": overrides}},
+                    },
+                ),
+            ),
+        )
+        return cls._detector_config(root)
+
+    @classmethod
+    def _write_comparisons(cls, config: m.ConfigDocument, package: Path) -> bool:
+        """Two real functions exceed configured line and AST-node limits.
+
+        Returns:
+            The resulting ``bool``.
+        """
+        language = u.Cli.json_deep_mapping(config.data, "language", "python")
+        mode = u.Cli.json_walk_path(language, ("smells", "mode"))
+        if mode is None:
+            mode = u.Cli.json_walk_path(config.data, ("smells", "mode"))
+        identical = cls._comparison_rule(config, "identical_code")
+        similar = cls._comparison_rule(config, "similar_code")
+        limits = [
+            rule["threshold"]
+            for rule in (identical, similar)
+            if rule["enabled"] is True
+        ]
+        nodes = u.Cli.json_walk_path(
+            language,
+            ("smells", "duplication", "nodes_threshold"),
+        )
+        limits.append(
+            nodes
+            if nodes is not None
+            else u.Cli.json_walk_path(
+                config.data,
+                ("smells", "duplication", "nodes_threshold"),
+            ),
+        )
+        tm.that(all(type(limit) is int for limit in limits), eq=True)
+        statements = max(tm.ok(u.parse(limit, int)) for limit in limits) + 1
+        body = "\n".join(f"    value += {index}" for index in range(statements))
+        for index, name in enumerate(("first.py", "second.py")):
+            function = (
+                "repeated" if identical["enabled"] is True else f"repeated_{index}"
+            )
+            (package / name).write_text(
+                f"def {function}(value):\n{body}\n    return value\n",
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+        return (
+            language["enabled"] is True
+            and mode != "disabled"
+            and (identical["enabled"] is True or similar["enabled"] is True)
+        )
+
+    @staticmethod
+    def _assert_native_span(original: t.JsonMapping, retained: t.JsonMapping) -> None:
+        """Compare raw protocol coordinates without the production span parser."""
+        original_physical = u.Cli.json_deep_mapping(original, "physicalLocation")
+        retained_physical = u.Cli.json_deep_mapping(retained, "physicalLocation")
+        tm.that(
+            u.Cli.json_pick_str(
+                u.Cli.json_deep_mapping(retained_physical, "artifactLocation"),
+                "uri",
+            ),
+            eq=u.Cli.json_pick_str(
+                u.Cli.json_deep_mapping(original_physical, "artifactLocation"),
+                "uri",
+            ),
+        )
+        original_region = u.Cli.json_deep_mapping(original_physical, "region")
+        retained_region = u.Cli.json_deep_mapping(retained_physical, "region")
+        for coordinate in ("startLine", "startColumn", "endLine", "endColumn"):
+            tm.that(coordinate in retained_region, eq=coordinate in original_region)
+            tm.that(retained_region.get(coordinate), eq=original_region.get(coordinate))
+
+    @classmethod
+    def _assert_native_result(
+        cls,
+        original: t.JsonMapping,
+        retained: t.JsonMapping,
+    ) -> None:
+        """Retain every primary and comparison location in native order."""
+        for key in ("locations", "relatedLocations"):
+            native_locations = u.Cli.json_deep_mapping_list(original, key)
+            emitted_locations = u.Cli.json_deep_mapping_list(retained, key)
+            tm.that(len(emitted_locations), eq=len(native_locations))
+            for observed, emitted in zip(
+                native_locations,
+                emitted_locations,
+                strict=True,
+            ):
+                cls._assert_native_span(observed, emitted)
 
     @staticmethod
     def _ctx(root: Path) -> m.Infra.GateContext:

@@ -43,7 +43,7 @@ class TestsFlextInfraLazyInitProcessing:
         content = self._read(package_root)
 
         tm.that(result, eq=0)
-        tm.that(content, contains="build_lazy_import_map(")
+        tm.that(content, contains='"m": ".models"')
         tm.that(content, contains="install_lazy_exports(")
         tm.that(content, contains="__all__: tuple[str, ...]")
         tm.that(content, lacks="__unit__")
@@ -95,7 +95,7 @@ class TestsFlextInfraLazyInitProcessing:
             for package_dir in (level_two, level_three, level_four)
         )
         before = tuple(path.read_bytes() for path in generated_paths)
-        level_two_content, level_three_content, level_four_content = (
+        contents = tuple(
             path.read_text(encoding=c.Cli.ENCODING_DEFAULT) for path in generated_paths
         )
         u.Cli.run_raw(
@@ -121,12 +121,12 @@ class TestsFlextInfraLazyInitProcessing:
         after = tuple(path.read_bytes() for path in generated_paths)
 
         tm.that(apply_result, eq=0)
-        for content in (level_two_content, level_three_content, level_four_content):
+        for content in contents:
             tm.that(content, contains="install_lazy_exports(")
             tm.that(content, contains="__all__: tuple[str, ...]")
         level_four_imports = {
             (node.module, alias.name)
-            for node in ast.walk(ast.parse(level_four_content))
+            for node in ast.walk(ast.parse(contents[-1]))
             if isinstance(node, ast.ImportFrom)
             for alias in node.names
         }
@@ -135,10 +135,10 @@ class TestsFlextInfraLazyInitProcessing:
             "FlextTestsWorker",
         )
         tm.that(worker_import in level_four_imports, eq=True)
-        tm.that(level_four_content, contains="FlextTestsWorker")
-        tm.that(level_four_content, contains='"worker"')
-        tm.that(level_two_content, contains="FlextTestsWorker")
-        tm.that(level_three_content, contains="FlextTestsWorker")
+        tm.that(contents[-1], contains="FlextTestsWorker")
+        tm.that(contents[-1], contains='"worker"')
+        tm.that(contents[0], contains="FlextTestsWorker")
+        tm.that(contents[1], contains="FlextTestsWorker")
         tm.that(check_result, eq=0)
         tm.that(check_service.modified_files, empty=True)
         tm.that(after, eq=before)

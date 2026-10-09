@@ -15,7 +15,7 @@ from flext_infra import (
     FlextInfraEnsurePyrightConfigPhase,
     FlextInfraPyprojectModernizer,
     FlextInfraWorkspaceDetector,
-    u as infra_u,
+    config,
 )
 from tests import m, t, u
 
@@ -110,7 +110,7 @@ class TestsFlextInfraDepsModernizerPyright:
         (member_source / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
 
         tm.that(
-            infra_u.Infra.discover_python_dirs(
+            u.Infra.discover_python_dirs(
                 tmp_path,
                 workspace_excluded_top_dirs=(
                     FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
@@ -132,7 +132,7 @@ class TestsFlextInfraDepsModernizerPyright:
             directory.mkdir()
             (directory / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
 
-        discovered = infra_u.Infra.discover_python_dirs(
+        discovered = u.Infra.discover_python_dirs(
             tmp_path,
             workspace_excluded_top_dirs=frozenset({excluded.name}),
         )
@@ -170,7 +170,10 @@ class TestsFlextInfraDepsModernizerPyright:
 
         tm.that(
             sorted(u.Tests.toml_strings(pyright["exclude"])),
-            eq=sorted(set(rules.default_excludes)),
+            eq=sorted({
+                *rules.default_excludes,
+                *config.Infra.codegen.generated_source_globs,
+            }),
         )
         if rules.ignored_diagnostic_globs:
             tm.that(
@@ -196,7 +199,10 @@ class TestsFlextInfraDepsModernizerPyright:
         tmp_path: Path,
         tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
-        """Workspace root execution environments include every declared first-party member src path for Pylance resolution."""
+        """Workspace root execution environments include every member src path.
+
+        Every declared first-party member src path is listed for Pylance resolution.
+        """
         pyright_rules = tool_config_document.tools.pyright
         rules = pyright_rules.path_rules
         _ = (tmp_path / "pyproject.toml").write_text(
@@ -323,10 +329,13 @@ class TestsFlextInfraDepsModernizerPyright:
             sorted(u.Tests.toml_strings(pyright["include"])),
             eq=sorted([rules.source_dir, rules.test_like_dirs[0]]),
         )
+        # Pyright reads no Git ignore rules: the generated-source trees of the
+        # codegen artifact key must reach its exclude list (flext-gknfx).
         tm.that(
-            set(u.Tests.toml_strings(pyright["exclude"])).issuperset(
-                rules.default_excludes,
-            ),
+            set(u.Tests.toml_strings(pyright["exclude"])).issuperset({
+                *rules.default_excludes,
+                *config.Infra.codegen.generated_source_globs,
+            }),
             eq=True,
         )
 
@@ -434,7 +443,7 @@ class TestsFlextInfraDepsModernizerPyright:
             tmp_path,
         ).unwrap()
         discovered = frozenset(
-            infra_u.Infra.discover_python_dirs(
+            u.Infra.discover_python_dirs(
                 tmp_path,
                 workspace_excluded_top_dirs=excluded_top_dirs,
             ),
@@ -452,7 +461,7 @@ class TestsFlextInfraDepsModernizerPyright:
                 for environment in u.Tests.toml_list(pyright["executionEnvironments"])
             ),
             eq=sorted(
-                infra_u.Infra.analyzer_python_roots(
+                u.Infra.analyzer_python_roots(
                     tmp_path,
                     declared,
                     workspace_excluded_top_dirs=excluded_top_dirs,

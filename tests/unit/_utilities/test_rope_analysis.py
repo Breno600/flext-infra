@@ -86,16 +86,12 @@ class TestsFlextInfraRopeAnalysis:
         with u.Infra.open_project(project) as rope_project:
             resource = tm.not_none(u.Infra.fetch_python_resource(rope_project, source))
             namespaces = u.Infra.inherited_facade_namespaces(
-                rope_project,
-                resource,
-                class_name="Consumer",
+                rope_project, resource, class_name="Consumer"
             )
             tm.that(namespaces, eq=expected)
             tm.that(
                 u.Infra.inherited_facade_namespaces(
-                    rope_project,
-                    resource,
-                    class_name="Consumer",
+                    rope_project, resource, class_name="Consumer"
                 ),
                 eq=namespaces,
             )
@@ -116,9 +112,7 @@ class TestsFlextInfraRopeAnalysis:
             resource = tm.not_none(u.Infra.fetch_python_resource(rope_project, source))
             with pytest.raises(ValueError, match="cyclic facade namespace inheritance"):
                 u.Infra.inherited_facade_namespaces(
-                    rope_project,
-                    resource,
-                    class_name="Consumer",
+                    rope_project, resource, class_name="Consumer"
                 )
 
     @staticmethod
@@ -200,8 +194,7 @@ class TestsFlextInfraRopeAnalysis:
         """Real builtin, local, imported and inferred classes use public SDK APIs."""
         project, package = u.Tests.demo_project(tmp_path)
         (package / "provider.py").write_text(
-            "class Parent:\n    pass\n",
-            encoding="utf-8",
+            "class Parent:\n    pass\n", encoding="utf-8"
         )
         source = package / "consumer.py"
         source.write_text(declaration + "\n", encoding="utf-8")
@@ -311,7 +304,7 @@ class TestsFlextInfraRopeAnalysis:
         suffix: str,
     ) -> None:
         """Bare dots and renamed symbols retain their actual package provenance."""
-        project, package = test_u.Tests.demo_project(tmp_path)
+        project, package = u.Tests.demo_project(tmp_path)
         nested = package / "inner" / "leaf"
         nested.mkdir(parents=True)
         for directory in (package, nested.parent, nested):
@@ -356,7 +349,7 @@ class TestsFlextInfraRopeAnalysis:
         tmp_path: Path,
     ) -> None:
         """An invalid relative import is not converted into an absolute import."""
-        project, package = test_u.Tests.demo_project(tmp_path)
+        project, package = u.Tests.demo_project(tmp_path)
         source = package / "consumer.py"
         source.write_text("from .. import Owner\n", encoding="utf-8")
         with u.Infra.open_project(project) as rope_project:
@@ -378,3 +371,112 @@ class TestsFlextInfraRopeAnalysis:
         # The rejection names the offending runtime type; its prose is not a contract.
         with pytest.raises(TypeError, match=r"\bobject\b"):
             u.Infra.ensure_ast_node(object())
+
+    @staticmethod
+    def test_call_headed_assignment_binds_as_non_class(tmp_path: Path) -> None:
+        """A call-headed value is a non-class binding, never a base reference.
+
+        Generated package-data modules assign validated payloads
+        (``Payload.model_validate_json(resource).section``); the inventory
+        records that binding as ``None`` instead of feeding the call to the
+        class-reference resolver.
+        """
+        project, package = u.Tests.demo_project(tmp_path)
+        source = package / "data_module.py"
+        source.write_text(
+            "class Owner:\n"
+            "    pass\n"
+            "\n"
+            "\n"
+            "PAYLOAD_SECTION: dict[str, Owner] = Owner.factory(\n"
+            "    resource_text('values.json'),\n"
+            ").items\n",
+            encoding="utf-8",
+        )
+        bases = u.Infra.runtime_evaluated_base_classes(
+            project,
+            {source: source.read_text(encoding="utf-8")},
+            (),
+        )
+        tm.that(bases, eq=())
+
+    @staticmethod
+    def test_base_through_external_facade_instance_resolves_to_its_class(
+        tmp_path: Path,
+    ) -> None:
+        """A base read through a provider's module-level facade instance resolves.
+
+        Consumer facades publish their bases as nested classes of the facade
+        type and expose one module-level instance (``meltano.Tap`` on
+        ``meltano: FlextMeltano``). Attribute access on that instance reaches
+        the class attribute through the instance's type, so the planner walks
+        the type's MRO instead of rejecting the instance as a non-class base.
+        """
+        (tmp_path / "src").mkdir()
+        (tmp_path / "flext-core").mkdir()
+        _, provider = u.Tests.demo_project(tmp_path, name="provider-project")
+        (provider / "bases.py").write_text(
+            "class ProviderBases:\n    class Tap:\n        pass\n",
+            encoding="utf-8",
+        )
+        (provider / "api.py").write_text(
+            "from provider_project.bases import ProviderBases\n"
+            "\n"
+            "\n"
+            "class ProviderFacade(ProviderBases):\n"
+            "    pass\n"
+            "\n"
+            "\n"
+            "facade: ProviderFacade = ProviderFacade()\n",
+            encoding="utf-8",
+        )
+        (provider / "__init__.py").write_text(
+            "from provider_project.api import ProviderFacade, facade\n",
+            encoding="utf-8",
+        )
+        project, package = u.Tests.demo_project(tmp_path, name="consumer-project")
+        consumer = package / "api.py"
+        consumer.write_text(
+            "from provider_project import facade\n"
+            "\n"
+            "\n"
+            "class Consumer(facade.Tap):\n"
+            "    pass\n",
+            encoding="utf-8",
+        )
+        bases = u.Infra.runtime_evaluated_base_classes(
+            project,
+            {consumer: consumer.read_text(encoding="utf-8")},
+            ("provider_project.bases.ProviderBases.Tap",),
+        )
+        tm.that(bases, has="provider_project.facade.Tap")
+
+    @staticmethod
+    def test_missing_planned_class_binding_fails_at_the_required_base(
+        tmp_path: Path,
+    ) -> None:
+        """An explicit missing base fails instead of silently losing its lineage."""
+        project, package = u.Tests.demo_project(tmp_path)
+        helper = package / "data_module.py"
+        helper.write_text(
+            "def build() -> int:\n    return 0\n",
+            encoding="utf-8",
+        )
+        consumer = package / "consumer.py"
+        consumer.write_text(
+            "from . import data_module\n"
+            "\n"
+            "\n"
+            "class Consumer(data_module.Helper):\n"
+            "    pass\n",
+            encoding="utf-8",
+        )
+        with pytest.raises(ValueError, match="Unresolved planned base"):
+            u.Infra.runtime_evaluated_base_classes(
+                project,
+                {
+                    source: source.read_text(encoding="utf-8")
+                    for source in (helper, consumer)
+                },
+                (),
+            )

@@ -19,7 +19,7 @@ from flext_infra import (
     config,
 )
 from tests import m, t, u
-from tests.unit.deps.extra_paths_support import ExtraPathsTestSupport
+from tests.unit.deps.extra_paths_support import TestsFlextInfraExtraPathsSupport
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -268,26 +268,29 @@ class TestsFlextInfraModernizerPyrefly:
             "VALUE = 2\n",
             encoding="utf-8",
         )
+        scaffold_project = config.Infra.codegen.scaffold.project
 
         tooling_runtime = tm.ok(
             FlextInfraPyprojectModernizer(
                 repository_root=tmp_path,
                 skip_check=True,
             ).resolve_tooling_context(
-                project_name="flext-consumer",
-                package_name="flext_consumer",
-                path=project_dir / c.PYPROJECT_FILENAME,
-                scaffold_project=config.Infra.codegen.scaffold.project,
-                upstream=next(
-                    profile.upstream
-                    for profile in config.Infra.codegen.scaffold.project.dependency_profiles
-                    if profile.project is None
-                ),
-                runtime_dependency_overlay=(),
-                declared_project_dependencies=(),
-                topology=m.Infra.PyprojectDeclaredTopology(
-                    declared_python_dirs=(source_dir,),
-                    declared_python_dirs_are_complete=True,
+                m.Infra.ToolingContextRequest(
+                    project_name="flext-consumer",
+                    package_name="flext_consumer",
+                    path=project_dir / c.PYPROJECT_FILENAME,
+                    scaffold_project=scaffold_project,
+                    upstream=next(
+                        profile.upstream
+                        for profile in scaffold_project.dependency_profiles
+                        if profile.project is None
+                    ),
+                    runtime_dependency_overlay=(),
+                    declared_project_dependencies=(),
+                    topology=m.Infra.PyprojectDeclaredTopology(
+                        declared_python_dirs=(source_dir,),
+                        declared_python_dirs_are_complete=True,
+                    ),
                 ),
             ),
         )
@@ -351,7 +354,7 @@ class TestsFlextInfraModernizerPyrefly:
         rules = config.Infra.tooling.tools.pyrefly.path_rules
         (tmp_path / "tests").mkdir()
         (tmp_path / "tests" / "__init__.py").write_text("", encoding="utf-8")
-        _ = ExtraPathsTestSupport.workspace_with_dependency(tmp_path)
+        _ = TestsFlextInfraExtraPathsSupport.workspace_with_dependency(tmp_path)
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python({})
 
         _ = FlextInfraEnsurePyreflyConfigPhase(config.Infra.tooling).apply_payload(

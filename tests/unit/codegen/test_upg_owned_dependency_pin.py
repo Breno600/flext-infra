@@ -17,8 +17,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, p, t, u
-from tests import TestsFlextInfraUtilities as tu, u as test_u
+from flext_infra import c, config, m, p, t
+from tests import u
 
 
 class TestsFlextInfraUpgOwnedDependencyPin:
@@ -66,7 +66,7 @@ class TestsFlextInfraUpgOwnedDependencyPin:
         }
         if flext_source:
             manifest["project"] = {
-                **test_u.Tests.project_spec("consumer").model_dump(mode="json"),
+                **u.Tests.project_spec("consumer").model_dump(mode="json"),
                 "flext_source": flext_source,
             }
         tm.ok(u.Cli.yaml_dump(root / "config" / "workspace.yaml", manifest))
@@ -77,15 +77,19 @@ class TestsFlextInfraUpgOwnedDependencyPin:
             f'codegen = ["{cls._requirement("flext-infra", infra_ref)}"]\n'
             f'dev = ["{cls._requirement("flext-core", core_ref)}"]\n'
             "[tool.uv]\n"
-            f'override-dependencies = ["{cls._requirement("flext-core", cls.COMMIT)}"]\n'
+            "override-dependencies = "
+            f'["{cls._requirement("flext-core", cls.COMMIT)}"]\n'
         )
         (root / c.PYPROJECT_FILENAME).write_text(source, encoding="utf-8")
         return source
 
     @staticmethod
-    def _conform(source: str, family_line: str | None = None) -> p.Result[str]:
+    def _conform(
+        source: str,
+        flext_line: m.Infra.WorkspaceIntegrationSpec | None = None,
+    ) -> p.Result[str]:
         toolchain = config.Infra.codegen.toolchain
-        workspace = test_u.Tests.workspace_spec(test_u.Tests.repository_ref("consumer"))
+        workspace = u.Tests.workspace_spec(u.Tests.repository_ref("consumer"))
         return u.Infra.pyproject_conform(
             source,
             workspace=workspace,
@@ -96,7 +100,9 @@ class TestsFlextInfraUpgOwnedDependencyPin:
                 exclude_dependencies=(),
                 environments=tuple(toolchain.uv_environments),
             ),
-            family_line=family_line,
+            options=u.Infra.PyprojectConformOptions(
+                flext_line=flext_line,
+            ),
         )
 
     def test_generation_keeps_the_line_and_drops_override_pins(
@@ -111,7 +117,7 @@ class TestsFlextInfraUpgOwnedDependencyPin:
             ("dependency-groups", "dev"),
             ("dependency-groups", "codegen"),
         ):
-            for requirement in tu.Tests.toml_strings_at(rendered, section, key):
+            for requirement in u.Tests.toml_strings_at(rendered, section, key):
                 tm.that(requirement.endswith(f".git@{self.LINE}"), eq=True)
         tm.that(rendered, lacks=self.COMMIT)
         tm.that(rendered, lacks="override-dependencies")
@@ -130,10 +136,15 @@ class TestsFlextInfraUpgOwnedDependencyPin:
     ) -> None:
         """A retired pin left in the projection never survives generation."""
         source = self._consumer(tmp_path, self.COMMIT, self.COMMIT)
-        rendered = tm.ok(self._conform(source, self.LINE))
+        line = m.Infra.WorkspaceIntegrationSpec(
+            provider=u.Tests.provider().name,
+            branch=self.LINE,
+            base_url=self.PROVIDER,
+        )
+        rendered = tm.ok(self._conform(source, line))
         tm.that(rendered, lacks=self.COMMIT)
         tm.that(rendered, has=self._requirement("flext-core", self.LINE))
-        tm.that(tm.ok(self._conform(rendered, self.LINE)), eq=rendered)
+        tm.that(tm.ok(self._conform(rendered, line)), eq=rendered)
         tm.fail(self._conform(source), has="only `make upg` moves it")
 
     def test_a_fully_pinned_projection_takes_the_line_from_the_manifest(
@@ -199,7 +210,7 @@ class TestsFlextInfraUpgOwnedDependencyPin:
     def test_the_manifest_carries_no_revision_pins(self) -> None:
         """The retired manifest pin is rejected, never silently ignored."""
         retired = {
-            **test_u.Tests.project_spec("consumer").model_dump(),
+            **u.Tests.project_spec("consumer").model_dump(),
             "dependency_revisions": {"flext-core": self.COMMIT},
         }
         with pytest.raises(ValueError, match="dependency_revisions"):

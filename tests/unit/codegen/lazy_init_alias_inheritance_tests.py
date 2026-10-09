@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -73,11 +72,6 @@ class TestsFlextInfraLazyInitAliasInheritance:
         first = (child / c.Infra.INIT_PY).read_bytes()
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
         tm.that((child / c.Infra.INIT_PY).read_bytes(), eq=first)
-        probe_env = dict(os.environ)
-        probe_env["PYTHONPATH"] = os.pathsep.join([
-            str(repository / c.Infra.DEFAULT_SRC_DIR),
-            *sys.path,
-        ])
         probe = (
             "from flext_bootstrap_child.consumer import execute\n"
             "import flext_bootstrap_child as generated\n"
@@ -87,11 +81,12 @@ class TestsFlextInfraLazyInitAliasInheritance:
             "print('compile' in generated.__all__)\n"
             "print(execute().value)\n"
         )
-        result = tm.ok(
-            u.Cli.run([sys.executable, "-c", probe], env=probe_env, cwd=repository),
-        )
         tm.that(
-            result.stdout.splitlines(),
+            u.Tests.run_lazy_init_probe(
+                probe,
+                python_paths=(str(repository / c.Infra.DEFAULT_SRC_DIR), *sys.path),
+                cwd=repository,
+            ),
             eq=["True", "True", "False", "bootstrap-ready"],
         )
 
@@ -178,10 +173,7 @@ class TestsFlextInfraLazyInitAliasInheritance:
         generated = child_root.joinpath(c.Infra.INIT_PY).read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        entries, _refs = u.Infra.module_mapping_assignment_source(
-            generated,
-            u.Infra.lazy_imports_name_source(generated),
-        )
+        entries, _refs = u.Infra.lazy_import_mapping_source(generated)
         sources = dict(entries)
 
         tm.that(sources.get("flext_cli", ()), has="r")
@@ -225,10 +217,7 @@ class TestsFlextInfraLazyInitAliasInheritance:
         generated = child_root.joinpath(c.Infra.INIT_PY).read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        entries, _refs = u.Infra.module_mapping_assignment_source(
-            generated,
-            u.Infra.lazy_imports_name_source(generated),
-        )
+        entries, _refs = u.Infra.lazy_import_mapping_source(generated)
         sources = dict(entries)
         inherited = {name for names in sources.values() for name in names}
 

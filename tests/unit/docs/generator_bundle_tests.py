@@ -131,7 +131,7 @@ class TestsFlextInfraDocsGeneratorBundle:
     def test_selected_project_symlink_cannot_escape_workspace(
         tmp_path: Path,
     ) -> None:
-        """Reject a selected local path whose physical project lives outside the root."""
+        """Reject a selected local path whose physical project is outside the root."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
         outside = tmp_path / "outside"
         package = outside / "src/outside"

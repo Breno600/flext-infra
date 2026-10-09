@@ -23,8 +23,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import config, p, u
-from tests import u as test_u
+from flext_infra import config, p
+from tests import u
 
 _TEMPLATES = (
     Path(__file__).resolve().parents[3]
@@ -39,7 +39,7 @@ _RENDERED_CI = Path(__file__).resolve().parents[3] / ".github" / "workflows" / "
 _WIP = config.Infra.codegen.make.work_in_progress
 
 
-class TestsWorkInProgressGates:
+class TestsFlextInfraWorkInProgressGates:
     """Prove the WIP merge predicate end to end on the rendered artifact."""
 
     @staticmethod
@@ -51,7 +51,7 @@ class TestsWorkInProgressGates:
         try:
             yield
         finally:
-            test_u.Tests.restore_env("BASE_REF", saved)
+            u.Tests.restore_env("BASE_REF", saved)
 
     @staticmethod
     def _merge_guard_script() -> str:
@@ -73,7 +73,7 @@ class TestsWorkInProgressGates:
             The resulting ``p.Result[str]``.
 
         """
-        test_u.Tests.git_bootstrap(root, ("commit", "--allow-empty", "-m", subject))
+        u.Tests.git_bootstrap(root, ("commit", "--allow-empty", "-m", subject))
         with cls._base_ref(base):
             return u.Cli.capture(
                 ["bash", "-c", cls._merge_guard_script()],
@@ -109,7 +109,7 @@ class TestsWorkInProgressGates:
 
     def test_rendered_merge_guard_decision_matrix(self, tmp_path: Path) -> None:
         """WIP heads are blocked on protected bases; clean or unprotected pass."""
-        test_u.Tests.initialize_git_repo(tmp_path)
+        u.Tests.initialize_git_repo(tmp_path)
         protected = _WIP.merge_lock_target_branches[0]
         wip_subject = "[WIP] preserve lane"
         tm.that(

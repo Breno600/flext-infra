@@ -11,7 +11,9 @@
 - [Canonical workflow](#canonical-workflow)
 - [Codemod rule fixtures](#codemod-rule-fixtures)
 - [Verb single-pass contract](#verb-single-pass-contract)
-- [Information-preserving repair](#information-preserving-repair)
+- [Repair selector verbs and the mod loop](#repair-selector-verbs-and-the-mod-loop)
+- [Fleet automation verbs](#fleet-automation-verbs)
+- [Mandatory unsafe repair channel (operator law 2026-10-05)](#mandatory-unsafe-repair-channel-operator-law-2026-10-05)
 - [Markdown quality pipeline](#markdown-quality-pipeline)
 - [Test contract](#test-contract)
 - [Failure contract](#failure-contract)
@@ -59,9 +61,12 @@ phase, fix, or changed-only selector may be attached to a standard verb. When
 `make setup` initializes an absent governed submodule, it uses the explicit GitHub
 credential selected by the root Make contract in a Git credential helper scoped to that
 invocation. The token stays in the process environment, outside command arguments and
-logs. `make.submodule_timeout_seconds` in `config/codegen.yaml` bounds the clone; a
-timed-out or incomplete checkout fails the verb. Existing submodule worktrees are
-validated without fetching or rewriting them.
+logs. `make.submodule_timeout_seconds` in `config/codegen.yaml` bounds the clone.
+Provisioning uses `git submodule update --init --depth 1`, the same depth
+private submodule init uses, because setup only needs the recorded gitlink
+and a full history of a large object database cannot finish inside that
+deadline. A timed-out or incomplete checkout fails the verb. Existing
+submodule worktrees are validated without fetching or rewriting them.
 
 `make help` is the complete live inventory. Additional declared verbs such as `upg`,
 `docs`, `audit`, `status`, `waza`, `duplication`, and the release verbs retain their own
@@ -105,8 +110,8 @@ read-only — no verb repeats another verb's work across the canonical sequence
 | `smells` — qlty                   | read-only scan                     | —                       | —                                          |
 
 `make fmt` never runs a lint pass and `make fix` never runs the format-only gates: each
-operation runs once per verb. `rumdl check --fix` repairs fixable findings and returns a
-failing status for residual findings. A mutation that cannot complete its declared
+operation runs once per verb. `rumdl check --fix` repairs fixable findings and returns
+a failing status for residual findings. A mutation that cannot complete its declared
 repair stays red before `make check`; on a green tree, repeated `make fix` and
 `make fmt` are no-ops.
 
@@ -138,21 +143,21 @@ Two surfaces compose the per-repository verbs into fleet-scale loops. Both are
   members and external consumers and publishes `.reports/fleet-gaps.json`:
   per repository, its porcelain dirty paths, its open pull requests (a
   failing `gh` degrades to an empty list), its local branches not merged into
-   the integration line, explicitly selected lint/Pyrefly execution counts,
-   the codemod count its own `.reports` carries (an absent mod artifact counts
-   zero), and the standards
+  the integration line, explicitly selected lint/Pyrefly execution counts,
+  the codemod count its own `.reports` carries (an absent mod artifact counts
+  zero), and the standards
   presence columns (`AGENTS.md`, `.agents/skills/.flext-stamp.json` with its
   `distribution_version`, `.beads/config.yaml`). The report carries no
-   timestamp: an unchanged tree re-publishes a byte-identical receipt.
-   `--quality-receipts path/to/check-report.sarif[,other/check-report.sarif]`
-   selects exact published check invocations, with relative paths resolved from
-   `--repository-root`. Their typed SARIF properties bind execution verdicts to
-   canonical project roots. No selection, missing gates, unreached projects and
-   file-scoped checks yield `null` (unknown/not executed), not zero or PASS.
-   Missing/malformed selected receipts, unrelated roots, native tool errors,
-   missing native output and duplicate full-project repo/gate selections fail
-   before hygiene probes. The auditor never searches by time or combines counts
-   from multiple captures of the same repo/gate.
+  timestamp: an unchanged tree re-publishes a byte-identical receipt.
+  `--quality-receipts path/to/check-report.sarif[,other/check-report.sarif]`
+  selects exact published check invocations, with relative paths resolved from
+  `--repository-root`. Their typed SARIF properties bind execution verdicts to
+  canonical project roots. No selection, missing gates, unreached projects and
+  file-scoped checks yield `null` (unknown/not executed), not zero or PASS.
+  Missing/malformed selected receipts, unrelated roots, native tool errors,
+  missing native output and duplicate full-project repo/gate selections fail
+  before hygiene probes. The auditor never searches by time or combines counts
+  from multiple captures of the same repo/gate.
 - `flext-infra refactor violations-sweep` measures the repository's mod scan
   totals, runs the canonical repair sequence (`make fix`, `make fmt`,
   `make mod`) in order, measures again, and publishes
@@ -169,22 +174,17 @@ forever, and must never be disabled again.** The typed Make contract enforces it
 `MakeRuffSpec` fails validation when `make.ruff.lint_fix` lacks `--unsafe-fixes`, so a
 configuration that disables the channel cannot even generate. Removing the flag is a
 regression against an explicit operator order and is reverted on sight.
-## Information-preserving repair
-
-`make fix` repairs code; it never deletes information. The lint repair runs
-`ruff check --fix` with the `make.ruff.lint_fix` flags of `config/codegen.yaml`, which
-apply Ruff's safe fixes only: the typed Make contract rejects `--unsafe-fixes`. Ruff's
-unsafe T201 fix once deleted `print(..., file=sys.stderr)` from a consumer script and
-turned its failures silent.
 
 The fix-safety policy lives in `config/tooling.yaml` (`Infra.tooling.tools.ruff.lint`)
 and `make gen` renders it into every generated `pyproject.toml`:
 
 - `unfixable` names the rules whose fixes delete a diagnostic print, an assignment, a
   redefinition, a duplicated key, value or test case, or a version block. Ruff keeps
-  reporting them and never rewrites them, including a direct or IDE Ruff run.
-- `extend-safe-fixes` is the only channel that promotes an unsafe fix into `make fix`. A
-  rule enters it with evidence that its fix preserves code, comments and diagnostics.
+  reporting them and never rewrites them, including a direct or IDE Ruff run. This is
+  rule selection — it protects specific destructive fixes and never disables the
+  mandatory unsafe channel.
+- `extend-safe-fixes` keeps its historical evidence records from the opt-in era; the
+  channel itself no longer needs promotion because it is always on.
 
 `make mod` rewires `print` diagnostics instead of deleting them. In `src/`, `tests/` and
 `scripts/`, a module that binds the `flext_cli` facade has `print(x)`,

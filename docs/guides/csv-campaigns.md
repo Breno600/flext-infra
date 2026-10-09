@@ -2,8 +2,6 @@
 
 <!-- TOC START -->
 
-- No sections found
-
 <!-- TOC END -->
 
 For a recovery that only needs declarative Sed text rules, run `make mod-text`
@@ -16,6 +14,10 @@ Python files in governed source trees are scanned by default. A rule may also
 declare a relative `include` glob ending in a file suffix to elect authored
 Markdown or configuration text. The same authenticated inventory and atomic
 publisher cover these files; a generated-file header rejects a direct rewrite.
+Sed `include` and `exclude` scopes must be lists of non-empty strings. Scalar,
+mapping, null, non-string, and blank entries fail before any publication; no
+scope is expanded into characters or coerced into a glob. Omitted scopes retain
+the typed rule defaults, and empty lists remain valid unrestricted selectors.
 When a candidate's Python package cannot import, the healthy Infra provider
 can run `make mod-text-candidate` after its workspace manifest declares exactly
 one `candidate_bootstrap_targets` entry. The same target declaration also
@@ -35,6 +37,40 @@ The project identity is parsed from one authenticated `pyproject.toml` snapshot,
 using the same managed-conflict recovery and typed TOML validation as project
 metadata. That snapshot remains a transaction input through publication, so a
 concurrent identity change rejects the complete text batch.
+
+Python identity migrations are not Sed rules. Native ast-grep captures carry
+authenticated UTF-8 byte ranges; `resolved-symbol` binds that exact expression
+to the module and expression declared in `arg`, and `same-binding` proves the
+replacement expression in the occurrence's lexical scope. Neither predicate
+resolves another same-spelling occurrence or uses a module-level binding for a
+shadowed function parameter. Admission refuses rebound source and replacement
+roots, intermediate attributes and ambiguous imported aliases rather than using
+Rope's inferred last assignment as a reaching-definition proof. Its immutable
+source graph carries descriptor-authenticated Python import-owner receipts into
+the guarded semantic publisher. All read-only dependency states must still match
+at the existing source barrier before any candidate is staged or written.
+Strings, docstrings, `Literal` values and `Annotated` metadata retain their
+contents, including PEP 695 and assignment-style aliases. Actual type operands
+remain distinct from metadata; unrelated runtime assignments are not annotations.
+Foreign NoProject-backed binding owners cannot establish an immutable identity
+graph through the closed project's filesystem. They remain unsupported with no
+fixer even when their read-only file receipts exist; receipts are not permission
+to infer from opaque or mutable third-party state.
+
+The codegen helper migration only fixes references when `u` already binds the
+same canonical utilities class. A missing or different binding leaves a visible
+non-fixable finding for the semantic import owner; the AST phase never invents
+an import or overwrites a homonym. Its existing Rope import cleanup retires
+imports only after their executable references have actually migrated.
+The tool-error literal migration only fixes comparisons with a resolved canonical
+outcome and an equivalent local `c` binding. The retired regex's other contexts
+(including expected data and untyped issue-code comparisons) have no declared
+consumer identity and are not eligible for automatic enum conversion. Executable
+legacy comparisons retain non-fixable findings in either direction and for unequal
+comparisons, without guessing a schema from the other operand's name. Unreferenced
+legacy module imports likewise retain a semantic-adjudication finding. JSON
+payloads are data, not code, even when a text replacement would leave Python
+syntax valid. These bounded AST rules run through `make mod`, not `mod-text`.
 
 The public `make mod` circuit reads `Infra.refactor_csv_campaigns` from the packaged
 configuration. Each campaign keeps one `old,new` CSV as its rename source. Consumer
@@ -58,6 +94,24 @@ the real CSV runner and Rope workspace through `p.Infra` ports. The mod service 
 those dependencies and the validated campaign inputs by constructor. `infra.apply_renames`
 offers the same real runner for an explicit `m.Infra.ApplyRenamesInput`. The CLI route
 renders progress and rename reports; the runner itself only returns typed results.
+
+Before class nesting, `make mod` plans nested payload relocation against an immutable
+Rope snapshot. The nested-payload rule admits data-only declarations by resolved
+Pydantic ancestry, not the spelling of an imported base. The planner requires exactly
+one existing authored model-family owner already composed by the public `m` facade;
+missing, competing, occupied, or generated destinations are not created or guessed.
+Bases, field/default expressions, configuration and docstrings move unchanged through
+CST. There is no automatic raw-model-to-preset conversion. Behavior-bearing bodies,
+settings subclasses, unknown class decorators, unresolved dependencies and test
+fixtures are not automatic payload movers. Executable references and quoted type
+positions follow Rope identity; ordinary strings, `Literal` values and `Annotated`
+metadata remain payloads. Proposed runtime imports include only requested lazy-export
+providers, and a new cycle rejects the entire plan before publication. Model owners
+that already depend on the source utility must have that prerequisite repaired first.
+Resolved Pydantic validators and computed fields retain their declaration semantics;
+ordinary methods do not establish a DTO role. Quoted field types participate in import
+dependency discovery, and a local binding capturing the elected facade refuses the
+cutover instead of rewriting through that unrelated binding.
 
 `bindings` maps CSV expression prefixes to current public Rope identities. An empty
 prefix describes member names relative to an owner; a nonempty prefix describes

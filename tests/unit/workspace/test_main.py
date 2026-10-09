@@ -10,9 +10,9 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, main as infra_main
+from flext_infra import main
 from flext_infra.workspace import FlextInfraWorkspaceDetector
-from tests import t, u
+from tests import c, t, u
 
 
 class TestsFlextInfraWorkspaceMain:
@@ -48,7 +48,7 @@ class TestsFlextInfraWorkspaceMain:
         args = ["workspace"]
         if argv is not None:
             args.extend(argv)
-        return infra_main(args)
+        return main(args)
 
     def test_unattached_child_does_not_infer_workspace_from_ancestor(
         self,

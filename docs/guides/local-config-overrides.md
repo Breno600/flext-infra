@@ -3,6 +3,7 @@
 <!-- TOC START -->
 
 - [Contract](#contract)
+- [Mandatory Mypy policy](#mandatory-mypy-policy)
 - [List-typed registries](#list-typed-registries)
 - [Example](#example)
 - [Local dependency binding](#local-dependency-binding)
@@ -36,6 +37,35 @@ config/codegen-overrides.local.yaml
   editing it.
 - **Never track it**: `.gitignore` blocks `/config/codegen-overrides.local.yaml` by SSOT
   rule; the guard gate rejects any diff reintroducing private values.
+
+## Mandatory Mypy policy
+
+`config/tooling.yaml` owns the declared Mypy policy and both projection paths consume
+that same typed configuration. The project's Pydantic 2 contract requires the
+`pydantic.mypy` plugin; missing, empty, or v1 resolved plugin declarations fail validation
+rather than receiving a silent default.
+
+The operator contract globally suspends only `prop-decorator` and `call-arg`. A complete
+policy payload must declare both and cannot add another global suspension. The model
+does not supply configuration-owned values through declaration defaults. Empty local
+lists retain the tracked policy because the YAML loader concatenates lists. Pyright
+call diagnostics and other unsuspended diagnostics remain active.
+
+Generic Mypy options cannot replace `plugins`, `disable_error_code`, `python_version`,
+`overrides`, or generated `mypy_path`. Reserved aliases and duplicate declarations
+within or between the boolean and string maps fail validation. A string-valued
+`enable_error_code` may enable unrelated diagnostics, but cannot re-enable any
+suspended code, including within a comma-separated list. Boolean enabling is invalid.
+Generic keys must be plain option identifiers, not quoted TOML keys or statements.
+Global `ignore_errors = true` is forbidden; an explicit false boolean remains valid.
+Dependency profiles in `config/codegen.yaml` restrict Pydantic to major version 2;
+dependency locks and project manifests are regenerated through `make upg` and
+`make gen`, respectively.
+
+Regenerate consumers through canonical `make gen` after changing the source owner;
+never patch generated pyprojects. Validate the public consumer with the plugin active
+and an unsuspended negative diagnostic, then run the applicable native gates. A source
+inspection, generation receipt, or merged PR alone is not proof of green delivery.
 
 ## List-typed registries
 
@@ -95,6 +125,10 @@ candidate campaign adds exact paths only in its worktree lane and removes them b
 landing. An empty list
 fails loud when the verb runs, rather than claiming a completed bootstrap. After
 Makefile bootstrap, run `make setup` and `make gen` in that consumer's worktree.
+The `pyproject` bootstrap regenerates declared tool tables through the existing
+dependency conformance phases before Rope or uv reads the physical document. Project
+metadata, dependency groups, and unowned tables remain live inputs; multiline string
+contents never select a table. Normal generation and all gates still run afterward.
 `docs-config` renders only the declared docs policy template when a conflicted
 generated JSON file prevents ordinary generation from parsing it; afterward run
 `make gen` to verify the full projection. Generated targets are never edited
@@ -107,6 +141,15 @@ project its managed files, including CI. The
 a member checkout has been initialized only partially and still lacks its
 `pyproject.toml`; that is the state the new Make setup must repair. All other conform
 surfaces continue to reject that incomplete member.
+
+The public `codegen conform --what mise-config --scope self` recovery surface
+regenerates only the selected checkout's `.mise.toml` from the canonical toolchain,
+template, and declared project overlay. It snapshots the malformed destination as
+raw bytes rather than parsing it as input. Apply holds the existing file transaction
+lease and validates the journal-owned staged TOML before publication, then verifies
+the live declaration and its fixed point. It installs no tools, changes no lockfile,
+and rejects fleet scopes. Run the read-only `codegen mise-proof` for that checkout
+before invoking a lifecycle command that requires its frozen installed toolchain.
 
 A dedicated integration worktree may stage exact supplier commits in its handwritten
 `config/workspace.yaml` under `candidate_dependencies`. Each entry declares the

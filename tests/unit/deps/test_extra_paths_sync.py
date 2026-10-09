@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,27 @@ from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 from tests import u
 
 _TEST_REPOSITORY_ROOT = Path(__file__).resolve().parent
+
+
+@dataclasses.dataclass(frozen=True)
+class SyncScenario:
+    """One parametrized extra-paths sync scenario bundle."""
+
+    mode: str
+    dry_run: bool = False
+    project_dirs: t.StrSequence | None = None
+    expect_fail: bool = False
+    expect_has: str | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class SyncOneEdgeScenario:
+    """One parametrized ``sync_one`` edge-case bundle."""
+
+    mode: str
+    dry_run: bool = False
+    expected_ok: bool = False
+    expect_fail: bool = False
 
 
 class TestsFlextInfraDepsExtraPathsSync:
@@ -49,54 +71,56 @@ class TestsFlextInfraDepsExtraPathsSync:
         )
 
     @pytest.mark.parametrize(
-        ("mode", "dry_run", "project_dirs", "expect_fail", "expect_has"),
+        "scenario",
         [
-            ("project", False, ["proj"], False, None),
-            ("project", True, ["proj"], False, "old"),
-            ("root", False, None, False, None),
-            ("none", True, [], False, None),
-            ("none", True, None, False, None),
+            SyncScenario("project", project_dirs=["proj"]),
+            SyncScenario(
+                "project",
+                dry_run=True,
+                project_dirs=["proj"],
+                expect_has="old",
+            ),
+            SyncScenario("root"),
+            SyncScenario("none", dry_run=True, project_dirs=[]),
+            SyncScenario("none", dry_run=True),
         ],
     )
     def test_sync_extra_paths_success_modes(
         self,
         tmp_path: Path,
         pyright_content: str,
-        mode: str,
-        *,
-        dry_run: bool,
-        project_dirs: t.StrSequence | None,
-        expect_fail: bool,
-        expect_has: str | None,
+        scenario: SyncScenario,
     ) -> None:
         """Verify sync extra paths success modes."""
         project_dirs_arg: t.SequenceOf[Path] | None = None
-        if mode == "project":
+        if scenario.mode == "project":
             project = tmp_path / "proj"
             project.mkdir()
             content = (
-                "[tool.pyright]\nextraPaths = ['old']\n" if dry_run else pyright_content
+                "[tool.pyright]\nextraPaths = ['old']\n"
+                if scenario.dry_run
+                else pyright_content
             )
             pyproject = self._create_pyproject(project, content)
-            project_dirs_arg = [project] if project_dirs else []
+            project_dirs_arg = [project] if scenario.project_dirs else []
             result = self._manager(tmp_path).sync_extra_paths(
-                dry_run=dry_run,
+                dry_run=scenario.dry_run,
                 project_dirs=project_dirs_arg,
             )
             tm.ok(result)
-            if expect_has:
-                tm.that(pyproject.read_text(encoding="utf-8"), has=expect_has)
+            if scenario.expect_has:
+                tm.that(pyproject.read_text(encoding="utf-8"), has=scenario.expect_has)
             return
-        if mode == "root":
+        if scenario.mode == "root":
             _ = self._create_pyproject(tmp_path, pyright_content)
             tm.ok(self._manager(tmp_path).sync_extra_paths())
             return
         _ = self._create_pyproject(tmp_path, pyright_content)
         result = self._manager(tmp_path).sync_extra_paths(
-            dry_run=dry_run,
-            project_dirs=[] if project_dirs == [] else None,
+            dry_run=scenario.dry_run,
+            project_dirs=[] if scenario.project_dirs == [] else None,
         )
-        if expect_fail:
+        if scenario.expect_fail:
             tm.fail(result)
             return
         tm.ok(result)
@@ -156,44 +180,47 @@ class TestsFlextInfraDepsExtraPathsSync:
         tm.that(main(["deps", "extra-paths", *argv[1:]]), eq=expected_exit)
 
     @pytest.mark.parametrize(
-        ("mode", "dry_run", "expected_ok", "expect_fail"),
+        "scenario",
         [
-            ("nonexistent", True, False, False),
-            ("invalid", True, False, True),
-            ("stubbed", False, True, False),
+            SyncOneEdgeScenario("nonexistent", dry_run=True),
+            SyncOneEdgeScenario("invalid", dry_run=True, expect_fail=True),
+            SyncOneEdgeScenario("stubbed"),
         ],
     )
     def test_sync_one_edge_cases(
         self,
         tmp_path: Path,
         pyright_content: str,
-        mode: str,
-        *,
-        dry_run: bool,
-        expected_ok: bool,
-        expect_fail: bool,
+        scenario: SyncOneEdgeScenario,
     ) -> None:
         """Verify sync one edge cases."""
-        if mode == "nonexistent":
+        if scenario.mode == "nonexistent":
             tm.that(
                 not self
                 ._manager(tmp_path)
-                .sync_one(Path("/nonexistent/pyproject.toml"), dry_run=dry_run)
+                .sync_one(Path("/nonexistent/pyproject.toml"), dry_run=scenario.dry_run)
                 .success,
                 eq=True,
             )
             return
-        if mode == "invalid":
+        if scenario.mode == "invalid":
             pyproject = self._create_pyproject(tmp_path, "invalid toml {")
-            result = self._manager(tmp_path).sync_one(pyproject, dry_run=dry_run)
-            if expect_fail:
+            result = self._manager(tmp_path).sync_one(
+                pyproject,
+                dry_run=scenario.dry_run,
+            )
+            if scenario.expect_fail:
                 tm.fail(result)
                 return
-            tm.that(result.success, eq=expected_ok)
+            tm.that(result.success, eq=scenario.expected_ok)
             return
         pyproject = self._create_pyproject(tmp_path, pyright_content)
         tm.ok(
-            self._manager(tmp_path).sync_one(pyproject, is_root=True, dry_run=dry_run),
+            self._manager(tmp_path).sync_one(
+                pyproject,
+                is_root=True,
+                dry_run=scenario.dry_run,
+            ),
         )
 
     def test_sync_doc_is_idempotent_when_paths_already_match(

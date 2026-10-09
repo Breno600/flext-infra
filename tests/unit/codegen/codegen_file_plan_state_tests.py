@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from flext_infra import c, m, u
-from flext_infra.utilities import FlextInfraUtilitiesCodegenFilePlan
+from flext_infra._utilities import FlextInfraUtilitiesCodegenFilePlan
 
 
 class TestsFlextInfraCodegenFilePlanState:

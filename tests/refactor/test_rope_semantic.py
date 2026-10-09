@@ -21,7 +21,7 @@ class TestsFlextInfraRefactorRopeSemantic:
     @staticmethod
     def test_returns_imports(
         semantic_rope_workspace: RopeWorkspace,
-        services_resource: t.Infra.RopeResource,
+        services_resource: t.Infra.RopeFile,
     ) -> None:
         """Test returns imports."""
         proj, _ = semantic_rope_workspace
@@ -31,7 +31,7 @@ class TestsFlextInfraRefactorRopeSemantic:
     @staticmethod
     def test_no_imports_returns_empty(
         semantic_rope_workspace: RopeWorkspace,
-        models_resource: t.Infra.RopeResource,
+        models_resource: t.Infra.RopeFile,
     ) -> None:
         """Test no imports returns empty."""
         proj, _ = semantic_rope_workspace
@@ -44,7 +44,7 @@ class TestsFlextInfraRefactorRopeSemantic:
     @staticmethod
     def test_returns_defined_classes(
         semantic_rope_workspace: RopeWorkspace,
-        models_resource: t.Infra.RopeResource,
+        models_resource: t.Infra.RopeFile,
     ) -> None:
         """Test returns defined classes."""
         proj, _ = semantic_rope_workspace
@@ -55,7 +55,7 @@ class TestsFlextInfraRefactorRopeSemantic:
     @staticmethod
     def test_excludes_imported_classes(
         semantic_rope_workspace: RopeWorkspace,
-        services_resource: t.Infra.RopeResource,
+        services_resource: t.Infra.RopeFile,
     ) -> None:
         """Test excludes imported classes."""
         proj, _ = semantic_rope_workspace
@@ -66,7 +66,7 @@ class TestsFlextInfraRefactorRopeSemantic:
     @staticmethod
     def test_returns_base_classes(
         semantic_rope_workspace: RopeWorkspace,
-        models_resource: t.Infra.RopeResource,
+        models_resource: t.Infra.RopeFile,
     ) -> None:
         """Test returns base classes."""
         proj, _ = semantic_rope_workspace
@@ -76,7 +76,7 @@ class TestsFlextInfraRefactorRopeSemantic:
     @staticmethod
     def test_no_bases_for_root_class(
         semantic_rope_workspace: RopeWorkspace,
-        models_resource: t.Infra.RopeResource,
+        models_resource: t.Infra.RopeFile,
     ) -> None:
         """Test no bases for root class."""
         proj, _ = semantic_rope_workspace
@@ -87,7 +87,7 @@ class TestsFlextInfraRefactorRopeSemantic:
     @staticmethod
     def test_nonexistent_class_returns_empty(
         semantic_rope_workspace: RopeWorkspace,
-        models_resource: t.Infra.RopeResource,
+        models_resource: t.Infra.RopeFile,
     ) -> None:
         """Test nonexistent class returns empty."""
         proj, _ = semantic_rope_workspace
@@ -97,7 +97,7 @@ class TestsFlextInfraRefactorRopeSemantic:
     @staticmethod
     def test_returns_public_methods(
         semantic_rope_workspace: RopeWorkspace,
-        models_resource: t.Infra.RopeResource,
+        models_resource: t.Infra.RopeFile,
     ) -> None:
         """Test returns public methods."""
         proj, _ = semantic_rope_workspace
@@ -110,7 +110,7 @@ class TestsFlextInfraRefactorRopeSemantic:
     @staticmethod
     def test_excludes_private_by_default(
         semantic_rope_workspace: RopeWorkspace,
-        models_resource: t.Infra.RopeResource,
+        models_resource: t.Infra.RopeFile,
     ) -> None:
         """Test excludes private by default."""
         proj, _ = semantic_rope_workspace
@@ -120,7 +120,7 @@ class TestsFlextInfraRefactorRopeSemantic:
     @staticmethod
     def test_includes_private_when_requested(
         semantic_rope_workspace: RopeWorkspace,
-        models_resource: t.Infra.RopeResource,
+        models_resource: t.Infra.RopeFile,
     ) -> None:
         """Test includes private when requested."""
         proj, _ = semantic_rope_workspace
@@ -136,7 +136,7 @@ class TestsFlextInfraRefactorRopeSemantic:
     @staticmethod
     def test_returns_character_offset_for_semantic_definition(
         semantic_rope_workspace: RopeWorkspace,
-        models_resource: t.Infra.RopeResource,
+        models_resource: t.Infra.RopeFile,
     ) -> None:
         """Test returns character offset for semantic definition."""
         proj, _ = semantic_rope_workspace

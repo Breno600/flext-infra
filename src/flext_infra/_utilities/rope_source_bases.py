@@ -47,7 +47,7 @@ class FlextInfraUtilitiesRopeSourceBases:
         module: str,
         path: Path,
         source: str,
-    ) -> dict[str, str]:
+    ) -> t.StrMapping:
         """Read the ``install_lazy_exports`` namespace alias map of one module.
 
         Returns:

@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra.validate.lazy_map_freshness import FlextInfraValidateLazyMapFreshness
+from flext_infra.validate import FlextInfraValidateLazyMapFreshness
 from tests import m, u
 
 if TYPE_CHECKING:

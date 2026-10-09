@@ -81,7 +81,8 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
             _write(
                 project / f"src/{pkg_name}/__init__.py",
                 '"""Documentation fixture package."""\n\n'
-                'def hello() -> str:\n    """Return a greeting."""\n    return "hello"\n\n'
+                'def hello() -> str:\n    """Return a greeting."""\n'
+                '    return "hello"\n\n'
                 '__all__ = ["hello"]\n',
             )
             _write(project / "README.md", f"# {name}\n")
@@ -157,10 +158,7 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
                 ),
                 encoding="utf-8",
             )
-            src_dir = project / "src" / name.replace("-", "_")
-            src_dir.mkdir(parents=True, exist_ok=True)
-            (src_dir / "__init__.py").write_text("", encoding="utf-8")
-            TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
+            TestsFlextInfraUtilitiesProjectFixtureMixin.write_member_package(
                 project,
                 name,
             )
