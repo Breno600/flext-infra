@@ -31,9 +31,8 @@ class FlextInfraMisePublication:
         if path.name == c.PYPROJECT_FILENAME:
             u.read_project_document_cached.cache_clear()
 
-    @classmethod
+    @staticmethod
     def publish_file_plan(
-        cls,
         plan: m.Infra.CodegenFilePlan,
         *,
         phase: str,
@@ -49,72 +48,39 @@ class FlextInfraMisePublication:
         before = u.Infra.codegen_file_before_state(plan)
         if before.failure:
             return r[bool].from_failure(before)
-        staged_publication = cls._staged_publication(
-            plan,
-            phase=phase,
-            before=before.value,
-        )
-        if staged_publication.failure:
-            return r[bool].from_failure(staged_publication)
-        published = files.write_publication(staged_publication.value)
-        FlextInfraMisePublication._invalidate_project_document(plan.path)
-        return published
-
-    @classmethod
-    def _staged_publication(
-        cls,
-        plan: m.Infra.CodegenFilePlan,
-        *,
-        phase: str,
-        before: m.Cli.AtomicFileState,
-    ) -> p.Result[m.Infra.CodegenStagedFile]:
-        """Stage one plan's desired content beside its destination.
-
-        A deletion-only plan stages the journal entry whose replacement is
-        None; the model owns that contract.
-
-        Returns:
-            The resulting ``p.Result[m.Infra.CodegenStagedFile]``.
-
-        """
-        result_type = r[m.Infra.CodegenStagedFile]
-        if plan.desired_content is None:
-            return result_type.ok(
-                m.Infra.CodegenStagedFile(
-                    phase=c.Infra.CodegenStagedFilePhase(phase),
-                    project=plan.project,
-                    before=before,
-                    replacement=None,
-                ),
+        replacement: m.Cli.AtomicFileState | None = None
+        if plan.desired_content is not None:
+            mode = plan.desired_mode
+            if mode is None:
+                return r[bool].fail(f"codegen desired mode is absent: {plan.path}")
+            staging_path = plan.path.with_name(f".{plan.path.name}.codegen-staging")
+            staged_before = u.Cli.atomic_read_binary_file_state(
+                staging_path,
+                required=False,
             )
-        mode = plan.desired_mode
-        if mode is None:
-            return result_type.fail(f"codegen desired mode is absent: {plan.path}")
-        staging_path = plan.path.with_name(f".{plan.path.name}.codegen-staging")
-        staged_before = u.Cli.atomic_read_binary_file_state(
-            staging_path,
-            required=False,
-        )
-        if staged_before.failure:
-            return result_type.from_failure(staged_before)
-        written = u.Cli.atomic_write_binary_file_guarded(
-            staged_before.value,
-            plan.desired_content,
-            permission_mode=mode,
-        )
-        if written.failure:
-            return result_type.from_failure(written)
-        staged = files.read_state(staging_path, required=True)
-        if staged.failure:
-            return result_type.from_failure(staged)
-        return result_type.ok(
+            if staged_before.failure:
+                return r[bool].from_failure(staged_before)
+            written = u.Cli.atomic_write_binary_file_guarded(
+                staged_before.value,
+                plan.desired_content,
+                permission_mode=mode,
+            )
+            if written.failure:
+                return r[bool].from_failure(written)
+            staged = files.read_state(staging_path, required=True)
+            if staged.failure:
+                return r[bool].from_failure(staged)
+            replacement = staged.value
+        published = files.write_publication(
             m.Infra.CodegenStagedFile(
-                phase=c.Infra.CodegenStagedFilePhase(phase),
+                phase=phase,
                 project=plan.project,
-                before=before,
-                replacement=staged.value,
+                before=before.value,
+                replacement=replacement,
             ),
         )
+        FlextInfraMisePublication._invalidate_project_document(plan.path)
+        return published
 
     @staticmethod
     def publish(

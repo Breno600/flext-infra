@@ -6,22 +6,19 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
 from flext_infra import config, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesProjectDiscovery,
-    FlextInfraUtilitiesRopeRuntime,
-)
 from flext_infra._utilities._rope_core_pymodule import (
     FlextInfraUtilitiesRopeCorePyModuleMixin,
 )
 from flext_infra._utilities._rope_core_resources import (
     FlextInfraUtilitiesRopeCoreResourcesMixin,
 )
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeCore(
@@ -90,18 +87,8 @@ class FlextInfraUtilitiesRopeCore(
             str(resolved_root),
             ropefolder="",
             save_objectdb=False,
-            filter_lists=(
-                sorted(config.Infra.codegen.source_scan_ignored),
-                source_folders,
-                sorted(
-                    name
-                    for name, module in tuple(sys.modules.items())
-                    if name.partition(".")[0] in sys.stdlib_module_names
-                    and module is not None
-                    and module.__spec__ is not None
-                    and module.__spec__.origin == "frozen"
-                ),
-            ),
+            ignored_resources=sorted(config.Infra.codegen.source_scan_ignored),
+            source_folders=source_folders,
         )
 
     @staticmethod

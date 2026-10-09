@@ -6,9 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-
-from flext_cli import u
+from typing import ClassVar
 
 from flext_infra import m, p, t
 from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
@@ -17,9 +15,10 @@ from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRunt
 class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase):
     """Load Rope refactor helpers behind protocols."""
 
-    @classmethod
+    _WORD_RANGE_SIZE: ClassVar[int] = 2
+
+    @staticmethod
     def unwrap_class_rewrites(
-        cls,
         source: str,
         layout: m.Infra.ClassBlockLayout,
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
@@ -32,27 +31,13 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
             The resulting ``t.VariadicTuple[m.Infra.SourceRewrite]``.
 
         Raises:
-            TypeError: If Rope's source lines do not satisfy their public contract.
             ValueError: If Rope wrapper body has inconsistent indentation.
 
         """
-        lines = cls._runtime_callable("rope.base.codeanalyze", "SourceLinesAdapter")(
-            source,
-        )
-        if not isinstance(lines, p.Infra.RopeSourceLines):
-            msg = "Rope SourceLinesAdapter does not satisfy its public contract"
-            raise TypeError(msg)
-        regions_adapter: t.ValueAdapter[
-            t.SequenceOf[t.Triple[int, int, t.MappingKV[str, str | None]]]
-        ] = u.type_adapter(
-            Sequence[tuple[int, int, dict[str, str | None]]],
-        )
-        regions = tuple(
-            regions_adapter.validate_python(
-                cls._runtime_callable("rope.base.simplify", "ignored_regions")(source),
-                strict=True,
-            ),
-        )
+        from rope.base import codeanalyze, simplify
+
+        lines = codeanalyze.SourceLinesAdapter(source)
+        regions = tuple(simplify.ignored_regions(source))
         start = lines.get_line_start(layout.header_start)
         end = min(lines.get_line_end(layout.header_end) + 1, len(source))
         comments = "".join(
@@ -255,12 +240,14 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
             msg = "rope Worder does not expose callable get_primary_range"
             raise TypeError(msg)
         value = primary_range(offset)
-        match value:
-            case tuple([int() as start, int() as end]):
-                return start, end
-            case _:
-                msg = "rope Worder returned invalid primary range"
-                raise TypeError(msg)
+        if (
+            not isinstance(value, tuple)
+            or len(value) != cls._WORD_RANGE_SIZE
+            or not all(isinstance(item, int) for item in value)
+        ):
+            msg = "rope Worder returned invalid primary range"
+            raise TypeError(msg)
+        return value
 
     @classmethod
     def word_is_function_call(cls, source: str, offset: int) -> bool:

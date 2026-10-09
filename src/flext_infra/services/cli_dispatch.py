@@ -9,16 +9,16 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_cli import FlextCli
+from flext_cli import cli as cli_facade
 
-from flext_infra import c, m, t, u
+from flext_infra import c, t, u
 from flext_infra.services.cli_routes import FlextInfraCliRouteService
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraCliDispatchService(FlextInfraCliRouteService, FlextCli):
+class FlextInfraCliDispatchService(FlextInfraCliRouteService, type(cli_facade)):
     """Dispatch public command groups through their typed route models."""
 
     app_name: ClassVar[str] = "flext-infra"
@@ -109,7 +109,12 @@ class FlextInfraCliDispatchService(FlextInfraCliRouteService, FlextCli):
         if result.success:
             return c.Infra.PROCESS_SUCCESS_EXIT_CODE
         if result.error_code == c.Infra.PROCESS_EXIT_ERROR_CODE:
-            process_exit = m.Infra.ProcessExit.model_validate(result.error_data)
+            # Why: `m` is a TYPE_CHECKING-only name at module scope, so binding
+            # it again here made Python treat it as local for the whole function
+            # (NameError before this line). Import the module under its own name.
+            from flext_infra import models as _models
+
+            process_exit = _models.m.Infra.ProcessExit.model_validate(result.error_data)
             exit_code: int = process_exit.exit_code
             return exit_code
         error_message = result.error

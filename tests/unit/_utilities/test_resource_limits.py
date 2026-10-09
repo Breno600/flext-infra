@@ -13,15 +13,14 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
-from tests import c, m, u
+from flext_infra import c, config, m, u
+from tests import u as test_u
 
 
 class TestsFlextInfraUtilitiesResourceLimits:
     """Behavior tests for the canonical Mypy resource-limit command."""
 
     @staticmethod
-    @pytest.mark.requires_engine("mypy")
     def test_mypy_command_checks_source_with_memory_and_time_limits(
         tmp_path: Path,
     ) -> None:
@@ -31,7 +30,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
         command = u.Infra.mypy_limited_command(
-            u.Tests.mypy_workload(tmp_path),
+            test_u.Tests.mypy_workload(tmp_path),
             limit,
         )
         result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
@@ -40,10 +39,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
 
     @staticmethod
-    @pytest.mark.requires_engine("mypy")
     def test_mypy_profile_records_the_real_checker(tmp_path: Path) -> None:
         """Keep the public profiling contract while removing executable selection."""
-        project = u.Tests.mypy_workload(tmp_path)
+        project = test_u.Tests.mypy_workload(tmp_path)
         profile = tmp_path / "checker.pstats"
         invocation = m.Infra.MypyInvocation(
             targets=project.targets,
@@ -69,8 +67,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         budget = config.Infra.tooling.tools.mypy.timeout_seconds // 2
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
-            "Infra:\n  tooling:\n    tools:\n      mypy:\n"
-            f"        timeout_seconds: {budget}\n",
+            f"Infra:\n  tooling:\n    tools:\n      mypy:\n        timeout_seconds: {budget}\n",
             encoding="utf-8",
         )
         expected_limit = m.Infra.MypyResourceLimit(
@@ -91,8 +88,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         above = config.Infra.tooling.tools.mypy.timeout_seconds + 1
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
-            "Infra:\n  tooling:\n    tools:\n      mypy:\n"
-            f"        timeout_seconds: {above}\n",
+            f"Infra:\n  tooling:\n    tools:\n      mypy:\n        timeout_seconds: {above}\n",
             encoding="utf-8",
         )
 
@@ -114,8 +110,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tmp_path: Path,
     ) -> None:
         """An unprovisioned target never borrows the orchestrator's interpreter."""
-        u.Tests.initialize_git_repo(tmp_path)
-        project = u.Tests.mypy_workload(tmp_path)
+        test_u.Tests.initialize_git_repo(tmp_path)
+        project = test_u.Tests.mypy_workload(tmp_path)
         invocation = m.Infra.MypyInvocation(
             targets=project.targets,
             config_file=project.config_file,
@@ -123,7 +119,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
         with pytest.raises(FileNotFoundError, match="managed workspace interpreter"):
             u.Infra.mypy_command(invocation)
-        tm.ok(u.Tests.create_python_environment(tmp_path))
+        tm.ok(test_u.Tests.create_python_environment(tmp_path))
         with pytest.raises(FileNotFoundError, match="managed workspace checker"):
             u.Infra.mypy_command(invocation)
 
@@ -132,7 +128,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tmp_path: Path,
     ) -> None:
         """A hostile request cannot turn the supervisor into an arbitrary executor."""
-        project = u.Tests.mypy_workload(tmp_path)
+        project = test_u.Tests.mypy_workload(tmp_path)
         command = u.Infra.mypy_limited_command(project, host_system="Darwin")
         injected = project.model_dump_json()[:-1] + ',"command":["/bin/sh"]}'
         result = u.Cli.run_raw(
@@ -166,7 +162,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             memory_limit_mb=max(1, c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 2)
             if scenario == "memory"
             else c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-            timeout_seconds=u.Tests.mypy_deadline_limit().timeout_seconds
+            timeout_seconds=test_u.Tests.mypy_deadline_limit().timeout_seconds
             if scenario == "deadline"
             else config.Infra.tooling.tools.mypy.timeout_seconds,
         )
@@ -178,7 +174,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 source += f"allocation = bytearray({limit.memory_limit_bytes * 2}); "
             source += f"time.sleep({limit.timeout_seconds + 1})"
         command = u.Infra.mypy_limited_command(
-            u.Tests.mypy_workload(tmp_path, source),
+            test_u.Tests.mypy_workload(tmp_path, source),
             limit,
         )
         result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
@@ -218,18 +214,17 @@ class TestsFlextInfraUtilitiesResourceLimits:
         request: pytest.FixtureRequest,
     ) -> None:
         """Kill a TERM-resistant descendant after leader exit or deadline."""
-        limit = u.Tests.mypy_deadline_limit()
+        limit = test_u.Tests.mypy_deadline_limit()
         policy = config.Infra.tooling.tools.pytest
         pid_file = tmp_path / "descendant.pid"
         error_file = tmp_path / "descendant.stderr"
         request.addfinalizer(
-            lambda: u.Tests.reap_mypy_descendant(
+            lambda: test_u.Tests.reap_mypy_descendant(
                 pid_file,
                 policy.termination_grace_seconds,
             ),
         )
-        bound = u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds
-        sleep = f"time.sleep({bound})"
+        sleep = f"time.sleep({u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds})"
         tail = f"sys.exit({expected})" if leader_exits else sleep
         descendant = (
             "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
@@ -250,7 +245,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
         result = u.Cli.run_raw(
             u.Infra.mypy_limited_command(
-                u.Tests.mypy_workload(tmp_path, source),
+                test_u.Tests.mypy_workload(tmp_path, source),
                 limit,
             ),
             timeout=u.Infra.mypy_runner_timeout(limit),
@@ -284,7 +279,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
         started = u.Cli.process_start(
             u.Infra.mypy_limited_command(
-                u.Tests.mypy_workload(
+                test_u.Tests.mypy_workload(
                     tmp_path,
                     "import time; print('ready', flush=True); "
                     f"time.sleep({limit.timeout_seconds + 1})",
@@ -309,9 +304,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
     @staticmethod
     def test_mypy_resource_contract_rejects_non_positive_limits() -> None:
         """Reject invalid external configuration before spawning a process."""
-        invalid: int = 0
         with pytest.raises(ValueError, match="greater than 0"):
-            m.Infra.MypyResourceLimit(memory_limit_mb=invalid, timeout_seconds=invalid)
+            m.Infra.MypyResourceLimit(memory_limit_mb=0, timeout_seconds=0)
 
     @staticmethod
     def test_mypy_resource_limit_parses_environment_at_boundary() -> None:
@@ -357,9 +351,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 "-c",
                 "from flext_infra import u; u.Infra.mypy_resource_limit()",
             ],
-            options=m.Cli.ProcessOptions(
-                env={c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: invalid_value},
-            ),
+            env={c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: invalid_value},
         )
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=False)

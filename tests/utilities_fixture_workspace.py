@@ -6,9 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import dataclasses
 import os
-import shutil
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -26,28 +24,6 @@ from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
 
 class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
     """Typed workspace and project-layout fixture helpers."""
-
-    @dataclasses.dataclass(frozen=True)
-    class BeadsIdentity:
-        """The three Beads identity strings one governed fixture declares."""
-
-        workspace: str
-        database: str
-        issue_prefix: str
-
-    @dataclasses.dataclass(frozen=True)
-    class StandaloneManifestDeclaration:
-        """Optional standalone-manifest declaration knobs in one contract."""
-
-        upstream: str | None = None
-        inherited_facets: t.StrSequence = ()
-        root_modules: t.StrSequence = ()
-        root_packages: t.StrSequence = ()
-        repository_namespace_packages: t.StrSequence = ()
-        packaged_data_paths: t.StrSequence = ()
-        packaged_data_excludes: t.StrSequence = ()
-        gascity_enabled: bool | None = None
-        cli_module: bool | None = None
 
     @staticmethod
     def mk_project(
@@ -130,10 +106,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
         Returns ``(workspace, project, package)``. ``declare`` writes the
         governed ``.gitmodules`` row; a scan that must observe an undeclared
-        project sets it to ``False``. Workspace and project both carry the
-        tracked Mise seeds, as governed repositories do: the rule engine runs
-        ast-grep through the scanned repository's pinned lock, and a bare
-        fixture resolved only a host-global binary (none on CI runners).
+        project sets it to ``False``.
 
         Returns:
             The resulting ``t.Triple[Path, Path, Path]``.
@@ -147,10 +120,6 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             pyproject=pyproject,
         )
         (project / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
-        for governed_root in (workspace, project):
-            TestsFlextInfraUtilitiesToolingFixtureMixin.copy_tracked_mise_seeds(
-                governed_root,
-            )
         if declare:
             TestsFlextInfraUtilitiesProjectFixtureMixin.declare_workspace_projects(
                 workspace,
@@ -163,9 +132,17 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         project_dir: Path,
         name: str,
         *,
+        upstream: str | None = None,
+        inherited_facets: t.StrSequence = (),
+        root_modules: t.StrSequence = (),
+        root_packages: t.StrSequence = (),
+        repository_namespace_packages: t.StrSequence = (),
+        packaged_data_paths: t.StrSequence = (),
+        packaged_data_excludes: t.StrSequence = (),
         extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
+        gascity_enabled: bool | None = None,
         role: c.Infra.MakeProfile = c.Infra.MakeProfile.STANDALONE,
-        declaration: StandaloneManifestDeclaration | None = None,
+        cli_module: bool | None = None,
     ) -> Path:
         """Write the declared ``config/workspace.yaml`` of one standalone repository.
 
@@ -178,24 +155,18 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         managed Makefile renders into its help block, so a caller controls
         real rendered content through the declaration the loader validates.
 
-        ``declaration`` groups the remaining optional knobs. Its
-        ``cli_module`` declares whether an existing package ships its cli
-        entry module; ``None`` keeps the project model's own default. Its
-        ``gascity_enabled`` declares the Gas City participation of a
-        repository that participates in Beads; ``None`` writes no overlay at
-        all (the fleet default). An overlay states every participation
-        explicitly: its Beads default is off, and Gas City requires Beads.
+        ``cli_module`` declares whether an existing package ships its cli entry
+        module; ``None`` keeps the project model's own default.
+
+        ``gascity_enabled`` declares the Gas City participation of a repository
+        that participates in Beads; ``None`` writes no overlay at all (the fleet
+        default). An overlay states every participation explicitly: its Beads
+        default is off, and Gas City requires Beads.
 
         Returns:
             The resulting ``Path``.
 
         """
-        fixture = TestsFlextInfraUtilitiesWorkspaceFixtureMixin
-        resolved = (
-            fixture.StandaloneManifestDeclaration()
-            if declaration is None
-            else declaration
-        )
         repository = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
             name,
             role=role,
@@ -203,38 +174,36 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         if extra_verbs:
             repository = repository.model_copy(update={"extra_verbs": extra_verbs})
         project = TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name)
-        if resolved.upstream is not None:
-            project = project.model_copy(update={"upstream": resolved.upstream})
-        if resolved.inherited_facets:
+        if upstream is not None:
+            project = project.model_copy(update={"upstream": upstream})
+        if inherited_facets:
             project = project.model_copy(
-                update={"inherited_facets": tuple(resolved.inherited_facets)},
+                update={"inherited_facets": tuple(inherited_facets)},
             )
-        if resolved.cli_module is not None:
-            project = project.model_copy(update={"cli_module": resolved.cli_module})
-        if resolved.root_modules or resolved.root_packages:
+        if cli_module is not None:
+            project = project.model_copy(update={"cli_module": cli_module})
+        if root_modules or root_packages:
             project = project.model_copy(
                 update={
-                    "root_modules": tuple(resolved.root_modules),
-                    "root_packages": tuple(resolved.root_packages),
+                    "root_modules": tuple(root_modules),
+                    "root_packages": tuple(root_packages),
                 },
             )
-        if resolved.repository_namespace_packages:
+        if repository_namespace_packages:
             project = project.model_copy(
                 update={
                     "repository_namespace_packages": tuple(
-                        resolved.repository_namespace_packages,
+                        repository_namespace_packages,
                     ),
                 },
             )
-        if resolved.packaged_data_paths:
+        if packaged_data_paths:
             project = project.model_copy(
-                update={"packaged_data_paths": tuple(resolved.packaged_data_paths)},
+                update={"packaged_data_paths": tuple(packaged_data_paths)},
             )
-        if resolved.packaged_data_excludes:
+        if packaged_data_excludes:
             project = project.model_copy(
-                update={
-                    "packaged_data_excludes": tuple(resolved.packaged_data_excludes),
-                },
+                update={"packaged_data_excludes": tuple(packaged_data_excludes)},
             )
         manifest = m.Infra.WorkspaceManifestSpec(
             version=c.Infra.WORKSPACE_MANIFEST_VERSION,
@@ -242,14 +211,14 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             repository=repository,
             project=project,
         )
-        if resolved.gascity_enabled is not None:
+        if gascity_enabled is not None:
             manifest = manifest.model_copy(
                 update={
                     "repository_policy_overlays": (
                         m.Infra.RepositoryPolicyOverlaySpec(
                             project=name,
                             beads_enabled=True,
-                            gascity_enabled=resolved.gascity_enabled,
+                            gascity_enabled=gascity_enabled,
                         ),
                     ),
                 },
@@ -311,13 +280,13 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         package_root = project_dir / "src" / name.replace("-", "_")
         package_root.mkdir(parents=True, exist_ok=True)
         (package_root / "__init__.py").write_text("", encoding="utf-8")
-        project_spec = TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name)
         (project_dir / "pyproject.toml").write_text(
             "[project]\n"
             f'name = "{name}"\n'
-            f'authors = [{{name = "{project_spec.author_name}", '
-            f'email = "{project_spec.author_email}"}}]\n'
+            f'authors = [{{name = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_name}", email = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_email}"}}]\n'
             'version = "0.1.0"\n'
+            f'authors = [{{name = "{spec.author_name}", '
+            f'email = "{spec.author_email}"}}]\n'
             f'requires-python = "{python_required}"\n'
             f'dependencies = ["{upstream_source}"]\n'
             "[dependency-groups]\n"
@@ -554,11 +523,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             cls.initialize_governed_project(
                 child,
                 "fixture-child",
-                beads=TestsFlextInfraUtilitiesWorkspaceFixtureMixin.BeadsIdentity(
-                    workspace="fixture-child",
-                    database="fixture_child",
-                    issue_prefix="fixture-child",
-                ),
+                workspace="fixture-child",
+                database="fixture_child",
+                issue_prefix="fixture-child",
                 beads_owner=False,
             )
             cls.link_member_beads(
@@ -569,48 +536,6 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 issue_prefix="fixture-workspace",
             )
             return child
-
-        @classmethod
-        def copied_member(
-            cls,
-            parent: Path,
-            distribution: str,
-            *,
-            workspace: str,
-            database: str,
-            issue_prefix: str,
-        ) -> Path:
-            """Initialize ``parent`` and copy a ledger-less governed member into it.
-
-            The caller declares the member's Beads route and attaches it.
-
-            Returns:
-                The copied member checkout at ``apps/member``.
-
-            """
-            source = parent.parent / "child-source"
-            cls.initialize_governed_project(
-                source,
-                "fixture-member",
-                beads=TestsFlextInfraUtilitiesWorkspaceFixtureMixin.BeadsIdentity(
-                    workspace="member-workspace",
-                    database="member-database",
-                    issue_prefix="member-prefix",
-                ),
-                beads_owner=False,
-            )
-            cls.initialize_governed_project(
-                parent,
-                distribution,
-                beads=TestsFlextInfraUtilitiesWorkspaceFixtureMixin.BeadsIdentity(
-                    workspace=workspace,
-                    database=database,
-                    issue_prefix=issue_prefix,
-                ),
-            )
-            member = parent / "apps" / "member"
-            shutil.copytree(source, member)
-            return member
 
         @staticmethod
         def _lane(primary_root: Path, outermost_project: Path, branch: str) -> Path:
@@ -644,24 +569,6 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 encoding="utf-8",
             )
             TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(repository)
-            remote = tmp_path / "integration.git"
-            git = TestsFlextInfraUtilitiesGitMixin
-            git.git_bootstrap(tmp_path, ("init", "--bare", str(remote)))
-            policy = config.Infra.codegen.branch_policy
-            action = "set-url" if policy.lane_remote == c.Infra.GIT_ORIGIN else "add"
-            git.git_bootstrap(
-                repository,
-                ("remote", action, policy.lane_remote, str(remote)),
-            )
-            git.git_bootstrap(
-                repository,
-                (
-                    "push",
-                    policy.lane_remote,
-                    "HEAD:refs/heads/"
-                    + TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch(),
-                ),
-            )
             return repository
 
         @staticmethod
@@ -679,15 +586,6 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                     cwd=repository,
                 ),
             )
-            TestsFlextInfraUtilitiesGitMixin.git_bootstrap(
-                repository,
-                (
-                    "push",
-                    config.Infra.codegen.branch_policy.lane_remote,
-                    "HEAD:refs/heads/"
-                    + TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch(),
-                ),
-            )
 
         @classmethod
         def conformed_root(cls, tmp_path: Path) -> Path:
@@ -701,11 +599,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             cls.initialize_governed_project(
                 root,
                 "fixture-project",
-                beads=TestsFlextInfraUtilitiesWorkspaceFixtureMixin.BeadsIdentity(
-                    workspace="fixture-workspace",
-                    database="fixture-database",
-                    issue_prefix="fixture-prefix",
-                ),
+                workspace="fixture-workspace",
+                database="fixture-database",
+                issue_prefix="fixture-prefix",
             )
             TestsFlextInfraUtilitiesGitMixin.commit_git_changes(
                 root,
@@ -893,8 +789,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             directory: str,
             *,
             distribution: str = "fixture-workspace",
-            beads: TestsFlextInfraUtilitiesWorkspaceFixtureMixin.BeadsIdentity
-            | None = None,
+            workspace: str = "fixture-workspace",
+            database: str = "fixture_workspace",
+            issue_prefix: str = "fixture-workspace",
         ) -> Path:
             """Initialize one governed checkout at ``parent/directory`` and return it.
 
@@ -902,40 +799,13 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 The resulting ``Path``.
 
             """
-            fixture = TestsFlextInfraUtilitiesWorkspaceFixtureMixin
-            resolved = (
-                fixture.BeadsIdentity(
-                    workspace="fixture-workspace",
-                    database="fixture_workspace",
-                    issue_prefix="fixture-workspace",
-                )
-                if beads is None
-                else beads
-            )
             root = parent / directory
             _ = cls.initialize_governed_project(
                 root,
                 distribution,
-                beads=resolved,
-            )
-            return root
-
-        @classmethod
-        def self_named_project(cls, root: Path, name: str) -> Path:
-            """Initialize one governed repository with a name-derived Beads identity.
-
-            Returns:
-                The initialized repository root.
-
-            """
-            _ = cls.initialize_governed_project(
-                root,
-                name,
-                beads=TestsFlextInfraUtilitiesWorkspaceFixtureMixin.BeadsIdentity(
-                    workspace=f"{name}-workspace",
-                    database=f"{name}-database",
-                    issue_prefix=f"{name}-prefix",
-                ),
+                workspace=workspace,
+                database=database,
+                issue_prefix=issue_prefix,
             )
             return root
 
@@ -959,17 +829,13 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 The attached member checkout path.
 
             """
-            fixture = TestsFlextInfraUtilitiesWorkspaceFixtureMixin
-            identity = fixture.BeadsIdentity(
-                workspace=workspace,
-                database=database,
-                issue_prefix=issue_prefix,
-            )
             for checkout, distribution in ((root, workspace), (root / member, member)):
                 _ = cls.initialize_governed_project(
                     checkout,
                     distribution,
-                    beads=identity,
+                    workspace=workspace,
+                    database=database,
+                    issue_prefix=issue_prefix,
                 )
             cls.attach_submodule(
                 root,
@@ -991,7 +857,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             root: Path,
             distribution: str,
             *,
-            beads: TestsFlextInfraUtilitiesWorkspaceFixtureMixin.BeadsIdentity,
+            workspace: str,
+            database: str,
+            issue_prefix: str,
             custom_issue_types: t.VariadicTuple[str] = (),
             beads_owner: bool = True,
         ) -> Path:
@@ -1010,9 +878,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             if beads_owner:
                 cls.write_beads_project(
                     root,
-                    workspace=beads.workspace,
-                    database=beads.database,
-                    issue_prefix=beads.issue_prefix,
+                    workspace=workspace,
+                    database=database,
+                    issue_prefix=issue_prefix,
                     custom_issue_types=custom_issue_types,
                 )
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_workspace_manifest(

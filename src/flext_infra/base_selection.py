@@ -11,7 +11,7 @@ from flext_infra._base_projects import FlextInfraProjectSelectionMixin
 from flext_infra.base import FlextInfraServiceBase
 
 
-class FlextInfraProjectSelectionServiceBase[TDomainResult](
+class FlextInfraProjectSelectionServiceBase[TDomainResult: t.Cli.ResultValue](
     FlextInfraServiceBase[TDomainResult],
     FlextInfraProjectSelectionMixin,
 ):

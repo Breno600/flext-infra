@@ -7,21 +7,22 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from flext_infra import c, config, m, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDocs,
-    FlextInfraUtilitiesDocsApi,
-    FlextInfraUtilitiesDocsGithubLinks,
-    FlextInfraUtilitiesDocsScope,
-)
+from flext_infra import c, config, m
 from flext_infra._utilities._docs_audit_detectors import (
     FlextInfraUtilitiesDocsAuditDetectorsMixin,
 )
 from flext_infra._utilities._docs_command_contract import (
     FlextInfraUtilitiesDocsCommandContractMixin,
 )
+from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesDocsAudit(
@@ -107,7 +108,6 @@ class FlextInfraUtilitiesDocsAudit(
         # heuristic) owns docs policy resolution — a workspace-root project
         # scope IS its own repository root, and only a genuine member-project
         # scope carries a `repository_root_override` set at scope build time.
-
         payload = FlextInfraUtilitiesDocsScope.load_config(scope.repository_root)
         return m.Infra.DocsAuditPolicySpec.model_validate(payload.get("audit", {}))
 
@@ -146,84 +146,6 @@ class FlextInfraUtilitiesDocsAudit(
         return names
 
     @staticmethod
-    def _link_issue(
-        issues: t.MutableSequenceOf[m.Infra.AuditIssue],
-        md_file: Path,
-        rel: str,
-        number: int,
-        raw: str,
-    ) -> None:
-        """Append one issue for a single link target when it violates policy."""
-        target = FlextInfraUtilitiesDocsAudit.docs_normalize_link(raw)
-        if re.match(
-            config.Infra.codegen.make.docs.cross_project_relative_link_pattern,
-            target,
-        ):
-            issues.append(
-                m.Infra.AuditIssue(
-                    file=rel,
-                    issue_type="cross_project_relative_link",
-                    severity="high",
-                    message=(
-                        f"line {number}: cross-project links require an "
-                        f"absolute repository URL -> {raw}"
-                    ),
-                ),
-            )
-            return
-        if not target or target.startswith("#"):
-            return
-        if FlextInfraUtilitiesDocs.docs_is_external(target):
-            issues.extend(
-                FlextInfraUtilitiesDocsGithubLinks.docs_github_link_issues(
-                    file=rel,
-                    line_number=number,
-                    raw=raw,
-                    target=target,
-                ),
-            )
-            return
-        if FlextInfraUtilitiesDocsAudit.docs_should_skip_target(raw, target):
-            return
-        if not (md_file.parent / target).resolve().exists():
-            issues.append(
-                m.Infra.AuditIssue(
-                    file=rel,
-                    issue_type="broken_link",
-                    severity="high",
-                    message=f"line {number}: target not found -> {raw}",
-                ),
-            )
-
-    @staticmethod
-    def _scan_broken_links(
-        content: str,
-        md_file: Path,
-        rel: str,
-        issues: t.MutableSequenceOf[m.Infra.AuditIssue],
-    ) -> None:
-        """Scan one markdown file's non-fenced lines for broken link targets."""
-        in_fenced_code = False
-        for number, line in enumerate(content.splitlines(), start=1):
-            stripped = line.lstrip()
-            if stripped.startswith("```"):
-                in_fenced_code = not in_fenced_code
-                continue
-            if in_fenced_code:
-                continue
-            clean_line = FlextInfraUtilitiesDocsAudit.docs_strip_inline_code(line)
-            for raw in FlextInfraUtilitiesDocsAudit.docs_markdown_link_targets(
-                clean_line,
-            ):
-                FlextInfraUtilitiesDocsAudit._link_issue(
-                    issues,
-                    md_file,
-                    rel,
-                    number,
-                    raw,
-                )
-
-    @staticmethod
     def docs_broken_link_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
@@ -240,12 +162,61 @@ class FlextInfraUtilitiesDocsAudit(
                 encoding=c.Cli.ENCODING_DEFAULT,
                 errors=c.Infra.IGNORE,
             )
-            FlextInfraUtilitiesDocsAudit._scan_broken_links(
-                content,
-                md_file,
-                rel,
-                issues,
-            )
+            in_fenced_code = False
+            for number, line in enumerate(content.splitlines(), start=1):
+                stripped = line.lstrip()
+                if stripped.startswith("```"):
+                    in_fenced_code = not in_fenced_code
+                    continue
+                if in_fenced_code:
+                    continue
+                clean_line = FlextInfraUtilitiesDocsAudit.docs_strip_inline_code(line)
+                for raw in FlextInfraUtilitiesDocsAudit.docs_markdown_link_targets(
+                    clean_line,
+                ):
+                    target = FlextInfraUtilitiesDocsAudit.docs_normalize_link(raw)
+                    if re.match(
+                        config.Infra.codegen.make.docs.cross_project_relative_link_pattern,
+                        target,
+                    ):
+                        issues.append(
+                            m.Infra.AuditIssue(
+                                file=rel,
+                                issue_type="cross_project_relative_link",
+                                severity="high",
+                                message=(
+                                    f"line {number}: cross-project links require an "
+                                    f"absolute repository URL -> {raw}"
+                                ),
+                            ),
+                        )
+                        continue
+                    if not target or target.startswith("#"):
+                        continue
+                    if FlextInfraUtilitiesDocs.docs_is_external(target):
+                        issues.extend(
+                            FlextInfraUtilitiesDocsGithubLinks.docs_github_link_issues(
+                                file=rel,
+                                line_number=number,
+                                raw=raw,
+                                target=target,
+                            ),
+                        )
+                        continue
+                    if FlextInfraUtilitiesDocsAudit.docs_should_skip_target(
+                        raw,
+                        target,
+                    ):
+                        continue
+                    if not (md_file.parent / target).resolve().exists():
+                        issues.append(
+                            m.Infra.AuditIssue(
+                                file=rel,
+                                issue_type="broken_link",
+                                severity="high",
+                                message=f"line {number}: target not found -> {raw}",
+                            ),
+                        )
         return issues
 
     @staticmethod

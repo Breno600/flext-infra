@@ -48,13 +48,7 @@ class TestsFlextInfraCodegenLayout:
                     ),
                 ],
                 cwd=project,
-                options=m.Cli.ProcessOptions(
-                    env={
-                        "FLEXT_INFRA_CONFIG_DIR": str(
-                            FlextInfraConfig.ssot_config_dir(),
-                        ),
-                    },
-                ),
+                env={"FLEXT_INFRA_CONFIG_DIR": str(FlextInfraConfig.ssot_config_dir())},
             ),
         )
         tm.that(

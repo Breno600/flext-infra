@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal, Self
 
-from flext_cli import t
+from flext_cli import t, u
 
 from flext_core import m
 from flext_infra import c
@@ -90,12 +90,6 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             t.StrSequence,
             m.Field(description="Extra arguments for Pyright"),
         ] = ()
-        selected_files: Annotated[
-            t.VariadicTuple[Path],
-            m.Field(
-                description="Validated literal file selection; empty means project"
-            ),
-        ] = ()
 
     class MypyDiagnostic(m.ContractModel):
         """One complete record from Mypy's native JSON formatter."""
@@ -103,15 +97,23 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         file: Annotated[str, m.Field(description="Diagnostic source file path")]
         line: Annotated[int, m.Field(description="Diagnostic start line")]
         column: Annotated[int, m.Field(description="Diagnostic start column")]
-        end_line: Annotated[int | None, m.Field(description="Diagnostic end line")] = (
-            None
-        )
+        end_line: Annotated[
+            int | None,
+            m.Field(default=None, description="Diagnostic end line"),
+        ]
         end_column: Annotated[
-            int | None, m.Field(description="Diagnostic end column")
-        ] = None
+            int | None,
+            m.Field(default=None, description="Diagnostic end column"),
+        ]
         message: Annotated[t.NonEmptyStr, m.Field(description="Diagnostic message")]
-        hint: Annotated[str | None, m.Field(description="Diagnostic hint")] = None
-        code: Annotated[str | None, m.Field(description="Mypy diagnostic code")] = None
+        hint: Annotated[
+            str | None,
+            m.Field(default=None, description="Diagnostic hint"),
+        ]
+        code: Annotated[
+            str | None,
+            m.Field(default=None, description="Mypy diagnostic code"),
+        ]
         severity: Annotated[
             Literal["error", "note"],
             m.Field(description="Mypy diagnostic severity"),
@@ -205,7 +207,7 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             m.Field(description="Completed analysis summary"),
         ]
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_counts(self) -> Self:
             for severity, count in (
                 ("error", self.summary.error_count),
@@ -286,7 +288,7 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             m.Field(description="UTC completion timestamp"),
         ]
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_evidence(self) -> Self:
             if not self.command.startswith(f"make {self.gate}"):
                 msg = "gate evidence command must use canonical make <gate>"
@@ -334,7 +336,7 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             m.Field(min_length=1, description="Successful canonical invocations"),
         ]
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_predicate(self) -> Self:
             if self.schema_version != c.Infra.GATE_ATTESTATION_SCHEMA:
                 msg = "schema_version must match the canonical gate attestation schema"
@@ -373,7 +375,7 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             m.Field(min_length=1, description="Canonical Make gates"),
         ]
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_gates(self) -> Self:
             if len(self.gates) != len(set(self.gates)):
                 msg = "attestation gates must be unique"
@@ -401,7 +403,7 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             m.Field(description="Optional path receiving the verified predicate JSON"),
         ] = None
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_expected_gates(self) -> Self:
             if len(self.expected_gates) != len(set(self.expected_gates)):
                 msg = "expected attestation gates must be unique"

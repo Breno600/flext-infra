@@ -17,7 +17,7 @@ from pathlib import Path
 from flext_tests import tm
 
 import flext_infra
-from flext_infra import c, config, p, t, u
+from flext_infra import c, config, p, u
 
 
 class TestsFlextInfraGenUsesLockedTaploIdentity:
@@ -77,8 +77,10 @@ class TestsFlextInfraGenUsesLockedTaploIdentity:
         root = Path(flext_infra.__file__).resolve().parents[2]
 
         formatted = tm.ok(
-            self._format(root, config.Infra.codegen.toolchain.tool_versions["taplo"]),
+            self._format(root, config.Infra.codegen.toolchain.taplo_version),
         )
-        payload = tm.not_none(u.Cli.toml_mapping_from_text(formatted))
-        tool = t.Cli.JSON_MAPPING_ADAPTER.validate_python(payload["tool"])
-        tm.that(dict(tool), eq={"b": 2})
+        payload = u.Cli.toml_mapping_from_text(formatted)
+
+        tm.that(payload is not None, eq=True)
+        tool = dict(payload or {}).get("tool")
+        tm.that(dict(tool or {}), eq={"b": 2})

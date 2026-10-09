@@ -1,6 +1,0 @@
-id: codegen-test-public-utility-binding-required
-valid:
-  - u.CodegenTestSupport.Ci
-  - 'payload = "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"'
-invalid:
-  - utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci

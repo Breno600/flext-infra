@@ -1,7 +1,6 @@
 """Lazy-init planning over generic Rope workspace indexes.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
-src/flext_infra/codegen/lazy_init_planner
 SPDX-License-Identifier: MIT
 """
 

@@ -9,12 +9,16 @@ from __future__ import annotations
 import os
 import stat
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from git import GitCommandError
 
-from flext_infra import c, m, p, r, t
-from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+from flext_infra import c, m, r, t
 from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
@@ -36,7 +40,6 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def _state_file(cls, root: Path, relative: Path) -> m.Infra.GitWorktreeFileState:
-
         path = root / relative
         if any((root / parent).is_symlink() for parent in relative.parents):
             msg = f"capture path traverses a symlink: {relative}"

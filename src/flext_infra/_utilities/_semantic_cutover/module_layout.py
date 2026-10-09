@@ -10,19 +10,18 @@ import ast
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from flext_infra._utilities import (
-    FlextInfraUtilitiesLintRecipes,
-    FlextInfraUtilitiesRopeSource,
-)
+from flext_infra import m, t
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
+from flext_infra._utilities.lint_recipes import FlextInfraUtilitiesLintRecipes
+from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from pathlib import Path
 
-    from flext_infra import m, p, t
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesSemanticCutoverModuleLayout(

@@ -15,11 +15,12 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Self, override
+from typing import TYPE_CHECKING, Self, override
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 from rope.base.project import Project
-
-from flext_infra import t
 
 
 class FlextInfraRopeProject(Project):

@@ -5,7 +5,6 @@ Infra:
       # drifts from mise.lock between upg runs — jscpd 5.3.2 -> 5.4.0 broke
       # `mise install --locked` on CI. These are exactly the versions
       # mise.lock resolves today; `make upg` advances them deliberately.
-      # The pins dict deep-merges per tool name over the tools table.
-      tool_version_pins:
-        qlty: "0.645.0"
-        jscpd: "5.3.2"
+      qlty_version: "0.645.0"
+      jscpd_version: "5.3.2"
+      prettier_version: "3.5.3"

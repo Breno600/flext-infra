@@ -10,26 +10,24 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra.transformers._semantic_publication import (
-        FlextInfraSemanticPublication,
-    )
-    from flext_infra.transformers.rope_transformer import FlextInfraRopeTransformer
-
+from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_infra.transformers._semantic_publication import FlextInfraSemanticPublication
+from flext_infra.transformers.rope_transformer import FlextInfraRopeTransformer
 
 __all__: tuple[str, ...] = (
     "FlextInfraRopeTransformer",
     "FlextInfraSemanticPublication",
 )
 
-install_lazy_exports(
-    __name__,
-    globals(),
-    MappingProxyType({
-        "FlextInfraRopeTransformer": ".rope_transformer",
-        "FlextInfraSemanticPublication": "._semantic_publication",
-    }),
-    public_exports=__all__,
+_LAZY_IMPORTS = MappingProxyType(
+    build_lazy_import_map(
+        MappingProxyType({
+            "._semantic_publication": ("FlextInfraSemanticPublication",),
+            ".rope_transformer": ("FlextInfraRopeTransformer",),
+        }),
+        alias_groups=MappingProxyType({}),
+        sort_keys=False,
+    ),
 )
+
+install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

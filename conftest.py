@@ -1,8 +1,4 @@
-"""Pytest bootstrap for flext-infra local package resolution.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Pytest bootstrap for flext-infra local package resolution."""
 
 from __future__ import annotations
 

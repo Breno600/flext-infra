@@ -7,15 +7,18 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+from typing import TYPE_CHECKING
 
 import libcst as cst
 from libcst.codemod import CodemodContext
 from libcst.codemod.visitors import AddImportsVisitor
 
-from flext_infra import t
 from flext_infra._utilities._semantic_cutover.nesting_references import (
     FlextInfraUtilitiesSemanticCutoverNestingReferences,
 )
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingCst(

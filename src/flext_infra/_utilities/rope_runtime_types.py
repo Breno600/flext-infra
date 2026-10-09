@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TypeGuard
 
 from flext_infra import p, t
@@ -17,55 +16,12 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
     """Expose typed predicates for Rope runtime objects."""
 
     @classmethod
-    def file_resource(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopeFile]:
+    def file_resource(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopeResource]:
         return isinstance(value, cls.runtime_type("rope.base.resources", "File"))
 
     @classmethod
-    def require_file_resource(
-        cls,
-        value: p.AttributeProbe,
-        label: str | Path,
-    ) -> t.Infra.RopeFile:
-        """Narrow one Rope resource to the file shape or refuse the input.
-
-        Single owner for the ``get_resource`` result consumers read content
-        from: every caller that treats a project resource as a module file
-        narrows through here instead of restating the predicate and refusal.
-
-        Returns:
-            The resulting ``t.Infra.RopeFile``.
-
-        Raises:
-            TypeError: If the resource is not a Rope file (folder or absent).
-
-        """
-        if not cls.file_resource(value):
-            msg = f"expected a Rope file resource: {label}"
-            raise TypeError(msg)
-        return value
-
-    @classmethod
     def pymodule(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyModule]:
-        """Accept every rope module-like object: modules and packages.
-
-        ``find_module`` resolves an installed third-party package to its
-        folder resource and ``get_pymodule`` returns a ``PyPackage`` for it,
-        which is rope's ``_PyModule`` sibling of ``PyModule`` — never a
-        ``PyModule`` instance. External base resolution
-        (``pydantic.BaseModel`` and friends) must read attributes through
-        packages exactly like through modules, so both shapes satisfy the
-        contract.
-
-        Returns:
-            The resulting ``TypeGuard[t.Infra.RopePyModule]``.
-        """
-        return isinstance(
-            value,
-            (
-                cls.runtime_type("rope.base.pyobjectsdef", "PyModule"),
-                cls.runtime_type("rope.base.pyobjectsdef", "PyPackage"),
-            ),
-        )
+        return isinstance(value, cls.runtime_type("rope.base.pyobjectsdef", "PyModule"))
 
     @classmethod
     def from_import_info(
@@ -128,7 +84,7 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         return type(value) is cls.runtime_type("rope.base.pyobjects", "PyObject")
 
     @classmethod
-    def py_class(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:
+    def py_class(cls, value: t.Infra.RopePyObject) -> bool:
         """Return whether ``value`` is a Rope class declared in Python source.
 
         Builtin classes (``Exception``, ``object``) are abstract classes too,
@@ -238,18 +194,6 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
 
         """
         return (cls._exception_type("rope.base.exceptions", "ModuleNotFoundError"),)
-
-    @classmethod
-    def rope_attribute_not_found_error_types(
-        cls,
-    ) -> t.VariadicTuple[type[BaseException]]:
-        """Return Rope exceptions for statically unresolved attributes.
-
-        Returns:
-            Rope exceptions for statically unresolved attributes.
-
-        """
-        return (cls._exception_type("rope.base.exceptions", "AttributeNotFoundError"),)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesRopeRuntimeTypes"]

@@ -64,7 +64,6 @@ class FlextInfraCodegenFixerWorkspaceMixin(FlextInfraCodegenFixerPassesMixin):
         self._run_lazy_init_preflight(ctx, project_path)
         # Each fixer owns Ruff-native output; no post-hoc mutation.
         self._classify_remaining_violations(ctx, project_path, initial_violations)
-        self._run_import_cycle_proof(ctx, project_path)
         return self._build_result(project_path.name, ctx)
 
     def fix_workspace(

@@ -14,7 +14,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import config, m, p, r, t, u
-from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
 
 
 class FlextInfraCodegenLayoutFilesMixin:
@@ -26,22 +25,18 @@ class FlextInfraCodegenLayoutFilesMixin:
         source: Path,
         target: Path,
         archive_rel: str,
-    ) -> p.Result[t.Pair[t.Infra.LayoutStatus, str]]:
+    ) -> p.Result[str]:
         """Move one entry; collisions archive the source (never delete).
 
         Returns:
-            The resulting ``p.Result[t.Pair[t.Infra.LayoutStatus, str]]``.
+            The resulting ``p.Result[str]``.
 
         """
         if not target.exists():
             moved = self._move_path(project_dir, source, target)
             if moved.failure:
-                return r[t.Pair[t.Infra.LayoutStatus, str]].from_failure(moved)
-            applied_status: t.Infra.LayoutStatus = "applied"
-            return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
-                applied_status,
-                f"moved {source.name} -> {target.name}",
-            ))
+                return r[str].from_failure(moved)
+            return r[str].ok(f"moved {source.name} -> {target.name}")
         if (
             source.is_file()
             and target.is_file()
@@ -49,20 +44,14 @@ class FlextInfraCodegenLayoutFilesMixin:
         ):
             archived = self._archive_path(project_dir, source, archive_rel)
             if archived.failure:
-                return r[t.Pair[t.Infra.LayoutStatus, str]].from_failure(archived)
-            status, message = archived.value
-            return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
-                status,
-                f"identical target kept; {message}",
-            ))
+                return r[str].from_failure(archived)
+            return r[str].ok(f"identical target kept; source archived: {source.name}")
         archived = self._archive_path(project_dir, source, archive_rel)
         if archived.failure:
-            return r[t.Pair[t.Infra.LayoutStatus, str]].from_failure(archived)
-        status, message = archived.value
-        return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
-            status,
-            f"collision: target kept; {message}",
-        ))
+            return r[str].from_failure(archived)
+        return r[str].ok(
+            f"collision: target kept, source archived for review: {source.name}",
+        )
 
     def _archive_path(
         self,
@@ -78,8 +67,7 @@ class FlextInfraCodegenLayoutFilesMixin:
 
         """
         spec = config.Infra.codegen.layout
-        project_name = FlextInfraCodegenLayoutPlanMixin.layout_project_name(project_dir)
-        target = project_dir / spec.archive_root / project_name / rel
+        target = project_dir / spec.archive_root / project_dir.name / rel
         base_message = finding.message if finding is not None else source.name
         if target.exists():
             if (

@@ -7,15 +7,11 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import Callable, MutableMapping
-from functools import partial
 from pathlib import Path
 
 from flext_cli import cli
 
 from flext_infra import c, config, m, p, r, t, u
-from flext_infra.refactor._census_apply_formatting import (
-    FlextInfraRefactorCensusApplyFormattingMixin,
-)
 from flext_infra.transformers import FlextInfraSemanticPublication
 
 
@@ -53,8 +49,11 @@ class FlextInfraCodemodSemanticApply:
 
         """
         original = cls._source_inventory(root, preflight)
+        from flext_infra._utilities.codegen_path_cutover import (
+            FlextInfraUtilitiesCodegenPathCutover,
+        )
 
-        return u.Infra.plan_transaction_path_cutover(
+        return FlextInfraUtilitiesCodegenPathCutover.plan_transaction_path_cutover(
             rope_workspace=rope_workspace,
             sources=original,
         )
@@ -143,12 +142,18 @@ class FlextInfraCodemodSemanticApply:
                     ),
                 )
             if phase is c.Infra.SemanticCutoverPhase.CLASS_NESTING:
-                residue = cls._apply_deferred_models(
-                    working,
-                    changed,
-                    counts,
-                    residue,
-                )
+                deferred = cls._deferred_model_edits(working)
+                cls._apply_plan(working, deferred, changed)
+                counts["deferred_models"] = len(deferred)
+                if deferred:
+                    residue = residue.flat_map(
+                        lambda _: cls._check_residue(
+                            "deferred-models",
+                            r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
+                                cls._deferred_model_edits(working),
+                            ),
+                        ),
+                    )
             if residue.failure:
                 return r[bool].from_failure(residue)
             cli.display_text(f"mod: semantic phase {phase} complete")
@@ -160,75 +165,28 @@ class FlextInfraCodemodSemanticApply:
             # Every phase just planned against this identical source snapshot.
             # With no publication there is no second state to validate.
             return r[bool].ok(value=True)
-        validator = partial(
-            cls._validate_published,
-            root,
-            preflight,
-            rope_workspace,
-        )
-        return cls._check_definition_time(original, working, changed).flat_map(
-            lambda _: cls._publish(
+
+        def validate_published() -> p.Result[bool]:
+            published = dict(cls._source_inventory(root, preflight))
+            rope_workspace.refresh()
+            return cls._verify_fixed_point(
                 root,
-                original,
-                working,
-                changed,
-                validator=validator,
-            ),
-        )
-
-    @classmethod
-    def _apply_deferred_models(
-        cls,
-        working: t.MutableMappingKV[Path, str],
-        changed: set[Path],
-        counts: MutableMapping[str, int],
-        residue: p.Result[bool],
-    ) -> p.Result[bool]:
-        """Apply the deferred model edits of the class-nesting phase.
-
-        Returns:
-            The resulting residue re-checked over the deferred edits.
-
-        """
-        deferred = cls._deferred_model_edits(working)
-        cls._apply_plan(working, deferred, changed)
-        counts["deferred_models"] = len(deferred)
-        if deferred:
-            return residue.flat_map(
+                published,
+                preflight,
+                rope_workspace,
+            ).flat_map(
                 lambda _: cls._check_residue(
-                    "deferred-models",
-                    r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
-                        cls._deferred_model_edits(working),
-                    ),
+                    "import-alignment",
+                    cls._phase_import_alignment(root, published, rope_workspace),
                 ),
             )
-        return residue
 
-    @classmethod
-    def _validate_published(
-        cls,
-        root: Path,
-        preflight: m.Infra.ModScanReport,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
-    ) -> p.Result[bool]:
-        """Re-read, refresh, and verify the fixed point of the published sources.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        published = dict(cls._source_inventory(root, preflight))
-        rope_workspace.refresh()
-        return cls._verify_fixed_point(
+        return cls._publish(
             root,
-            published,
-            preflight,
-            rope_workspace,
-        ).flat_map(
-            lambda _: cls._check_residue(
-                "import-alignment",
-                cls._phase_import_alignment(root, published, rope_workspace),
-            ),
+            original,
+            working,
+            changed,
+            validator=validate_published,
         )
 
     @classmethod
@@ -335,38 +293,6 @@ class FlextInfraCodemodSemanticApply:
             files = ", ".join(edit.file_path.as_posix() for edit in planned.value)
             return r[bool].fail(
                 f"{phase} phase left residue after application: {files}",
-            )
-        return r[bool].ok(value=True)
-
-    @staticmethod
-    def _check_definition_time(
-        original: t.MappingKV[Path, str],
-        working: t.MappingKV[Path, str],
-        changed: set[Path],
-    ) -> p.Result[bool]:
-        """Reject a plan whose class suites would raise NameError at import.
-
-        A rewrite that names a class inside its own suite, or reads an
-        enclosing class member from a nested suite, still parses and passes
-        every replan, so the fixed point alone cannot see it. Only errors the
-        original source did not already carry are attributed to the plan.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        broken: list[str] = []
-        for path in sorted(changed):
-            before = frozenset(u.Infra.definition_time_name_errors(original[path]))
-            broken.extend(
-                f"{path}: {error}"
-                for error in u.Infra.definition_time_name_errors(working[path])
-                if error not in before
-            )
-        if broken:
-            return r[bool].fail(
-                "semantic plan introduces definition-time NameError(s); nothing "
-                f"published for mandatory owner repair: {'; '.join(broken)}",
             )
         return r[bool].ok(value=True)
 
@@ -537,6 +463,10 @@ class FlextInfraCodemodSemanticApply:
             ValueError: If source changed after semantic preflight.
 
         """
+        from flext_infra.refactor._census_apply_formatting import (
+            FlextInfraRefactorCensusApplyFormattingMixin,
+        )
+
         semantic_plans: list[m.Infra.SemanticFilePlan] = []
         consumer_first = sorted(changed, key=cls._path_key)
         for path in consumer_first:

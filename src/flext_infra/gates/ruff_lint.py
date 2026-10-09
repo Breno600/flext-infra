@@ -50,10 +50,10 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Lint read-only with the config-owned check flags.
+        """Build check command.
 
         Returns:
-            The Ruff lint invocation in check mode.
+            The resulting ``t.StrSequence``.
 
         """
         _ = project_dir
@@ -121,7 +121,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         issues: t.SequenceOf[m.Infra.Issue],
         recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
     ) -> frozenset[t.Pair[str, str]]:
-        """Index the methods on an override chain of this project.
+        """Index the methods a subclass of this project redefines.
 
         The index exists only for the static-method recipe, so a run without
         its findings builds none. A module Ruff reports as ``invalid-syntax``
@@ -129,7 +129,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         finding remains for its owner.
 
         Returns:
-            The ``(class name, method name)`` pairs on an override chain.
+            The overridden ``(class name, method name)`` pairs.
 
         """
         if not any(
@@ -262,7 +262,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
         hooks: t.StrSequence,
     ) -> None:
-        """Report retained receivers and raise on any other recipe-owned finding.
+        """Report overridden hooks and raise on any other recipe-owned finding.
 
         Raises:
             ValueError: If a recipe-owned finding survives every recipe phase.
@@ -270,9 +270,8 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         """
         if hooks:
             u.Cli.info(
-                f"lint: {len(hooks)} no-self-use finding(s) are on an override "
-                f"chain or read their receiver, left to their owner: "
-                f"{', '.join(hooks)}",
+                f"lint: {len(hooks)} no-self-use finding(s) are hooks a subclass "
+                f"overrides, left to their owner: {', '.join(hooks)}",
             )
         residual = config.Infra.tooling.tools.ruff.lint.fix_recipe_residual
         kept = sorted(
@@ -305,7 +304,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         """Locate the static-method findings the recipe leaves to their owner.
 
         Returns:
-            ``file:line:code`` of each finding the static-method recipe keeps.
+            ``file:line:code`` of each finding on a method a subclass overrides.
 
         """
         by_file: MutableMapping[Path, list[m.Infra.Issue]] = {}
@@ -372,36 +371,21 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         if not isinstance(report, list):
             msg = f"Ruff JSON report is not a list: {type(report).__name__}"
             raise TypeError(msg)
-        advisory = frozenset(config.Infra.tooling.tools.ruff.informative_rules)
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         for entry in report:
             if not isinstance(entry, Mapping):
                 msg = f"Ruff JSON finding is not an object: {type(entry).__name__}"
                 raise TypeError(msg)
-            code = u.Cli.json_pick_str(entry, "name")
             issues.append(
                 m.Infra.Issue(
                     file=u.Cli.json_pick_str(entry, "filename", "?"),
                     line=u.Cli.json_nested_int(entry, "location", "row"),
                     column=u.Cli.json_nested_int(entry, "location", "column"),
-                    code=code,
+                    code=u.Cli.json_pick_str(entry, "name"),
                     message=u.Cli.json_pick_str(entry, "message"),
-                    severity=u.Infra.ruff_finding_severity(code, advisory),
                 ),
             )
-        passed, parsed = self._finalize_parse_result(
-            result,
-            project_dir,
-            issues,
-            c.Infra.RUFF,
-        )
-        # A declared findings status reports violations, not a tool failure:
-        # the verdict below is issue-driven, so the parse must not treat the
-        # findings exit code as a crash (errors still exit with another code).
-        return (
-            passed or result.outcome.raw_return_code in self._findings_exit_codes(),
-            parsed,
-        )
+        return self._finalize_parse_result(result, project_dir, issues, c.Infra.RUFF)
 
     @staticmethod
     @override

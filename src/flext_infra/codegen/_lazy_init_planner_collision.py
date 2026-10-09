@@ -9,12 +9,12 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING
 
-from flext_infra import c, m, t, u
+from flext_infra import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra import p, t
 
 
 class FlextInfraCodegenLazyInitPlannerCollisionMixin:
@@ -33,26 +33,10 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
 
         """
         module_path, attr = target
+        score = 0
         module_file = self._module_file(module_path)
         if module_file is None:
-            return 0
-        score = self._policy_score(name, module_file)
-        if attr == name:
-            score += 3
-        if name in c.Infra.ALIAS_NAMES and "." not in module_path:
-            score -= 80
-        score += self._identity_score(module_file, module_path)
-        final_score: int = score
-        return final_score
-
-    def _policy_score(self, name: str, module_file: Path) -> int:
-        """Score a target by its module's governed publication policy.
-
-        Returns:
-            The resulting ``int``.
-
-        """
-        score = 0
+            return score
         policy = u.Infra.publication_policy(
             module_file,
             rope_project=self.rope_workspace.rope_project,
@@ -84,17 +68,10 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         )
         if name in declared_exports:
             score += 15
-        return score
-
-    @staticmethod
-    def _identity_score(module_file: Path, module_path: str) -> int:
-        """Score a target by module identity: part numbering and depth.
-
-        Returns:
-            The resulting ``int``.
-
-        """
-        score = 0
+        if attr == name:
+            score += 3
+        if name in c.Infra.ALIAS_NAMES and "." not in module_path:
+            score -= 80
         part_number = module_file.stem.rpartition("_part_")[2]
         if part_number.isdecimal():
             # The final public facade owns the external
@@ -102,7 +79,9 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
             # themselves when no facade candidate exists.
             score -= 50
             score += int(part_number)
-        return score - module_path.count(".")
+        score -= module_path.count(".")
+        final_score: int = score
+        return final_score
 
     def _pick_preferred_target(
         self,
@@ -198,16 +177,17 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
             Whether one module is a root-namespace stub re-exporting from the other.
 
         """
+        if self._is_flext_part_reexport(a, b):
+            return True
         # Root typing sidecars are removed; real source
         # owners now participate in the normal collision policy.
-        checks = (
-            self._is_flext_part_reexport,
-            self._is_private_facade_reexport,
-            self._is_declared_public_reexport,
-            self._is_package_root_reexport,
-            self._is_test_collection_collision,
-        )
-        if any(check(a, b) for check in checks):
+        if self._is_private_facade_reexport(a, b):
+            return True
+        if self._is_declared_public_reexport(a, b):
+            return True
+        if self._is_package_root_reexport(a, b):
+            return True
+        if self._is_test_collection_collision(a, b):
             return True
         for pub_mod, priv_mod in ((a[0], b[0]), (b[0], a[0])):
             pub_file = f"{pub_mod.rsplit('.', maxsplit=1)[-1]}.py"
@@ -342,20 +322,7 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         part_parts, part_index, facade_parts = (
             (a_parts, a_index, b_parts) if a_index >= 0 else (b_parts, b_index, a_parts)
         )
-        return cls._facade_owns_part(facade_parts, part_parts[:part_index])
-
-    @classmethod
-    def _facade_owns_part(
-        cls,
-        facade_parts: t.VariadicTuple[str],
-        owner_package: t.VariadicTuple[str],
-    ) -> bool:
-        """Whether a facade module owns one implementation part package.
-
-        Returns:
-            The resulting ``bool``.
-
-        """
+        owner_package = part_parts[:part_index]
         if facade_parts[:-1] == owner_package:
             return True
         if not owner_package or not owner_package[-1].startswith("_"):

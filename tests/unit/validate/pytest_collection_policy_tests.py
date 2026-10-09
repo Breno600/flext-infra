@@ -57,8 +57,7 @@ class TestsFlextInfraPytestCollectionPolicy:
             )
         else:
             source = (
-                "import pytest\n"
-                "pytest.skip('required module', allow_module_level=True)\n"
+                "import pytest\npytest.skip('required module', allow_module_level=True)\n"
                 if finding == "module-skip"
                 else "raise RuntimeError('first collection failure')\n"
             )
@@ -123,8 +122,7 @@ class TestsFlextInfraPytestCollectionPolicy:
         declaration = (
             f"class {category}(UserWarning):\n    pass\n"
             if homonym
-            else f"from flext_core import c\n\nclass {category}"
-            "(c.FlextSmellViolation):\n    pass\n"
+            else f"from flext_core import c\n\nclass {category}(c.FlextSmellViolation):\n    pass\n"
         )
         (
             cached_runner_project

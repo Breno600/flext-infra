@@ -41,7 +41,14 @@ def runner_for(
         repository_root=cached_runner_project,
         ci_context=ci_context,
         collection_command_prefix=(
-            (sys.executable, "-c", c.Infra.PYTEST_PROFILE_LAUNCHER)
+            (
+                sys.executable,
+                "-X",
+                "utf8",
+                "-m",
+                "flext_infra._pytest_entry",
+                "profile-collection",
+            )
             if profile_collection
             else ()
         ),
@@ -52,22 +59,6 @@ def runner_for(
         testmon_db=testmon_db,
         slow_phase=slow_phase,
     )
-
-
-def declared_project_runner(project_root: Path, name: str) -> FlextInfraPytestRunner:
-    """Declare the fixture as project ``name`` and bind a runner to it.
-
-    Returns:
-        The resulting ``FlextInfraPytestRunner``.
-
-    """
-    pyproject = project_root / c.PYPROJECT_FILENAME
-    pyproject.write_text(
-        pyproject.read_text(encoding="utf-8")
-        + f'\n[project]\nname = "{name}"\nversion = "0.1.0"\n',
-        encoding="utf-8",
-    )
-    return runner_for(project_root)
 
 
 def declare_parallel_project(project_root: Path) -> None:
@@ -118,21 +109,18 @@ def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
             (sys.executable, "-m", "flext_infra._pytest_entry", "profile", str(output)),
             log,
             cwd=runner.root,
-            options=m.Cli.ProcessOptions(
-                env=u.Cli.process_env(
-                    overrides={
-                        c.Infra.PYTEST_ENV_TARGET: str(runner.target),
-                        c.Infra.PYTEST_ENV_TARGET_FILE: str(runner.target_file or ""),
-                        c.Infra.PYTEST_ENV_REPORTS: str(runner.reports),
-                        cache.database_environment_variable: str(runner.testmon_db),
-                    },
+            env=u.Cli.process_env(
+                overrides={
+                    c.Infra.PYTEST_ENV_TARGET: str(runner.target),
+                    c.Infra.PYTEST_ENV_REPORTS: str(runner.reports),
+                    cache.database_environment_variable: str(runner.testmon_db),
+                },
+            ),
+            deadline=m.Cli.ProcessDeadline(
+                expires_at_monotonic=(
+                    runner.started_at_monotonic + policy.run_timeout_seconds
                 ),
-                deadline=m.Cli.ProcessDeadline(
-                    expires_at_monotonic=(
-                        runner.started_at_monotonic + policy.run_timeout_seconds
-                    ),
-                    termination_grace_seconds=policy.termination_grace_seconds,
-                ),
+                termination_grace_seconds=policy.termination_grace_seconds,
             ),
         ),
     )
@@ -141,8 +129,12 @@ def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
     return outcome.raw_return_code
 
 
-def profile_collection(output: Path, arguments: t.StrTuple) -> p.Cli.CommandOutput:
-    """Use the real child launcher invoked by the canonical profiling runner.
+def profile_collection(
+    output: Path,
+    receipt: Path,
+    arguments: t.StrTuple,
+) -> p.Cli.CommandOutput:
+    """Use the real child transport invoked by the canonical profiling runner.
 
     Returns:
         The resulting ``p.Cli.CommandOutput``.
@@ -152,12 +144,14 @@ def profile_collection(output: Path, arguments: t.StrTuple) -> p.Cli.CommandOutp
         u.Cli.run_raw(
             (
                 sys.executable,
-                "-c",
-                c.Infra.PYTEST_PROFILE_LAUNCHER,
+                "-m",
+                "flext_infra._pytest_entry",
+                "profile-collection",
                 str(output),
+                str(receipt),
                 *arguments,
             ),
-            cwd=output.parent,
+            cwd=receipt.parent,
             timeout=config.Infra.tooling.tools.pytest.run_timeout_seconds,
         ),
     )

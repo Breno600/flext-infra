@@ -8,68 +8,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-import libcst as cst
-from libcst.metadata import (
-    MetadataWrapper,
-    QualifiedName,
-    QualifiedNameProvider,
-    QualifiedNameSource,
-)
-
 if TYPE_CHECKING:
+    import libcst as cst
+
     from flext_infra import p, t
 
 
 class FlextInfraUtilitiesQualifiedNames:
     """Resolve lazy LibCST qualified-name metadata through its public visitor API."""
-
-    @staticmethod
-    def lexical_root(node: cst.CSTNode) -> cst.CSTNode:
-        """Return the lexical receiver underlying a dotted attribute expression.
-
-        Returns:
-            The leftmost receiver node.
-
-        """
-        while isinstance(node, cst.Attribute):
-            node = node.value
-        return node
-
-    @staticmethod
-    def prove_import_root(
-        names: t.VariadicTuple[QualifiedName],
-        roots: t.VariadicTuple[QualifiedName],
-    ) -> frozenset[QualifiedName]:
-        """Require imported attribute identities to agree with lexical root bindings.
-
-        Returns:
-            Identities compatible with the lexical root, excluding shadowed imports.
-
-        Raises:
-            ValueError: If an imported identity has unresolved or competing roots.
-
-        """
-        proven: set[QualifiedName] = set()
-        for name in names:
-            if name.source is not QualifiedNameSource.IMPORT:
-                proven.add(name)
-                continue
-            if not roots:
-                msg = "unresolved qualified alias lexical root"
-                raise ValueError(msg)
-            compatible = [
-                root
-                for root in roots
-                if root.source is QualifiedNameSource.IMPORT
-                and (name.name == root.name or name.name.startswith(f"{root.name}."))
-            ]
-            if not compatible:
-                continue
-            if len(compatible) != len(roots):
-                msg = "ambiguous qualified alias lexical root"
-                raise ValueError(msg)
-            proven.add(name)
-        return frozenset(proven)
 
     @staticmethod
     def dotted_name(node: cst.BaseExpression | None) -> str | None:
@@ -79,6 +25,8 @@ class FlextInfraUtilitiesQualifiedNames:
             A static dotted name, or ``None`` for a dynamic expression.
 
         """
+        import libcst as cst
+
         if isinstance(node, cst.Name):
             return node.value
         if isinstance(node, cst.Attribute):
@@ -97,6 +45,8 @@ class FlextInfraUtilitiesQualifiedNames:
             The resulting ``cst.BaseExpression``.
 
         """
+        import libcst as cst
+
         if not isinstance(value, cst.List | cst.Tuple):
             return value
         return value.with_changes(
@@ -120,6 +70,8 @@ class FlextInfraUtilitiesQualifiedNames:
             The resulting ``N``.
 
         """
+        import libcst as cst
+
         targets = (
             tuple(target.target for target in node.targets)
             if isinstance(node, cst.Assign)
@@ -148,6 +100,8 @@ class FlextInfraUtilitiesQualifiedNames:
             The resulting ``t.VariadicTuple[cst.ImportAlias]``.
 
         """
+        import libcst as cst
+
         last_index = len(aliases) - 1
         return tuple(
             alias.with_changes(comma=cst.MaybeSentinel.DEFAULT)
@@ -172,6 +126,8 @@ class FlextInfraUtilitiesQualifiedNames:
             Whether ``parent`` spells ``node`` as a binding, not a reference.
 
         """
+        import libcst as cst
+
         if isinstance(parent, cst.ImportAlias):
             return True
         if isinstance(parent, cst.Attribute) and parent.attr is node:
@@ -190,6 +146,8 @@ class FlextInfraUtilitiesQualifiedNames:
             Candidate qualified names referenced by Python source.
 
         """
+        import libcst as cst
+        from libcst.metadata import MetadataWrapper, QualifiedNameProvider
 
         class _ResidueCollector(cst.CSTVisitor):
             METADATA_DEPENDENCIES = (QualifiedNameProvider,)
@@ -200,25 +158,13 @@ class FlextInfraUtilitiesQualifiedNames:
 
             @override
             def on_visit(self, node: cst.CSTNode) -> bool:
-                names = tuple(self.get_metadata(QualifiedNameProvider, node, ()))
-                if isinstance(node, cst.Attribute) and any(
-                    name.name in self.candidates for name in names
-                ):
-                    names = tuple(
-                        cls.prove_import_root(
-                            names,
-                            tuple(
-                                self.get_metadata(
-                                    QualifiedNameProvider,
-                                    cls.lexical_root(node),
-                                    (),
-                                ),
-                            ),
-                        ),
-                    )
                 self.residue.update(
                     qualified_name.name
-                    for qualified_name in names
+                    for qualified_name in self.get_metadata(
+                        QualifiedNameProvider,
+                        node,
+                        (),
+                    )
                     if qualified_name.name in self.candidates
                 )
                 return True

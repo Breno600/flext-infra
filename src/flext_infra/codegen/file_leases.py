@@ -9,15 +9,11 @@ from __future__ import annotations
 from collections.abc import Generator, MutableMapping
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-from flext_infra import c, m, r, t, u
+from flext_infra import c, m, t, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
-
-if TYPE_CHECKING:
-    from flext_infra import p
 
 
 class FlextInfraCodegenFileLeases:
@@ -67,52 +63,9 @@ class FlextInfraCodegenFileLeases:
                 raise ValueError(msg)
             yield
 
-    def __init__(
-        self,
-        participant_policy: m.Infra.CodegenParticipantPolicy | None = None,
-    ) -> None:
+    def __init__(self) -> None:
         """Start without borrowed destination capabilities."""
         self._file_leases: MutableMapping[Path, m.Infra.CodegenFileParticipant] = {}
-        self._participant_policy = participant_policy
-
-    def _authorize_roots(
-        self,
-        roots: t.VariadicTuple[Path],
-        paths: t.VariadicTuple[Path] = (),
-    ) -> p.Result[bool]:
-        """Reauthenticate injected capabilities before any destination effect.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-        """
-        policy = self._participant_policy
-        if policy is None:
-            return r[bool].ok(value=True)
-        authorized = {root.target: root for root in policy.roots}
-        for root in dict.fromkeys((policy.scope_root, *roots)):
-            expected = authorized.get(root)
-            if expected is None:
-                return r[bool].fail(
-                    f"generation participant is outside authorized roots: {root}; "
-                    "pending journal preserved",
-                )
-            observed = u.Cli.atomic_plan_directory_chain(root)
-            if observed.failure:
-                return r[bool].from_failure(observed)
-            if observed.value != expected:
-                return r[bool].fail(f"generation authorized root changed: {root}")
-        for path in paths:
-            if (
-                not path.is_absolute()
-                or ".." in path.parts
-                or not any(path.is_relative_to(root) for root in roots)
-                or path.resolve() != path
-            ):
-                return r[bool].fail(
-                    f"generation effect is outside authorized participants: {path}; "
-                    "pending journal preserved",
-                )
-        return r[bool].ok(value=True)
 
     @contextmanager
     def _lease_file_participants(
@@ -128,10 +81,6 @@ class FlextInfraCodegenFileLeases:
                 publication root changed during lease.
 
         """
-        self._authorize_roots(
-            tuple(participant.root for participant in participants),
-            tuple(participant.transaction_root for participant in participants),
-        ).unwrap()
         for participant in participants:
             physical = files.physical_directory_identity(participant.root).unwrap()
             if physical != (participant.device, participant.inode):

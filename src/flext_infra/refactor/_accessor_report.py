@@ -21,15 +21,13 @@ class FlextInfraAccessorMigrationReportMixin:
     """Per-file lint snapshot/write and CLI report rendering.
 
     Composed into FlextInfraAccessorMigrationOrchestrator via inheritance; the
-    facade provides ``effective_dry_run`` / ``repository_root`` / the gate-name
-    properties through FLEXT (declared below for static resolution).
+    facade provides ``dry_run`` / ``repository_root`` / the gate-name properties
+    through FLEXT (declared below for static resolution).
     """
 
     if TYPE_CHECKING:
+        dry_run: bool
         repository_root: Path
-
-        @property
-        def effective_dry_run(self) -> bool: ...
 
         @property
         def gate_names(self) -> t.StrSequence: ...
@@ -73,16 +71,12 @@ class FlextInfraAccessorMigrationReportMixin:
             The resulting ``m.Infra.AccessorMigrationFile``.
 
         """
-        updated_source, rewrite_changes = self._apply_automated_rewrites(
+        updated_source, automated_changes = self._apply_automated_rewrites(
             rope_project,
             py_file,
             source,
         )
-        automated_changes = tuple(
-            change for change in rewrite_changes if change.automated
-        )
         warnings = list(self._collect_manual_warnings(py_file, source))
-        warnings.extend(change for change in rewrite_changes if not change.automated)
         include_preview = bool(automated_changes or warnings) and preview_available
         lint_before: MutableMapping[str, t.StrSequence] = {}
         lint_after: MutableMapping[str, t.StrSequence] = {}
@@ -90,14 +84,14 @@ class FlextInfraAccessorMigrationReportMixin:
         before: t.Infra.LintSnapshot = {}
         after: t.Infra.LintSnapshot = {}
         if automated_changes:
-            if self.effective_dry_run and include_preview:
+            if self.dry_run and include_preview:
                 before, after = u.Infra.preview_source_lint(
                     py_file,
                     self.repository_root,
                     updated_source=updated_source,
                     gates=self.gate_names,
                 )
-            elif not self.effective_dry_run:
+            elif not self.dry_run:
                 before = (
                     u.Infra.lint_snapshot(
                         py_file,

@@ -24,10 +24,6 @@ from jinja2.environment import (
     Template as _JinjaTemplate,
 )
 
-# mypy defers a PEP 695 bound written as an attribute path and asserts in
-# the final iteration. Callers bind to this module-level name.
-type CliResultValue = t.Cli.ResultValue
-
 
 class FlextInfraTypesBase:
     """Base typings for flext-infra project."""
@@ -205,4 +201,4 @@ class FlextInfraTypesBase:
     "Git pathspec string (e.g. ``:(exclude)dir``)."
 
 
-__all__: list[str] = ["CliResultValue", "FlextInfraTypesBase"]
+__all__: list[str] = ["FlextInfraTypesBase"]

@@ -186,7 +186,7 @@ class FlextInfraCodegenGenerationPathsMixin:
         return mod
 
     @staticmethod
-    def normalize_type_checking_module_path(
+    def _normalize_type_checking_module_path(
         mod: str,
         local_package_root: str | None,
     ) -> str:

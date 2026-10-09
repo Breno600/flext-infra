@@ -13,8 +13,10 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config, u
-from flext_infra.services import FlextInfraValidationCommandRoutes
-from flext_infra.validate import FlextInfraCProfileReport
+from flext_infra.services.cli_routes_validate_commands import (
+    FlextInfraValidationCommandRoutes,
+)
+from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 
 
 class TestsFlextInfraCProfileReport:

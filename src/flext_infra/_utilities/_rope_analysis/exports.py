@@ -11,15 +11,14 @@ from collections.abc import MutableMapping
 from typing import ClassVar
 
 from flext_infra import c, m, t
-from flext_infra._utilities import (
+from flext_infra._utilities._rope_analysis.asthelpers import (
     FlextInfraUtilitiesRopeAnalysisAstHelpers,
+)
+from flext_infra._utilities._rope_analysis.sourcescan import (
     FlextInfraUtilitiesRopeAnalysisSourceScan,
-    FlextInfraUtilitiesRopeCore,
-    FlextInfraUtilitiesRopeRuntime,
 )
-from flext_infra._utilities._rope_analysis._exports_binding_inventory import (
-    _ExportBindingInventory,
-)
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeAnalysisExports:
@@ -171,12 +170,89 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         """
         resolved_options = export_options or m.Infra.ExportOptions()
         module = ast.parse(source)
-        inventory = FlextInfraUtilitiesRopeAnalysisExports._source_binding_inventory(
-            module.body,
-        )
-        assignments = inventory[0]
-        definitions = inventory[1]
-        explicit_all = inventory[2]
+        assignments: t.MutableSequenceOf[str] = []
+        definitions: t.MutableSequenceOf[t.Pair[str, bool]] = []
+        explicit_all = False
+
+        def bound_names(target: ast.expr) -> t.StrSequence:
+            if isinstance(target, ast.Name):
+                return (target.id,)
+            if isinstance(target, (ast.List, ast.Tuple)):
+                return tuple(
+                    name for element in target.elts for name in bound_names(element)
+                )
+            return ()
+
+        def collect(statements: t.SequenceOf[ast.stmt]) -> None:
+            nonlocal explicit_all
+            for statement in statements:
+                if isinstance(
+                    statement,
+                    (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef),
+                ):
+                    definitions.append((
+                        statement.name,
+                        isinstance(statement, ast.ClassDef),
+                    ))
+                    continue
+                names: t.StrSequence
+                if isinstance(statement, ast.Assign):
+                    names = tuple(
+                        name
+                        for target in statement.targets
+                        for name in bound_names(target)
+                    )
+                elif isinstance(statement, (ast.AnnAssign, ast.AugAssign)):
+                    names = bound_names(statement.target)
+                else:
+                    names = ()
+                if names:
+                    explicit_all = explicit_all or c.Infra.DUNDER_ALL in names
+                    assignments.extend(
+                        name for name in names if name != c.Infra.DUNDER_ALL
+                    )
+                    continue
+                if isinstance(statement, (ast.Import, ast.ImportFrom)):
+                    continue
+                if isinstance(statement, ast.If):
+                    sides = (
+                        (statement.test.left, statement.test.comparators[0])
+                        if isinstance(statement.test, ast.Compare)
+                        and len(statement.test.ops) == 1
+                        and isinstance(statement.test.ops[0], ast.Eq)
+                        and len(statement.test.comparators) == 1
+                        else ()
+                    )
+                    names_in_test = {
+                        side.id for side in sides if isinstance(side, ast.Name)
+                    }
+                    values_in_test = {
+                        side.value for side in sides if isinstance(side, ast.Constant)
+                    }
+                    if names_in_test == {"__name__"} and values_in_test == {"__main__"}:
+                        continue
+                    collect(statement.body)
+                    collect(statement.orelse)
+                    continue
+                if isinstance(statement, (ast.For, ast.AsyncFor, ast.While)):
+                    collect(statement.body)
+                    collect(statement.orelse)
+                    continue
+                if isinstance(statement, (ast.With, ast.AsyncWith)):
+                    collect(statement.body)
+                    continue
+                if isinstance(statement, (ast.Try, ast.TryStar)):
+                    collect(statement.body)
+                    for handler in statement.handlers:
+                        collect(handler.body)
+                    collect(statement.orelse)
+                    collect(statement.finalbody)
+                    continue
+                if isinstance(statement, ast.Match):
+                    for case in statement.cases:
+                        collect(case.body)
+
+        collect(module.body)
         if resolved_options.include_dunder:
             return tuple(
                 dict.fromkeys(
@@ -206,25 +282,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         if resolved_options.allow_assignments:
             implicit_names.extend(assignments)
         return tuple(dict.fromkeys(implicit_names))
-
-    @staticmethod
-    def _source_binding_inventory(
-        statements: t.SequenceOf[ast.stmt],
-    ) -> t.Triple[
-        t.MutableSequenceOf[str],
-        t.MutableSequenceOf[t.Pair[str, bool]],
-        bool,
-    ]:
-        """Inventory one statement list's assignments, definitions, and ``__all__``.
-
-        Returns:
-            The assignment names, the definition name and class-kind pairs,
-            and whether ``__all__`` was bound.
-
-        """
-        collector = _ExportBindingInventory()
-        collector.collect(statements)
-        return (collector.assignments, collector.definitions, collector.explicit_all)
 
     @staticmethod
     def _module_export_names(
@@ -389,32 +446,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         return tuple(spans)
 
     @staticmethod
-    def _assignment_export_allowed(
-        export_options: m.Infra.ExportOptions,
-        pyname: t.Infra.RopeAssignedName,
-        guard_spans: t.SequenceOf[t.Pair[int, int]],
-    ) -> bool:
-        """Return whether one assigned name is exportable under the options.
-
-        Returns:
-            Whether one assigned name is exportable under the options.
-
-        """
-        allow_assignments: bool = export_options.allow_assignments
-        if not allow_assignments:
-            return False
-        lines = tuple(
-            line
-            for assignment in pyname.assignments
-            if (line := getattr(assignment.ast_node, "lineno", None)) is not None
-        )
-        return not lines or not all(
-            any(start <= line <= end for start, end in guard_spans) for line in lines
-        )
-
-    @classmethod
     def _is_export_name(
-        cls,
         *,
         export_options: m.Infra.ExportOptions,
         name: str,
@@ -430,10 +462,17 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         if FlextInfraUtilitiesRopeRuntime.imported_name(pyname):
             return False
         if FlextInfraUtilitiesRopeRuntime.assigned_name(pyname):
-            return cls._assignment_export_allowed(
-                export_options,
-                pyname,
-                guard_spans,
+            allow_assignments: bool = export_options.allow_assignments
+            if not allow_assignments:
+                return False
+            lines = tuple(
+                line
+                for assignment in pyname.assignments
+                if (line := getattr(assignment.ast_node, "lineno", None)) is not None
+            )
+            return not lines or not all(
+                any(start <= line <= end for start, end in guard_spans)
+                for line in lines
             )
         if not FlextInfraUtilitiesRopeRuntime.defined_name(pyname):
             return False

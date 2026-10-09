@@ -35,25 +35,12 @@ class FlextInfraCodegenLayoutPlanMixin:
         Returns:
             The project's declared identity, ``[project].name``.
 
-        Raises:
-            ValueError: If ``member.failure``; or if unsafe layout project identity.
         """
         pyproject_path = project_dir / c.PYPROJECT_FILENAME
-        project_name = u.Infra.project_name_from_payload(
+        return u.Infra.project_name_from_payload(
             pyproject_path,
             u.Infra.pyproject_payload(pyproject_path),
         )
-        member = u.Infra.archive_member_path(project_name)
-        if member.failure:
-            raise ValueError(member.error)
-        if (
-            len(member.value.parts) != 1
-            or member.value.as_posix() != project_name
-            or "\x00" in project_name
-        ):
-            msg = f"unsafe layout project identity: {project_name}"
-            raise ValueError(msg)
-        return project_name
 
     def plan_project(self, project_dir: Path) -> m.Infra.LayoutProjectReport:
         """Classify every root entry of one project without writing anything.
@@ -77,15 +64,6 @@ class FlextInfraCodegenLayoutPlanMixin:
                 continue
             if self._is_ignored_root(spec, override, name):
                 continue
-            if override is not None and name in override.archive_names:
-                findings.append(
-                    self._finding(
-                        "archive",
-                        name,
-                        f"{spec.archive_root}/{project_name}/{name}",
-                    ),
-                )
-                continue
             if name in allowed or name in override_roots:
                 continue
             findings.append(
@@ -94,12 +72,7 @@ class FlextInfraCodegenLayoutPlanMixin:
         if override is not None:
             findings.extend(self._override_move_findings(override, project_dir))
             findings.extend(
-                self._override_empty_dir_findings(
-                    spec,
-                    override,
-                    project_dir,
-                    project_name,
-                ),
+                self._override_empty_dir_findings(spec, override, project_dir),
             )
         findings.extend(self._gitignore_findings(spec, override, project_dir))
         return m.Infra.LayoutProjectReport(
@@ -154,10 +127,10 @@ class FlextInfraCodegenLayoutPlanMixin:
                 allowed.update(spec.profile_extra_root_files.get(profile, ()))
         if override is not None:
             allowed.update(override.keep_root_files)
-        declared = u.Infra.git_submodule_declarations(project_dir)
+        declared = u.Infra.git_declared_submodule_paths(project_dir)
         if declared.failure:
             raise ValueError(declared.error or "invalid .gitmodules")
-        allowed.update(item.path.parts[0] for item in declared.value)
+        allowed.update(path.parts[0] for path in declared.value if path.parts)
         return frozenset(allowed)
 
     @staticmethod
@@ -213,9 +186,21 @@ class FlextInfraCodegenLayoutPlanMixin:
 
         """
         name = entry.name
-        docs_finding = self._classify_docs_entry(spec, project_name, entry)
-        if docs_finding is not None:
-            return docs_finding
+        if entry.is_dir() and name in spec.move_docs_dirs:
+            return self._finding("move", name, f"{spec.docs_target}/{name}")
+        if entry.is_file() and name in spec.move_docs_files:
+            target = f"{spec.docs_target}/{name}"
+            if (entry.parent / target).exists():
+                return self._finding(
+                    "archive",
+                    name,
+                    f"{spec.archive_root}/{project_name}/{name}",
+                    message=(
+                        f"archive {name} -> {spec.archive_root}/{project_name}/{name} "
+                        f"(canonical docs/{name} kept)"
+                    ),
+                )
+            return self._finding("move", name, target)
         if entry.is_file() and name in spec.move_example_files:
             return self._finding("move", name, f"{spec.examples_target}/{name}")
         if entry.is_file() and any(
@@ -233,36 +218,6 @@ class FlextInfraCodegenLayoutPlanMixin:
                 f"{spec.archive_root}/{project_name}/{name}",
             )
         return self._finding("review", name)
-
-    def _classify_docs_entry(
-        self,
-        spec: m.Infra.LayoutSpec,
-        project_name: str,
-        entry: Path,
-    ) -> m.Infra.LayoutFinding | None:
-        """Classify a docs move or an archived docs conflict, else None.
-
-        Returns:
-            The resulting ``m.Infra.LayoutFinding | None``.
-
-        """
-        name = entry.name
-        if entry.is_dir() and name in spec.move_docs_dirs:
-            return self._finding("move", name, f"{spec.docs_target}/{name}")
-        if entry.is_file() and name in spec.move_docs_files:
-            target = f"{spec.docs_target}/{name}"
-            if (entry.parent / target).exists():
-                return self._finding(
-                    "archive",
-                    name,
-                    f"{spec.archive_root}/{project_name}/{name}",
-                    message=(
-                        f"archive {name} -> {spec.archive_root}/{project_name}/{name} "
-                        f"(canonical docs/{name} kept)"
-                    ),
-                )
-            return self._finding("move", name, target)
-        return None
 
     def _override_move_findings(
         self,
@@ -286,7 +241,6 @@ class FlextInfraCodegenLayoutPlanMixin:
         spec: m.Infra.LayoutSpec,
         override: m.Infra.LayoutProjectOverrideSpec,
         project_dir: Path,
-        project_name: str,
     ) -> t.SequenceOf[m.Infra.LayoutFinding]:
         """Override directories archived once override moves have emptied them.
 
@@ -300,7 +254,7 @@ class FlextInfraCodegenLayoutPlanMixin:
             path = project_dir / name
             if not path.is_dir():
                 continue
-            target = f"{spec.archive_root}/{project_name}/{name}"
+            target = f"{spec.archive_root}/{project_dir.name}/{name}"
             if not any(path.iterdir()):
                 findings.append(self._finding("archive", name, target))
                 continue

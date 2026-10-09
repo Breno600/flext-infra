@@ -15,8 +15,9 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
+from flext_infra import u
 from flext_infra.docs.server import FlextInfraDocServer
-from tests import c, m, u
+from tests import c, m, u as tu
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -39,7 +40,7 @@ class TestsFlextInfraDocServer:
     @staticmethod
     def test_serve_without_mkdocs_yml_fails_with_guidance(tmp_path: Path) -> None:
         """Scope resolution governs which site a blocking preview may serve."""
-        workspace = u.Tests.create_docs_workspace(tmp_path)
+        workspace = tu.Tests.create_docs_workspace(tmp_path)
 
         result = FlextInfraDocServer().serve(workspace)
 
@@ -52,7 +53,7 @@ class TestsFlextInfraDocServer:
         tmp_path: Path,
     ) -> None:
         """Test serve with multiple servable scopes requires project."""
-        workspace = u.Tests.create_docs_workspace(
+        workspace = tu.Tests.create_docs_workspace(
             tmp_path,
             project_names=("flext-a", "flext-b"),
         )
@@ -68,7 +69,7 @@ class TestsFlextInfraDocServer:
     @staticmethod
     def test_execute_propagates_selection_failure(tmp_path: Path) -> None:
         """Test execute propagates selection failure."""
-        workspace = u.Tests.create_docs_workspace(tmp_path)
+        workspace = tu.Tests.create_docs_workspace(tmp_path)
 
         result = FlextInfraDocServer(repository_root=workspace).execute()
 

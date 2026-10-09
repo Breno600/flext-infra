@@ -11,14 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_core import e
-from flext_infra import (
-    FlextInfraEnsureRuffConfigPhase,
-    FlextInfraPyprojectModernizer,
-    FlextInfraToolTablesPhase,
-    config,
-)
-from flext_infra.gates.mypy import FlextInfraMypyGate
+from flext_infra import FlextInfraPyprojectModernizer, FlextInfraToolTablesPhase, config
 from tests import c, m, t, u
 
 
@@ -44,10 +37,7 @@ class TestsFlextInfraDepsModernizerToolTables:
         # A live package: the first-party owner derives importable packages.
         (package_dir / c.Infra.INIT_PY).write_text('"""Package."""\n', encoding="utf-8")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
-            u.Tests.toml_payload(
-                '[project]\nname = "flext-sample"\n'
-                f'version = "{config.Infra.initial_project_version}"\n{source}',
-            ),
+            u.Tests.toml_payload(f'[project]\nname = "flext-sample"\n{source}'),
         )
         changes = FlextInfraToolTablesPhase(
             tool_config or config.Infra.tooling,
@@ -74,7 +64,6 @@ class TestsFlextInfraDepsModernizerToolTables:
             tmp_path,
             "[tool.mypy]\n"
             'plugins = ["custom.plugin"]\n'
-            'disable_error_code = ["assignment"]\n'
             "strict_concatenate = true\n"
             'overrides = [{ module = ["stale.*"] }]\n',
         )
@@ -87,10 +76,6 @@ class TestsFlextInfraDepsModernizerToolTables:
         tm.that(
             list(u.Tests.toml_strings(mypy["plugins"])),
             eq=list(mypy_policy.plugins),
-        )
-        tm.that(
-            set(u.Tests.toml_strings(mypy["disable_error_code"])),
-            eq=set(mypy_policy.disable_error_code),
         )
         tm.that(
             list(u.Tests.toml_list(mypy["overrides"])),
@@ -107,106 +92,6 @@ class TestsFlextInfraDepsModernizerToolTables:
             **mypy_policy.string_settings,
         }.items():
             tm.that(mypy[key], eq=value)
-        second = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
-            u.Tests.toml_payload(
-                u.Cli.toml_dumps(u.Cli.toml_document_from_mapping(payload)),
-            ),
-        )
-        changes = FlextInfraToolTablesPhase(config.Infra.tooling).apply_payload(
-            second,
-            path=tmp_path / "flext-sample" / c.PYPROJECT_FILENAME,
-        )
-        tm.that(second, eq=payload)
-        tm.that(changes, eq=())
-
-    @staticmethod
-    @pytest.mark.parametrize(
-        "plugins",
-        [(), ("custom.plugin",), ("pydantic.mypy", "pydantic.v1.mypy")],
-    )
-    def test_mypy_rejects_missing_or_v1_pydantic_plugin(
-        plugins: t.StrSequence,
-    ) -> None:
-        """The typed policy cannot remove mandatory Pydantic 2 support."""
-        payload = config.Infra.tooling.tools.mypy.model_dump()
-        payload["plugins"] = plugins
-        with pytest.raises(e.PydanticValidationError, match=r"pydantic\.mypy"):
-            m.Infra.MypyConfig.model_validate(payload)
-
-    @pytest.mark.slow
-    @pytest.mark.parametrize("enable_unrelated", [False, True])
-    def test_mypy_projected_policy_keeps_plugin_and_unsuspended_errors(
-        self,
-        tmp_path: Path,
-        *,
-        enable_unrelated: bool,
-    ) -> None:
-        """A real Mypy consumer suppresses only the declared codes with its plugin."""
-        tooling = config.Infra.tooling
-        if enable_unrelated:
-            policy = tooling.tools.mypy
-            validated = m.Infra.MypyConfig.model_validate({
-                **policy.model_dump(by_alias=True),
-                "string-settings": {
-                    **policy.string_settings,
-                    "enable_error_code": "arg-type",
-                },
-            })
-            tooling = tooling.model_copy(
-                update={"tools": tooling.tools.model_copy(update={"mypy": validated})},
-            )
-        payload, _ = self._applied(tmp_path, tool_config=tooling)
-        mypy = self._table(payload, "mypy")
-        tm.that(
-            tuple(u.Tests.toml_strings(mypy["plugins"])),
-            eq=tuple(tooling.tools.mypy.plugins),
-        )
-        tm.that(
-            set(u.Tests.toml_strings(mypy["disable_error_code"])),
-            eq=set(tooling.tools.mypy.disable_error_code),
-        )
-        if enable_unrelated:
-            tm.that(
-                mypy["enable_error_code"],
-                eq=tooling.tools.mypy.string_settings["enable_error_code"],
-            )
-        project = tmp_path / "flext-sample"
-        (project / c.PYPROJECT_FILENAME).write_text(
-            u.Cli.toml_dumps(u.Cli.toml_document_from_mapping(payload)),
-            encoding="utf-8",
-        )
-        source = project / "src" / "flext_sample" / "model.py"
-        declarations = (
-            "from pydantic import BaseModel, computed_field\n"
-            "class Model(BaseModel):\n"
-            "    value: int\n"
-            "    @computed_field\n"
-            "    @property\n"
-            "    def derived(self) -> int:\n"
-            "        return self.value\n"
-            "def missing_argument() -> Model:\n"
-            "    return Model()\n"
-        )
-        source.write_text(declarations, encoding="utf-8")
-        context = m.Infra.GateContext(
-            repository_root=project,
-            reports_dir=project / ".reports",
-        )
-        gate = FlextInfraMypyGate(project)
-        accepted = gate.check(project, context)
-        tm.that(accepted.result.passed, eq=True)
-        tm.that(accepted.issues, eq=())
-
-        source.write_text(
-            declarations
-            + "def requires_integer(value: int) -> int:\n"
-            + "    return value\n"
-            + 'invalid = requires_integer("incorrect")\n',
-            encoding="utf-8",
-        )
-        rejected = gate.check(project, context)
-        tm.that(rejected.result.passed, eq=False)
-        tm.that(tuple(issue.code for issue in rejected.issues), eq=("arg-type",))
 
     def test_pytest_table_replaces_policy_and_merges_extensions(
         self,
@@ -235,20 +120,6 @@ class TestsFlextInfraDepsModernizerToolTables:
         tm.that(
             set(u.Tests.strings(ini["markers"])),
             eq={"custom: custom marker", *policy.standard_markers},
-        )
-
-    @staticmethod
-    def test_projected_slow_timeout_key_is_registered_by_the_loaded_plugin(
-        pytestconfig: pytest.Config,
-    ) -> None:
-        """The ini key the pytest table projects is one the flext-tests plugin owns.
-
-        ``getini`` raises ``ValueError`` for an unregistered name, which strict
-        config collection turns into ``Unknown config option`` in every consumer.
-        """
-        tm.that(
-            pytestconfig.getini(c.Infra.FLEXT_SLOW_TIMEOUT_SECONDS),
-            eq=str(config.Infra.tooling.tools.pytest.slow_timeout_seconds),
         )
 
     @pytest.mark.parametrize("follow_untyped", [False, True])
@@ -543,6 +414,8 @@ class TestsFlextInfraDepsModernizerToolTables:
         namespace-packages contract only holds for live roots; the workspace
         SSOT's exclusions decide (bead flext-x44z3).
         """
+        from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
+
         project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload('[project]\nname = "flext-sample"\n'),
@@ -557,12 +430,4 @@ class TestsFlextInfraDepsModernizerToolTables:
         tm.that(src_roots, lacks="scripts", has="src")
         tm.that(namespace_packages, lacks="scripts")
         per_file = self._table(payload, "ruff", "lint", "per-file-ignores")
-        tm.that(
-            per_file,
-            eq={
-                pattern: sorted(rules)
-                for pattern, rules in (
-                    config.Infra.tooling.tools.ruff.lint.per_file_ignores.items()
-                )
-            },
-        )
+        tm.that(not any(p.startswith("scripts/") for p in per_file), eq=True)

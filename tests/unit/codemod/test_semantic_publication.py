@@ -20,7 +20,7 @@ from flext_infra.codemod import FlextInfraCodemodSemanticApply
 from flext_infra.transformers import FlextInfraSemanticPublication
 
 
-class TestsFlextInfraSemanticPublication:
+class TestsSemanticPublication:
     """All files remain recoverable until the semantic consumer accepts them."""
 
     @staticmethod

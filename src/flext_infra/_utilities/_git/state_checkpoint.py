@@ -6,42 +6,23 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from collections.abc import Generator
-from contextlib import ExitStack, contextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from flext_cli import u
 from git import GitCommandError
 
-from flext_infra import c, m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesCodegenFilePlan,
+from flext_infra import c, m, r
+from flext_infra._utilities._git.state_trees import (
     FlextInfraUtilitiesGitStateTreesMixin,
-    FlextInfraUtilitiesGitWorktreeIO,
 )
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTreesMixin):
     """Keep index-only and working-byte versions reachable after a save commit."""
-
-    @classmethod
-    @contextmanager
-    def _state_leases(cls, roots: t.SequenceOf[Path]) -> Generator[None]:
-        journals = {
-            Path(cls._repo(root).git_dir) / c.Infra.JOURNAL_NAME for root in roots
-        }
-        with ExitStack() as stack:
-            for journal in sorted(journals):
-                u.Cli.atomic_read_binary_file_state(
-                    journal.with_name(f"{journal.name}.lock"),
-                    required=False,
-                ).unwrap()
-                stack.enter_context(
-                    FlextInfraUtilitiesCodegenFilePlan.codegen_transaction_lease(
-                        journal,
-                    ),
-                )
-            yield
 
     @classmethod
     def _state_require_original(
@@ -65,13 +46,12 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
         snapshot: m.Infra.GitWorktreeStateSnapshot,
         checkpoint_ref: str,
     ) -> m.Infra.GitWorktreeStateCheckpoint:
-
         cls._state_require_original(snapshot)
         repo = cls._repo(snapshot.repo_root)
         if not checkpoint_ref.startswith("refs/") or checkpoint_ref.startswith((
-            c.Infra.GIT_REFS_HEADS,
-            c.Infra.GIT_REFS_TAGS,
-            c.Infra.GIT_REFS_REMOTES,
+            "refs/heads/",
+            "refs/tags/",
+            "refs/remotes/",
         )):
             msg = "checkpoint requires a dedicated non-branch Git reference"
             raise ValueError(msg)

@@ -15,8 +15,8 @@ from typing import Annotated, ClassVar, Literal
 from flext_cli import m
 
 from flext_infra import c, t
-from flext_infra._models.mixins import FlextInfraModelsMixins
-from flext_infra._models.refactor_namespace_enforcer import (
+from flext_infra._models import (
+    FlextInfraModelsMixins as mm,
     FlextInfraModelsNamespaceEnforcer,
 )
 
@@ -54,7 +54,7 @@ class FlextInfraModelsScan:
             m.Field(description="Optional project root containing the scanned file."),
         ] = None
 
-    class ScanViolation(FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel):
+    class ScanViolation(mm.PositiveLineMixin, m.ContractModel):
         """A single violation found during file scanning."""
 
         message: Annotated[
@@ -72,9 +72,9 @@ class FlextInfraModelsScan:
 
         file_path: Annotated[Path, m.Field(description="Path to the scanned file")]
         violations: Annotated[
-            t.SequenceOf[FlextInfraModelsScan.ScanViolation],
-            m.Field(description="Violations found in the file"),
-        ] = m.Field(default_factory=tuple)
+            list[FlextInfraModelsScan.ScanViolation],
+            m.Field(default_factory=list, description="Violations found in the file"),
+        ]
         detector_name: Annotated[
             str,
             m.Field(description="Name of the detector that produced this result"),
@@ -109,10 +109,9 @@ class FlextInfraModelsScan:
         binding_states: Annotated[
             tuple[m.Cli.AtomicFileState, ...],
             m.Field(
-                default_factory=tuple,
                 description="Closed occurrence-binding source receipts",
             ),
-        ]
+        ] = m.Field(default_factory=tuple)
         range: Annotated[
             t.JsonMapping,
             m.Field(description="Exact ast-grep source range payload"),
@@ -224,7 +223,7 @@ class FlextInfraModelsScan:
         capture_equals: Annotated[
             t.MappingKV[str, str],
             m.Field(description="Named regex captures and their required exact values"),
-        ] = m.Field(default_factory=lambda: MappingProxyType[str, str]({}))
+        ] = m.Field(default_factory=lambda: MappingProxyType({}))
         expected: Annotated[
             int | None,
             m.Field(

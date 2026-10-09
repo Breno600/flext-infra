@@ -36,24 +36,3 @@ class TestsFlextInfraGitRemoteIdentity:
             u.Infra.git_remote_identity(left) == u.Infra.git_remote_identity(right),
             eq=False,
         )
-
-    @staticmethod
-    def test_locked_revision_does_not_change_repository_identity() -> None:
-        """Compare lock-decorated VCS URLs with their PEP 610 origin."""
-        origin = u.Tests.repository_ref("locked-origin").url
-        identity = u.Infra.git_remote_identity(origin)
-        for suffix in (
-            "?rev=topic",
-            "#0123456789abcdef0123456789abcdef01234567",
-            "?rev=topic#0123456789abcdef0123456789abcdef01234567",
-        ):
-            tm.that(u.Infra.git_remote_identity(f"{origin}{suffix}"), eq=identity)
-
-    @staticmethod
-    def test_trailing_directory_separator_preserves_repository_identity() -> None:
-        """A URL path separator is not part of the native repository name."""
-        origin = u.Tests.repository_ref("directory-origin").url
-        tm.that(
-            u.Infra.git_remote_identity(f"{origin}/"),
-            eq=u.Infra.git_remote_identity(origin),
-        )

@@ -1,4 +1,4 @@
-{% from "docker_proof_macros.j2" import docker_header, docker_apt_seed, docker_bootstrap_proof with context -%}
+{% from "docker_mise_bootstrap.j2" import docker_header, docker_apt_seed, docker_bootstrap_proof with context -%}
 {{ docker_header("ubuntu.Dockerfile.j2", "Ubuntu") }}
 FROM ubuntu:24.04
 

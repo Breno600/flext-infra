@@ -8,14 +8,17 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
 
-from flext_infra import c, m, p, r, t
+from flext_infra import c, m, r, t
 from flext_infra._utilities.protected_edit_preview import (
     FlextInfraUtilitiesProtectedEditPreview,
 )
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPreview):
@@ -159,13 +162,13 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         if not cls._file_contains_tests(py_file):
             compile_result = u.Cli.run_raw(
                 [
-                    *cls._workspace_tool_command(c.Infra.PYTHON),
+                    *cls._workspace_tool_command(workspace, c.Infra.PYTHON),
                     "-m",
                     "py_compile",
                     str(py_file),
                 ],
                 cwd=cls._command_cwd(py_file, workspace),
-                options=m.Cli.ProcessOptions(env=cls._command_env()),
+                env=cls._command_env(),
                 timeout=c.Infra.TIMEOUT_SHORT,
             )
             if compile_result.failure:
@@ -173,14 +176,14 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
             return r[bool].ok(value=True)
         run_result = u.Cli.run_raw(
             [
-                *cls._workspace_tool_command("pytest"),
+                *cls._workspace_tool_command(workspace, "pytest"),
                 str(py_file),
                 "-x",
                 "--tb=short",
                 "-q",
             ],
             cwd=cls._command_cwd(py_file, workspace),
-            options=m.Cli.ProcessOptions(env=cls._command_env()),
+            env=cls._command_env(),
             timeout=c.Infra.TIMEOUT_MEDIUM,
         )
         if run_result.failure:

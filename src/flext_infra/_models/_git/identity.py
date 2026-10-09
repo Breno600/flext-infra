@@ -43,47 +43,55 @@ class FlextInfraModelsGitIdentity:
         branch: Annotated[
             t.NonEmptyStr | None,
             m.Field(
+                default=None,
                 description="Active branch name, None if detached HEAD",
             ),
-        ] = None
+        ]
         origin_remote: Annotated[
-            t.NonEmptyStr | None, m.Field(description="Origin remote URL")
-        ] = None
+            t.NonEmptyStr | None,
+            m.Field(default=None, description="Origin remote URL"),
+        ]
         upstream_remote: Annotated[
-            t.NonEmptyStr | None, m.Field(description="Upstream remote URL")
-        ] = None
+            t.NonEmptyStr | None,
+            m.Field(default=None, description="Upstream remote URL"),
+        ]
         superproject_root: Annotated[
             Path | None,
             m.Field(
+                default=None,
                 description="Superproject root if nested, None if standalone",
             ),
-        ] = None
+        ]
         requested_path: Annotated[
             Path | None,
             m.Field(
+                default=None,
                 description="Filesystem path submitted to the identity probe, if any",
             ),
-        ] = None
+        ]
         is_worktree: Annotated[
             bool,
             m.Field(
+                default=False,
                 description="Whether the checkout uses a linked (non-primary) Git dir",
             ),
-        ] = False
+        ]
         is_submodule: Annotated[
             bool,
             m.Field(
+                default=False,
                 description="Whether the primary repository is a Git submodule",
             ),
-        ] = False
+        ]
         is_attached_submodule: Annotated[
             bool,
             m.Field(
+                default=False,
                 description=(
                     "Whether this checkout is physically nested in its superproject"
                 ),
             ),
-        ] = False
+        ]
         has_submodules: Annotated[
             bool,
             m.Field(description="Whether the repository declares any submodules"),

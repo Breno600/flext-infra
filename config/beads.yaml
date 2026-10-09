@@ -2,7 +2,3 @@ version: 1
 workspace: flext
 database: flext
 issue_prefix: flext
-ownership_command_prefix:
-  - gc
-  - bd
-ownership_command_cwd: ..

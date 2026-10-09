@@ -12,6 +12,7 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import c, t
+from flext_infra._models.codemod import FlextInfraModelsCodemod
 
 
 class FlextInfraModelsRefactorGrep:
@@ -207,6 +208,38 @@ class FlextInfraModelsRefactorGrep:
             frozenset[str],
             m.Field(description="Import packages of the runtime dependency closure"),
         ]
+
+    class CodemodAdmission(m.ArbitraryTypesModel):
+        """One finding's admission inputs against its rule's project context."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        root: Annotated[
+            Path,
+            m.Field(description="Project root the finding was scanned under"),
+        ]
+        rule: Annotated[
+            FlextInfraModelsRefactorGrep.CodemodRule,
+            m.Field(description="Elected rule whose project context is evaluated"),
+        ]
+        file_path: Annotated[
+            Path,
+            m.Field(description="Finding file path, absolute or root-relative"),
+        ]
+        captures: Annotated[
+            t.JsonMapping,
+            m.Field(description="Captured metavariables of the finding"),
+        ]
+        facts: Annotated[
+            FlextInfraModelsRefactorGrep.CodemodProjectFacts,
+            m.Field(description="Project snapshot built for the rule's predicates"),
+        ]
+        snapshot: Annotated[
+            FlextInfraModelsCodemod.CodemodBindingSnapshot | None,
+            m.Field(
+                description="Precomputed binding snapshot; absent builds one on demand",
+            ),
+        ] = None
 
     class MethodOrderRule(m.ContractModel):
         """A declarative method ordering rule for class reconstruction.

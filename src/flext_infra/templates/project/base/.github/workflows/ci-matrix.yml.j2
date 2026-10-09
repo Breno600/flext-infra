@@ -92,7 +92,6 @@ jobs:
           # No step needs authenticated git after checkout; persisting the
           # token into .git/config would expose it to every later command.
           persist-credentials: false
-{%- include "_fragments/mise_install.j2" %}
       - name: Bootstrap
         run: {{ make.ci.variable }}={{ make.ci.value }} make setup
       - name: Upgrade and frozen bootstrap
@@ -124,7 +123,6 @@ jobs:
           # No step needs authenticated git after checkout; persisting the
           # token into .git/config would expose it to every later command.
           persist-credentials: false
-{%- include "_fragments/mise_install.j2" %}
       - name: Bootstrap
         shell: bash
         run: {{ make.ci.variable }}={{ make.ci.value }} make setup

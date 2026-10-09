@@ -108,82 +108,18 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         name, path = target
         output_dir = self._release_dir(ctx.repository_root, ctx.tag)
         log, stage = output_dir / f"build-{name}.log", temporary / "source"
-        version = (
-            ctx.version
-            if path.resolve() == ctx.repository_root.resolve()
-            else versions[name]
-        )
-        prepared = self._stage_release_source(path, stage, policy, version, versions)
-        if prepared.failure:
-            return r[m.Infra.BuildRecord].from_failure(prepared)
-        staged, rendered, boundary = prepared.value
-        written = self._write_release_metadata(name, stage, output_dir, rendered)
-        if written.failure:
-            return r[m.Infra.BuildRecord].from_failure(written)
-        if ctx.dry_run:
-            return self._write_release_text(
-                log,
-                f"release metadata staged and validated: {name}\n",
-            ).map(lambda _: self._record(target, log, exit_code=0, source=staged))
-        build = self._execute_staged_build(
-            path,
-            stage,
-            dist=temporary / "dist",
-            policy=policy,
-            source_date_epoch=staged[0].source_date_epoch,
-        )
-        if build.failure:
-            return r[m.Infra.BuildRecord].from_failure(build)
-        failed = self._logged_build_verdict(build.value, log, target, staged)
-        if failed is not None:
-            return failed
-        artifacts = self._persist_artifacts(
-            temporary / "dist",
-            output_dir / "artifacts" / name,
-            m.Infra.ArtifactExpectation(
-                project=name,
-                version=version,
-                license_sha256=staged[1],
-                allowed_roots=tuple(boundary),
-                versions=versions,
-            ),
-        )
-        return artifacts.map(
-            lambda built: self._record(
-                target,
-                log,
-                exit_code=0,
-                artifacts=built,
-                source=staged,
-            ),
-        )
-
-    def _stage_release_source(
-        self,
-        path: Path,
-        stage: Path,
-        policy: m.Infra.BuildPolicy,
-        version: str,
-        versions: t.StrMapping,
-    ) -> p.Result[t.Triple[t.Pair[m.Infra.SourceSnapshot, str], str, t.StrSequence]]:
-        """Stage, render, and boundary-check one project's release source.
-
-        Returns:
-            The resulting ``(staged, rendered, boundary_roots)`` triple.
-
-        """
-        result_type = r[
-            t.Triple[t.Pair[m.Infra.SourceSnapshot, str], str, t.StrSequence]
-        ]
+        root_project = path.resolve() == ctx.repository_root.resolve()
+        version = ctx.version if root_project else versions[name]
         staged = self._stage_source(path, stage, Path(policy.gitleaks_policy_path))
         if staged.failure:
-            return result_type.from_failure(staged)
+            return r[m.Infra.BuildRecord].from_failure(staged)
+        snapshot, license_sha256 = staged.value
         source = u.Cli.files_read_text(stage / c.PYPROJECT_FILENAME)
         if source.failure:
-            return result_type.from_failure(source)
+            return r[m.Infra.BuildRecord].from_failure(source)
         rendered = self._release_pyproject(source.value, version, versions)
         if rendered.failure:
-            return result_type.from_failure(rendered)
+            return r[m.Infra.BuildRecord].from_failure(rendered)
         document = u.Cli.toml_parse_text(rendered.value)
         tool = (
             u.Cli.toml_table_child(document, c.Infra.TOOL)
@@ -192,104 +128,29 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         )
         hatch = u.Cli.toml_table_child(tool, "hatch") if tool is not None else None
         if hatch is None:
-            return result_type.fail(
+            return r[m.Infra.BuildRecord].fail(
                 "rendered release metadata lost Hatch build targets",
             )
         boundary = self._sdist_boundary(hatch)
         if boundary.failure:
-            return result_type.from_failure(boundary)
-        return result_type.ok((staged.value, rendered.value, boundary.value))
-
-    def _write_release_metadata(
-        self,
-        name: str,
-        stage: Path,
-        output_dir: Path,
-        rendered: str,
-    ) -> p.Result[bool]:
-        """Write the rendered release pyproject to the stage and the receipt.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
+            return r[m.Infra.BuildRecord].from_failure(boundary)
         for destination in (
             stage / c.PYPROJECT_FILENAME,
             output_dir / "metadata" / f"{name}-pyproject.toml",
         ):
-            written = self._write_release_text(destination, rendered)
+            written = self._write_release_text(destination, rendered.value)
             if written.failure:
-                return r[bool].from_failure(written)
-        return r[bool].ok(value=True)
-
-    def _execute_staged_build(
-        self,
-        path: Path,
-        stage: Path,
-        *,
-        dist: Path,
-        policy: m.Infra.BuildPolicy,
-        source_date_epoch: int,
-    ) -> p.Result[p.Cli.CommandOutput]:
-        """Mirror the project's release inputs, then run the isolated build.
-
-        Returns:
-            The resulting ``p.Result[p.Cli.CommandOutput]``.
-
-        """
+                return r[m.Infra.BuildRecord].from_failure(written)
+        if ctx.dry_run:
+            return self._write_release_text(
+                log,
+                f"release metadata staged and validated: {name}\n",
+            ).map(lambda _: self._record(target, log, exit_code=0, source=staged.value))
         mirrored = self.mirror_release_inputs(path, stage)
         if mirrored.failure:
-            return r[p.Cli.CommandOutput].from_failure(mirrored)
-        return self._run_staged_build(
-            stage,
-            dist=dist,
-            policy=policy,
-            source_date_epoch=source_date_epoch,
-        )
-
-    def _logged_build_verdict(
-        self,
-        build: p.Cli.CommandOutput,
-        log: Path,
-        target: t.Pair[str, Path],
-        staged: t.Pair[m.Infra.SourceSnapshot, str],
-    ) -> p.Result[m.Infra.BuildRecord] | None:
-        """Write the build log and return its failed record, or ``None`` on success.
-
-        Returns:
-            The failed build record, or ``None`` when the build succeeded.
-
-        """
-        output = (build.stdout + "\n" + build.stderr).strip()
-        logged = self._write_release_text(log, output + "\n")
-        if logged.failure:
-            return r[m.Infra.BuildRecord].from_failure(logged)
-        if not u.Cli.process_succeeded(build.outcome):
-            return r[m.Infra.BuildRecord].ok(
-                self._record(
-                    target,
-                    log,
-                    exit_code=build.outcome.raw_return_code,
-                    source=staged,
-                ),
-            )
-        return None
-
-    @staticmethod
-    def _run_staged_build(
-        stage: Path,
-        *,
-        dist: Path,
-        policy: m.Infra.BuildPolicy,
-        source_date_epoch: int,
-    ) -> p.Result[p.Cli.CommandOutput]:
-        """Run the isolated release build of one staged source tree.
-
-        Returns:
-            The resulting ``p.Result[p.Cli.CommandOutput]``.
-
-        """
-        return u.Cli.run_raw(
+            return r[m.Infra.BuildRecord].from_failure(mirrored)
+        dist = temporary / "dist"
+        build = u.Cli.run_raw(
             [
                 *c.Infra.RELEASE_UV_BUILD_ARGS,
                 "--build-constraints",
@@ -299,16 +160,49 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
                 str(stage),
             ],
             timeout=c.Infra.TIMEOUT_LONG,
-            options=m.Cli.ProcessOptions(
-                env={
-                    c.Infra.SOURCE_DATE_EPOCH: str(source_date_epoch),
-                    c.Infra.UV_HTTP_CONNECT_TIMEOUT: (
-                        c.Infra.UV_RELEASE_HTTP_CONNECT_TIMEOUT
-                    ),
-                    c.Infra.UV_HTTP_TIMEOUT: c.Infra.UV_RELEASE_HTTP_TIMEOUT,
-                    c.Infra.UV_HTTP_RETRIES: c.Infra.UV_RELEASE_HTTP_RETRIES,
-                },
-                remove_env_keys=c.Infra.UV_RELEASE_POLICY_ENV_KEYS,
+            env={
+                c.Infra.SOURCE_DATE_EPOCH: str(snapshot.source_date_epoch),
+                c.Infra.UV_HTTP_CONNECT_TIMEOUT: (
+                    c.Infra.UV_RELEASE_HTTP_CONNECT_TIMEOUT
+                ),
+                c.Infra.UV_HTTP_TIMEOUT: c.Infra.UV_RELEASE_HTTP_TIMEOUT,
+                c.Infra.UV_HTTP_RETRIES: c.Infra.UV_RELEASE_HTTP_RETRIES,
+            },
+            remove_env_keys=c.Infra.UV_RELEASE_POLICY_ENV_KEYS,
+        )
+        if build.failure:
+            return r[m.Infra.BuildRecord].from_failure(build)
+        output = (build.value.stdout + "\n" + build.value.stderr).strip()
+        written = self._write_release_text(log, output + "\n")
+        if written.failure:
+            return r[m.Infra.BuildRecord].from_failure(written)
+        if not u.Cli.process_succeeded(build.value.outcome):
+            return r[m.Infra.BuildRecord].ok(
+                self._record(
+                    target,
+                    log,
+                    exit_code=build.value.outcome.raw_return_code,
+                    source=staged.value,
+                ),
+            )
+        artifacts = self._persist_artifacts(
+            dist,
+            output_dir / "artifacts" / name,
+            m.Infra.ArtifactExpectation(
+                project=name,
+                version=version,
+                license_sha256=license_sha256,
+                allowed_roots=tuple(boundary.value),
+                versions=versions,
+            ),
+        )
+        return artifacts.map(
+            lambda built: self._record(
+                target,
+                log,
+                exit_code=0,
+                artifacts=built,
+                source=staged.value,
             ),
         )
 
@@ -355,70 +249,24 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
             built.append(
                 m.Infra.BuildArtifact(path=persisted, kind=kind, sha256=digest),
             )
-        committed = cls._commit_artifacts(destination, sources)
-        if committed.failure:
-            return result_type.from_failure(committed)
-        return result_type.ok(tuple(built))
-
-    @classmethod
-    def _commit_artifacts(
-        cls,
-        destination: Path,
-        sources: t.SequenceOf[Path],
-    ) -> p.Result[bool]:
-        """Commit the artifact set: byte-identical acceptance or atomic persist.
-
-        An existing set is immutable: it is accepted only byte for byte.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        if not destination.exists():
-            return cls._persist_fresh_artifacts(destination, sources)
-        return cls._existing_artifacts_match(destination, sources)
-
-    @classmethod
-    def _existing_artifacts_match(
-        cls,
-        destination: Path,
-        sources: t.SequenceOf[Path],
-    ) -> p.Result[bool]:
-        """Prove an existing artifact set matches byte for byte.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        try:
-            same = sorted(destination.iterdir()) == sorted(
-                destination / source.name for source in sources
-            ) and all(
-                source.read_bytes() == (destination / source.name).read_bytes()
-                for source in sources
-            )
-        except OSError as exc:
-            return r[bool].fail_op(
-                f"compare immutable artifacts {destination}",
-                exc,
-            )
-        if not same:
-            return r[bool].fail(
-                f"immutable artifact collision at {destination}",
-            )
-        return r[bool].ok(value=True)
-
-    @staticmethod
-    def _persist_fresh_artifacts(
-        destination: Path,
-        sources: t.SequenceOf[Path],
-    ) -> p.Result[bool]:
-        """Persist a fresh artifact set atomically through a sibling staging dir.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
+        if destination.exists():
+            try:
+                same = sorted(destination.iterdir()) == sorted(
+                    destination / source.name for source in sources
+                ) and all(
+                    source.read_bytes() == (destination / source.name).read_bytes()
+                    for source in sources
+                )
+            except OSError as exc:
+                return result_type.fail_op(
+                    f"compare immutable artifacts {destination}",
+                    exc,
+                )
+            if not same:
+                return result_type.fail(
+                    f"immutable artifact collision at {destination}",
+                )
+            return result_type.ok(tuple(built))
         try:
             destination.parent.mkdir(parents=True, exist_ok=True)
             with TemporaryDirectory(
@@ -429,11 +277,11 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
                     shutil.copy2(source, Path(staging) / source.name)
                 Path(staging).replace(destination)
         except OSError as exc:
-            return r[bool].fail_op(
+            return result_type.fail_op(
                 f"persist release artifact set {destination}",
                 exc,
             )
-        return r[bool].ok(value=True)
+        return result_type.ok(tuple(built))
 
 
 __all__: list[str] = ["FlextInfraReleaseProjectMixin"]

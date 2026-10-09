@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Literal
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main
+from flext_infra import c, main as infra_main
 from tests import t, u
 
 if TYPE_CHECKING:
@@ -83,12 +83,10 @@ class TestsFlextInfraDepsModernizerPackaging:
         _ = u.Tests.write_standalone_workspace_manifest(
             root,
             "flext-packaging-fixture",
-            declaration=u.Tests.StandaloneManifestDeclaration(
-                root_modules=[root_module],
-                root_packages=[root_package],
-                # The fixture package ships no cli module, so it declares none.
-                cli_module=False,
-            ),
+            root_modules=[root_module],
+            root_packages=[root_package],
+            # The fixture package ships no cli module, so it declares none.
+            cli_module=False,
         )
         u.Tests.git_bootstrap(
             root,
@@ -111,7 +109,7 @@ class TestsFlextInfraDepsModernizerPackaging:
             The resulting ``int``.
 
         """
-        return main([
+        return infra_main([
             c.Infra.CLI_GROUP_CODEGEN,
             "conform",
             "--root",
@@ -203,7 +201,7 @@ class TestsFlextInfraDepsModernizerPackaging:
         )
         tm.that(u.Tests.toml_mapping(repaired["force-include"]), lacks="stale.txt")
 
-        fixed_point = main([
+        fixed_point = infra_main([
             c.Infra.CLI_GROUP_CODEGEN,
             "conform",
             "--root",

@@ -6,10 +6,15 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from flext_cli import r, u
 
-from flext_infra import c, m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesDependencies
+from flext_infra import c, m, t
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesPyprojectSession:
@@ -86,9 +91,7 @@ class FlextInfraUtilitiesPyprojectSession:
             dict.fromkeys(
                 FlextInfraUtilitiesDependencies.dependency_constraint(
                     parsed,
-                    replace_source=FlextInfraUtilitiesDependencies.dep_name(
-                        parsed,
-                    )
+                    replace_source=FlextInfraUtilitiesDependencies.dep_name(parsed)
                     in selected,
                 )
                 for item in (

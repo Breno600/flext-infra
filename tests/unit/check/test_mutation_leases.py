@@ -12,10 +12,10 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
+from flext_infra import c, m, u
 from flext_infra.codegen import FlextInfraCodegenFileLeases
 from flext_infra.gates import FlextInfraRuffFormatGate
-from tests import u
+from tests import u as test_u
 
 
 class TestsFlextInfraMutationLeases:
@@ -29,7 +29,9 @@ class TestsFlextInfraMutationLeases:
         git_owned: bool,
     ) -> None:
         """Test format waits for scope writer and does not apply lint."""
-        root = u.Tests.git_repository(tmp_path) if git_owned else tmp_path / "files"
+        root = (
+            test_u.Tests.git_repository(tmp_path) if git_owned else tmp_path / "files"
+        )
         root.mkdir(exist_ok=True)
         (root / "pyproject.toml").write_text("[tool.ruff]\n", encoding="utf-8")
         source = root / "src"
@@ -69,7 +71,7 @@ class TestsFlextInfraMutationLeases:
         tmp_path: Path,
     ) -> None:
         """Test nested git scope uses original worktree journal."""
-        root = u.Tests.git_repository(tmp_path)
+        root = test_u.Tests.git_repository(tmp_path)
         nested = root / "nested"
         nested.mkdir()
         scope = tm.ok(

@@ -7,12 +7,13 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from types import MappingProxyType
-from typing import Annotated, ClassVar, Literal, Self
+from typing import Annotated, Literal, Self
 
-from flext_cli import m
+from flext_cli import m, u
 
-from flext_infra import c, t
+from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsCodegenProject
+from flext_infra._constants.deps import FlextInfraConstantsDeps
 from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
 from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
 from flext_infra._models._config.contract import FlextInfraConfigModelsContract
@@ -26,31 +27,27 @@ class FlextInfraConfigModelsWorkspace:
 
         path: Annotated[Path, m.Field(description="Relative candidate worktree path")]
         what: Annotated[
-            c.Infra.CodegenConformSurface,
+            FlextInfraConstantsCodegenProject.CodegenConformSurface,
             m.Field(description="Canonical generator surface for this target"),
         ]
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_path(self) -> Self:
             if self.path.is_absolute() or not self.path.parts:
                 msg = "candidate bootstrap path must be relative"
                 raise ValueError(msg)
             if self.what not in {
-                c.Infra.CodegenConformSurface.MAKEFILE,
-                c.Infra.CodegenConformSurface.DOCS_CONFIG,
-                c.Infra.CodegenConformSurface.PYPROJECT,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.MISE_TRIPLE,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.DOCS_CONFIG,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.PYPROJECT,
             }:
                 msg = "candidate bootstrap owns only declared recovery surfaces"
                 raise ValueError(msg)
             return self
 
-    class DependencyCommitSourceSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One dependency distribution resolved to an immutable Git commit.
-
-        A staged candidate and a workspace member's recorded gitlink are the
-        same fact: a distribution, its canonical repository and the exact
-        commit it resolves to.
-        """
+    class CandidateDependencySourceSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One explicitly staged Git commit for a candidate dependency."""
 
         distribution: Annotated[
             t.NonEmptyStr,
@@ -65,64 +62,15 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Full immutable Git commit OID"),
         ]
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_source(self) -> Self:
             if not self.url.startswith("https://") or not self.url.endswith(".git"):
-                msg = "dependency commit source URL must be canonical HTTPS Git"
+                msg = "candidate dependency URL must be canonical HTTPS Git"
                 raise ValueError(msg)
-            if c.Infra.GIT_COMMIT_OID_RE.fullmatch(self.commit) is None:
-                msg = "dependency commit source must pin a full Git OID"
+            if FlextInfraConstantsDeps.GIT_COMMIT_OID_RE.fullmatch(self.commit) is None:
+                msg = "candidate dependency commit must be a full Git OID"
                 raise ValueError(msg)
             return self
-
-    class DependencyManifestSpec(m.ContractModel):
-        """Dependency facts one member's own ``pyproject.toml`` declares."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="ignore",
-            frozen=True,
-        )
-
-        name: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                validation_alias=m.AliasPath("project", "name"),
-                description="PEP 621 distribution name",
-            ),
-        ]
-        dependencies: Annotated[
-            t.StrSequence,
-            m.Field(
-                validation_alias=m.AliasPath("project", "dependencies"),
-                description="PEP 621 runtime requirements",
-            ),
-        ] = ()
-        dependency_groups: Annotated[
-            t.MappingKV[str, t.StrSequence],
-            m.Field(
-                validation_alias=c.Infra.DEPENDENCY_GROUPS,
-                description="PEP 735 dependency groups (dev, codegen, ...)",
-            ),
-        ] = m.Field(
-            default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
-        )
-
-    class DependencyEdgeSpec(m.ContractModel):
-        """One directed requirement edge between two workspace members."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="forbid",
-            frozen=True,
-        )
-
-        dependent: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Member distribution declaring the requirement"),
-        ]
-        dependency: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Member distribution it requires"),
-        ]
 
     type CandidateBootstrapTargets = t.VariadicTuple[CandidateBootstrapTargetSpec]
     """Shared declaration type for repeated candidate worktree target fields."""
@@ -205,9 +153,10 @@ class FlextInfraConfigModelsWorkspace:
         file_extensions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
+                default_factory=tuple,
                 description="Allowed file extensions (empty = all by pattern)",
             ),
-        ] = m.Field(default_factory=tuple)
+        ]
 
     class WorkspaceManifestSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete versioned input contract for ``config/workspace.yaml``."""
@@ -215,8 +164,8 @@ class FlextInfraConfigModelsWorkspace:
         version: Annotated[
             int,
             m.Field(
-                ge=c.Infra.WORKSPACE_MANIFEST_VERSION,
-                le=c.Infra.WORKSPACE_MANIFEST_VERSION,
+                ge=FlextInfraConstantsCodegenProject.WORKSPACE_MANIFEST_VERSION,
+                le=FlextInfraConstantsCodegenProject.WORKSPACE_MANIFEST_VERSION,
                 description="Workspace manifest schema version",
             ),
         ]
@@ -224,11 +173,10 @@ class FlextInfraConfigModelsWorkspace:
         docs_audit: Annotated[
             FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
             m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
                 description="Repository-owned documentation audit declarations",
             ),
-        ] = m.Field(
-            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec
-        )
+        ]
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(
@@ -280,7 +228,9 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Optional integration provider overlay"),
         ] = None
         candidate_dependencies: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsWorkspace.DependencyCommitSourceSpec],
+            t.VariadicTuple[
+                FlextInfraConfigModelsWorkspace.CandidateDependencySourceSpec
+            ],
             m.Field(description="Candidate-only exact dependency Git sources"),
         ] = ()
         candidate_bootstrap_targets: Annotated[
@@ -293,21 +243,12 @@ class FlextInfraConfigModelsWorkspace:
             ],
             m.Field(description="Repository-local policy overlays"),
         ] = ()
-        external_consumers: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsWorkspace.ExternalConsumerSpec],
-            m.Field(
-                description=(
-                    "Out-of-workspace repositories propagation adjusts as"
-                    " guests through their own make verbs"
-                ),
-            ),
-        ] = ()
         refactor: Annotated[
             FlextInfraConfigModelsWorkspace.RefactorConfigSpec | None,
             m.Field(description="Refactor file-selection configuration"),
         ] = None
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_references(self) -> Self:
             """Reject ambiguous paths and policy references in the full document.
 
@@ -372,48 +313,6 @@ class FlextInfraConfigModelsWorkspace:
         url: Annotated[t.NonEmptyStr, m.Field(description="Infrastructure Git URL")]
         ref: Annotated[t.NonEmptyStr, m.Field(description="Infrastructure Git ref")]
 
-    class ExternalConsumerSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One out-of-workspace repository propagation adjusts as a guest.
-
-        The consumer keeps its own governance: propagation only advances its
-        declared lane through the consumer's own canonical ``make`` verbs, so
-        FLEXT architecture is never imposed on a non-member repository.
-        """
-
-        name: Annotated[t.NonEmptyStr, m.Field(description="Consumer display name")]
-        root: Annotated[
-            Path,
-            m.Field(
-                description=(
-                    "Absolute checkout root of the consumer repository outside"
-                    " this workspace"
-                ),
-            ),
-        ]
-        integration_branch: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(
-                description=(
-                    "Consumer integration branch; absent defers to the"
-                    " resolver's provider fallback"
-                ),
-            ),
-        ] = None
-        advance_locks: Annotated[
-            bool,
-            m.Field(
-                description="Run the consumer's make upg so flext pins advance",
-            ),
-        ] = True
-        fix_namespace: Annotated[
-            bool,
-            m.Field(description="Run the consumer's make fix-namespace verb"),
-        ] = True
-        fix_accessors: Annotated[
-            bool,
-            m.Field(description="Run the consumer's make fix-accessors verb"),
-        ] = True
-
     class WorkspaceSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Local identity plus topology read from this repository's Git inputs."""
 
@@ -421,11 +320,10 @@ class FlextInfraConfigModelsWorkspace:
         docs_audit: Annotated[
             FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
             m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
                 description="Validated local documentation audit declarations",
             ),
-        ] = m.Field(
-            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec
-        )
+        ]
         beads: Annotated[
             FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
             m.Field(description="Repository-local Beads identity when enabled"),
@@ -477,7 +375,9 @@ class FlextInfraConfigModelsWorkspace:
             ),
         ] = None
         candidate_dependencies: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsWorkspace.DependencyCommitSourceSpec],
+            t.VariadicTuple[
+                FlextInfraConfigModelsWorkspace.CandidateDependencySourceSpec
+            ],
             m.Field(description="Candidate-only exact dependency Git sources"),
         ] = ()
         candidate_bootstrap_targets: Annotated[
@@ -488,35 +388,12 @@ class FlextInfraConfigModelsWorkspace:
             t.VariadicTuple[FlextInfraConfigModelsContexts.RepositoryRef],
             m.Field(description="Direct governed repositories from local .gitmodules"),
         ] = ()
-        superproject_members: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                description=(
-                    "Distribution names of the sibling members a superproject's "
-                    "[tool.uv.workspace] declares when this checkout is one of "
-                    "its members; empty for workspace roots and true standalones. "
-                    "Attached manifests redirect sibling dependencies through "
-                    "[tool.uv.sources] workspace = true while retaining inline "
-                    "Git provenance for publication; standalone renders remove "
-                    "the containing workspace source overlay."
-                ),
-            ),
-        ] = ()
         external_dependency_paths: Annotated[
             t.VariadicTuple[Path],
             m.Field(description="Observed external or fork Git submodule paths"),
         ] = ()
-        external_consumers: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsWorkspace.ExternalConsumerSpec],
-            m.Field(
-                description=(
-                    "Out-of-workspace repositories propagation adjusts as"
-                    " guests through their own make verbs"
-                ),
-            ),
-        ] = ()
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_topology_paths(self) -> Self:
             """Reject duplicate, ambiguous, or escaping topology paths.
 
@@ -527,8 +404,7 @@ class FlextInfraConfigModelsWorkspace:
                 ValueError: If external dependency paths must be workspace-relative; or
                     if external dependency paths must be unique; or if subproject paths
                     must be unique; or if external dependencies cannot also be governed
-                    subprojects; or if external consumers must declare unique names
-                    with absolute roots.
+                    subprojects.
 
             """
             invalid_external_paths = tuple(
@@ -556,21 +432,6 @@ class FlextInfraConfigModelsWorkspace:
                 msg = (
                     "external dependencies cannot also be governed subprojects: "
                     f"{', '.join(sorted(path.as_posix() for path in overlap))}"
-                )
-                raise ValueError(msg)
-            consumer_names = [item.name for item in self.external_consumers]
-            if len(set(consumer_names)) != len(consumer_names):
-                msg = "external consumer names must be unique"
-                raise ValueError(msg)
-            relative_roots = tuple(
-                item.root
-                for item in self.external_consumers
-                if not item.root.is_absolute()
-            )
-            if relative_roots:
-                msg = (
-                    "external consumer roots must be absolute: "
-                    f"{', '.join(path.as_posix() for path in relative_roots)}"
                 )
                 raise ValueError(msg)
             return self
