@@ -109,13 +109,14 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreePatc
         cls,
         request: m.Infra.GitLaneVerificationRequest,
     ) -> p.Result[m.Infra.GitRemoteBranchRequest]:
-        """Resolve the remote branch declared by the superproject's ``.gitmodules``.
+        """Resolve the integration branch the lane's repository declares.
 
-        The lane's primary checkout is a member of exactly one superproject, and
-        that superproject's ``.gitmodules`` ``branch`` key is the only integration
-        declaration. A checkout without a superproject, an undeclared member, or
-        a member that follows the superproject (``.``) has no declared line and
-        fails closed; no branch is inferred from names or cached refs.
+        A member composed by a superproject declares its line in that
+        superproject's ``.gitmodules`` ``branch`` key; an undeclared member or a
+        member that follows the superproject (``.``) fails closed. A standalone
+        checkout declares its line through its forge default branch, read live
+        from the remote's ``HEAD``. No branch is inferred from names or cached
+        refs.
 
         Returns:
             Declared integration query or a missing-authority diagnostic.
@@ -129,9 +130,20 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreePatc
         if superproject.failure:
             return result.from_failure(superproject)
         if superproject.value == primary.value:
-            return result.fail(
-                "lane admission requires the composing superproject's .gitmodules "
-                f"branch declaration; {primary.value} has no superproject",
+            default = cls.git_remote_default_branch(
+                m.Infra.GitRemoteRequest(
+                    repo_root=request.repo_root,
+                    remote=request.remote,
+                ),
+            )
+            if default.failure:
+                return result.from_failure(default)
+            return result.ok(
+                m.Infra.GitRemoteBranchRequest(
+                    repo_root=request.repo_root,
+                    remote=request.remote,
+                    branch=default.value.text,
+                ),
             )
         declaration = cls.git_submodule_declaration(
             m.Infra.GitSubmoduleContractRequest(
@@ -581,6 +593,46 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreePatc
         output = text if isinstance(text, str) else str(text)
         return r[m.Infra.GitTextReport].ok(
             m.Infra.GitTextReport(text=output.partition("\t")[0].strip()),
+        )
+
+    @classmethod
+    def git_remote_default_branch(
+        cls,
+        request: m.Infra.GitRemoteRequest,
+    ) -> p.Result[m.Infra.GitTextReport]:
+        """Ask the remote itself which branch its ``HEAD`` declares.
+
+        The forge default branch is the integration declaration of a
+        standalone repository; it is read live, never from a cached
+        ``refs/remotes/<remote>/HEAD``.
+
+        Returns:
+            The declared branch name, or a failure when the remote declares none.
+
+        """
+        try:
+            text = cls._repo(request.repo_root).git.ls_remote(
+                "--symref",
+                request.remote,
+                c.Infra.GIT_HEAD,
+            )
+        except GitCommandError as exc:
+            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
+        except (OSError, ValueError) as exc:
+            return r[m.Infra.GitTextReport].fail(
+                f"failed to query {request.remote} for its default branch: {exc}",
+                exception=exc,
+            )
+        output = text if isinstance(text, str) else str(text)
+        symref_prefix = f"ref: {c.Infra.GIT_REFS_HEADS}"
+        for line in output.splitlines():
+            target, _, name = line.partition("\t")
+            if name == c.Infra.GIT_HEAD and target.startswith(symref_prefix):
+                return r[m.Infra.GitTextReport].ok(
+                    m.Infra.GitTextReport(text=target.removeprefix(symref_prefix)),
+                )
+        return r[m.Infra.GitTextReport].fail(
+            f"{request.remote} declares no default branch through its HEAD",
         )
 
     @classmethod

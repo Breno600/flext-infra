@@ -501,10 +501,20 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         def add_worktree(repository: Path, branch: str, *, base: str = "HEAD") -> str:
             """Create one applied worktree and return Git's canonical lane path.
 
+            Like a real lane owner, the fixture fetches the declared remote
+            first: lane admission proves ancestry only against a fresh
+            remote-tracking tip.
+
             Returns:
                 The resulting ``str``.
 
             """
+            tm.ok(
+                u.Cli.run_checked(
+                    [c.Infra.GIT, "fetch", "--quiet", c.Infra.GIT_ORIGIN],
+                    cwd=repository,
+                ),
+            )
             return tm.ok(
                 FlextInfraWorktreeService(
                     repository_root=repository,

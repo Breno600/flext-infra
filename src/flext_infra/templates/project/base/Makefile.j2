@@ -373,39 +373,11 @@ unexport MISE_SYSTEM_CONFIG_FILE
 # the pinned mise release is the [tools] entry the committed mise.lock pins.
 # End SECTION: profile routing
 
-# Git identity distinguishes a linked worktree from a primary submodule:
-# both can have a .git file, but only a linked worktree has distinct Git
-# directory and common directory. The environment path cannot be overridden.
-RUNTIME_LINKED_WORKTREE :=
-ifneq ($(wildcard $(RUNTIME_ROOT)/.git),)
-RUNTIME_GIT_DIR := $(shell git -C "$(RUNTIME_ROOT)" rev-parse --path-format=absolute --git-dir)
-ifneq ($(.SHELLSTATUS),0)
-$(error Cannot resolve Git directory for $(RUNTIME_ROOT))
-endif
-RUNTIME_GIT_COMMON_DIR := $(shell git -C "$(RUNTIME_ROOT)" rev-parse --path-format=absolute --git-common-dir)
-ifneq ($(.SHELLSTATUS),0)
-$(error Cannot resolve Git common directory for $(RUNTIME_ROOT))
-endif
-ifneq ($(RUNTIME_GIT_DIR),$(RUNTIME_GIT_COMMON_DIR))
-RUNTIME_LINKED_WORKTREE := Y
-endif
-endif
-# A linked worktree uses the environment its primary worktree uses: Git lists
-# the primary first wherever the lane lives, and the primary's runtime is its
-# superproject when attached, else the primary itself.
-ifeq ($(RUNTIME_LINKED_WORKTREE),Y)
-RUNTIME_PRIMARY_WORKTREE := $(word 2,$(shell git -C "$(RUNTIME_ROOT)" worktree list --porcelain))
-ifneq ($(.SHELLSTATUS),0)
-$(error Cannot resolve the primary worktree of $(RUNTIME_ROOT))
-endif
-RUNTIME_PRIMARY_RUNTIME := $(shell cd "$(RUNTIME_PRIMARY_WORKTREE)" && root=$$(git rev-parse --show-superproject-working-tree) && cd "$${root:-.}" && pwd -P)
-ifneq ($(.SHELLSTATUS),0)
-$(error Cannot resolve the runtime of the primary worktree $(RUNTIME_PRIMARY_WORKTREE))
-endif
-override RUNTIME_VENV := $(RUNTIME_PRIMARY_RUNTIME)/{{ environment_directory }}
-else
+# D-VENV: the environment is <RUNTIME_ROOT>/.venv only. A member inside a
+# workspace uses the workspace environment; a standalone checkout or a linked
+# worktree owns its own physical environment inside the checkout. The path is
+# law, never configuration, and is never shared with another checkout.
 override RUNTIME_VENV := $(RUNTIME_ROOT)/{{ environment_directory }}
-endif
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
 override RUNTIME_PYTHON := $(RUNTIME_BIN)/python.exe
