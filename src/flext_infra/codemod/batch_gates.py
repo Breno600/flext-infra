@@ -549,12 +549,14 @@ class FlextInfraModGateEngine:
             else entry
             for entry in report.entries
             if u.Infra.codemod_context_admits(
-                root,
-                rules_by_id[entry.rule_id],
-                entry.file,
-                FlextInfraModGateEngine._captures(entry.payload),
-                facts,
-                snapshot,
+                m.Infra.CodemodAdmission(
+                    root=root,
+                    rule=rules_by_id[entry.rule_id],
+                    file_path=entry.file,
+                    captures=FlextInfraModGateEngine._captures(entry.payload),
+                    facts=facts,
+                    snapshot=snapshot,
+                ),
             )
         )
         if entries == report.entries:

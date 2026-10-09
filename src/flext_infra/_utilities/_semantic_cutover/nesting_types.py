@@ -114,7 +114,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
                 and protected[0] <= annotation.lineno <= protected[1]
             ):
                 continue
-            start, _ = cls._expression_range(source, annotation)
+            start, _ = cls.expression_range(source, annotation)
             scope = runtime.scope_at(module, start, declaration_line=declaration_line)
             for node in cls._type_nodes(annotation, project, scope):
                 if not isinstance(node, ast.Constant) or not isinstance(
@@ -130,7 +130,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
                     replacement,
                 )
                 if updated != node.value:
-                    start, end = cls._expression_range(source, node)
+                    start, end = cls.expression_range(source, node)
                     edits.append(
                         m.Infra.SourceRewrite(start=start, end=end, text=repr(updated)),
                     )
@@ -152,7 +152,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
             project,
             scope,
         ):
-            start, end = cls._expression_range(source, node)
+            start, end = cls.expression_range(source, node)
             if any(edit.start <= start and end <= edit.end for edit in edits):
                 continue
             text = replacement(scope, node)

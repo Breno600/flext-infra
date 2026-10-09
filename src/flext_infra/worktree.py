@@ -277,10 +277,42 @@ class FlextInfraWorktreeService(s[str]):
             The resulting ``p.Result[str]``.
 
         """
+        refusal = self._add_refusal(base)
+        if refusal is not None:
+            return refusal
+        base_oid = self._admitted_base_oid(primary_root, branch, base)
+        if base_oid.failure:
+            return r[str].from_failure(base_oid)
+        lane = self._new_lane_path(primary_root, branch)
+        if lane.failure:
+            return r[str].from_failure(lane)
+        return self._create_lane(primary_root, lane.value, branch, base_oid.value)
+
+    def _add_refusal(self, base: str) -> p.Result[str] | None:
+        """State why the add request cannot run, or admit it.
+
+        Returns:
+            The refusal result, or ``None`` when the request is admissible.
+
+        """
         if not self.apply_changes:
             return r[str].fail("worktree add requires --apply")
         if base.startswith("-"):
             return r[str].fail(f"invalid base commitish: {base}")
+        return None
+
+    def _admitted_base_oid(
+        self,
+        primary_root: Path,
+        branch: str,
+        base: str,
+    ) -> p.Result[str]:
+        """Verify the lane operation and admit the branch on the resolved base.
+
+        Returns:
+            The admitted base commit oid.
+
+        """
         admitted = u.Infra.git_verify_lane(
             m.Infra.GitLaneVerificationRequest(
                 repo_root=self.repository_root,
@@ -300,10 +332,7 @@ class FlextInfraWorktreeService(s[str]):
         )
         if admission.failure:
             return r[str].from_failure(admission)
-        lane = self._new_lane_path(primary_root, branch)
-        if lane.failure:
-            return r[str].from_failure(lane)
-        return self._create_lane(primary_root, lane.value, branch, base_oid.value)
+        return r[str].ok(base_oid.value)
 
     @staticmethod
     def _resolved_base(primary_root: Path, base: str) -> p.Result[str]:

@@ -150,6 +150,13 @@ class FlextInfraUtilitiesResourceLimits:
                 f"{__package__}._mypy_profile",
                 invocation.model_dump_json(),
             )
+        if invocation.report_file is not None:
+            return (
+                interpreter,
+                "-m",
+                f"{__package__}._mypy_report",
+                invocation.model_dump_json(),
+            )
         return (
             interpreter,
             "-m",

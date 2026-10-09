@@ -6,7 +6,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from pathlib import Path
+from typing import override
 
 from flext_infra import c, config, m, p, r, t, u
 from flext_infra.base import s
@@ -22,10 +23,18 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
     Each row observes only what the checkout itself publishes: its porcelain
     status, its open pull requests (an unreachable provider degrades to an
     empty list), its unmerged-vs-integration branch count, the violation
-    counts its own ``.reports`` carry, and the presence of the fleet's
+    counts explicitly selected check invocations carry, and the presence of the fleet's
     standards files. The command is read-only over every probed repository
     and writes exactly one receipt under the invoking workspace root.
     """
+
+    quality_receipts: str | None = m.Field(
+        default=None,
+        description=(
+            "Comma-separated explicit check SARIF paths; relative to repository-root. "
+            "Omitted gates are unknown; duplicate repo/gate selections fail."
+        ),
+    )
 
     @override
     def execute(self) -> p.Result[m.Infra.FleetGapsReport]:
@@ -40,12 +49,15 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
         if loaded.failure:
             return r[m.Infra.FleetGapsReport].from_failure(loaded)
         workspace = loaded.value
+        quality = self._quality_findings(root, workspace)
+        if quality.failure:
+            return r[m.Infra.FleetGapsReport].from_failure(quality)
         rows: list[m.Infra.FleetRepoGaps] = [
-            self._member_row(root, workspace, member)
+            self._member_row(root, workspace, member, quality.value)
             for member in workspace.subprojects
         ]
         rows.extend(
-            self._external_consumer_row(consumer)
+            self._external_consumer_row(consumer, quality.value)
             for consumer in workspace.external_consumers
         )
         report = m.Infra.FleetGapsReport(
@@ -68,6 +80,7 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
         root: Path,
         workspace: m.Infra.WorkspaceSpec,
         member: m.Infra.RepositoryRef,
+        quality: t.MappingKV[tuple[Path, str], int],
     ) -> m.Infra.FleetRepoGaps:
         """Probe one declared member at its composed path.
 
@@ -79,6 +92,7 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
         return self._repo_row(
             member_root,
             name=member.name,
+            quality=quality,
             declared=workspace.integration.branch
             if workspace.integration is not None
             else None,
@@ -87,6 +101,7 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
     def _external_consumer_row(
         self,
         consumer: m.Infra.ExternalConsumerSpec,
+        quality: t.MappingKV[tuple[Path, str], int],
     ) -> m.Infra.FleetRepoGaps:
         """Probe one declared external consumer at its absolute root.
 
@@ -97,6 +112,7 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
         return self._repo_row(
             consumer.root,
             name=consumer.name,
+            quality=quality,
             declared=consumer.integration_branch,
         )
 
@@ -106,11 +122,12 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
         *,
         name: str,
         declared: str | None,
+        quality: t.MappingKV[tuple[Path, str], int],
     ) -> m.Infra.FleetRepoGaps:
         """Assemble one row from the checkout's own Git, provider, and report facts.
 
-        A missing checkout degrades every probe to its empty value: the row
-        still records that a declared repository has no checkout.
+        A missing checkout retains its presence fact. Unselected or unexecuted
+        quality gates remain unknown, independently of the other hygiene probes.
 
         Returns:
             The resulting ``m.Infra.FleetRepoGaps``.
@@ -127,8 +144,8 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
             unmerged_branches=(
                 self._unmerged_branches(repo_root, declared=declared) if present else 0
             ),
-            lint_findings=self._lint_findings(repo_root),
-            pyrefly_findings=self._pyrefly_findings(repo_root),
+            lint_findings=quality.get((repo_root.resolve(), c.Infra.LINT)),
+            pyrefly_findings=quality.get((repo_root.resolve(), c.Infra.PYREFLY)),
             codemod_findings=self._codemod_findings(repo_root),
             agents_doc_present=(repo_root / c.Infra.AGENTS_DOC_FILENAME).is_file(),
             skills_stamp_present=stamp is not None,
@@ -253,51 +270,111 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
             return None
         return t.Cli.JSON_MAPPING_ADAPTER.validate_python(parsed.value)
 
-    @staticmethod
-    def _lint_findings(repo_root: Path) -> int:
-        """Read the checkout's check report lint count; absent is zero.
+    def _quality_findings(
+        self,
+        root: Path,
+        workspace: m.Infra.WorkspaceSpec,
+    ) -> p.Result[t.MappingKV[tuple[Path, str], int]]:
+        """Read only explicit native SARIF receipts, before unrelated probes.
+
+        A full-project completed lint/Pyrefly execution owns its count. Missing
+        gates and file-scoped invocations are unknown. Invalid selected evidence,
+        unrelated projects, tool errors and duplicate repo/gate selections fail.
 
         Returns:
-            The resulting ``int``.
-
+            Counts keyed by canonical checkout root and executed quality gate.
         """
-        report_path = (
-            repo_root
-            / c.Infra.REPORTS_DIR_NAME
-            / "check"
-            / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME
-        )
-        if not report_path.is_file():
-            return 0
-        found = c.Infra.LINT_REPORT_COUNT_LINE.findall(
-            report_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
-        )
-        return int(found[-1]) if found else 0
-
-    @staticmethod
-    def _pyrefly_findings(repo_root: Path) -> int:
-        """Read the checkout's pyrefly JSON report error count; absent is zero.
-
-        Returns:
-            The resulting ``int``.
-
-        """
-        report_path = (
-            repo_root
-            / c.Infra.REPORTS_DIR_NAME
-            / "check"
-            / repo_root.name
-            / f"{repo_root.name}-pyrefly.json"
-        )
-        if not report_path.is_file():
-            return 0
-        parsed = u.Cli.json_parse(
-            report_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
-        )
-        if parsed.failure or not isinstance(parsed.value, dict):
-            return 0
-        errors = parsed.value.get("errors")
-        return len(errors) if isinstance(errors, list) else 0
+        counts: dict[tuple[Path, str], int] = {}
+        if self.quality_receipts is None:
+            return r[t.MappingKV[tuple[Path, str], int]].ok(counts)
+        roots = {(root / member.path).resolve() for member in workspace.subprojects} | {
+            consumer.root.resolve() for consumer in workspace.external_consumers
+        }
+        for selected in self.quality_receipts.split(","):
+            if not selected.strip():
+                return r[t.MappingKV[tuple[Path, str], int]].fail(
+                    "quality-receipts requires nonempty explicit SARIF paths"
+                )
+            path = (root / selected.strip()).resolve()
+            try:
+                report = m.Infra.SarifReport.model_validate_json(path.read_bytes())
+            except (OSError, ValueError) as exc:
+                return r[t.MappingKV[tuple[Path, str], int]].fail(
+                    f"Invalid quality receipt {path}: {exc}", exception=exc
+                )
+            summary = report.properties
+            if (
+                summary is None
+                or len(report.runs) != 1
+                or (report.runs[0].tool_name != "flext-infra-check")
+            ):
+                return r[t.MappingKV[tuple[Path, str], int]].fail(
+                    f"Quality receipt lacks native invocation facts: {path}"
+                )
+            targets = {target.name: target.path for target in summary.targets}
+            if len(report.runs[0].results) != sum(
+                project.total_findings for project in summary.results
+            ):
+                return r[t.MappingKV[tuple[Path, str], int]].fail(
+                    f"Quality receipt findings disagree with executions: {path}"
+                )
+            if (
+                not targets
+                or len(targets) != len(summary.targets)
+                or any(
+                    not target.is_absolute() or target.resolve() not in roots
+                    for target in targets.values()
+                )
+            ):
+                return r[t.MappingKV[tuple[Path, str], int]].fail(
+                    f"Unbound or duplicate project targets in quality receipt: {path}"
+                )
+            seen: set[str] = set()
+            for project in summary.results:
+                project_root = targets.get(project.project)
+                if (
+                    project_root is None
+                    or not project_root.is_absolute()
+                    or (project_root.resolve() not in roots or project.project in seen)
+                ):
+                    return r[t.MappingKV[tuple[Path, str], int]].fail(
+                        f"Unbound or duplicate quality project {project.project}: {path}"
+                    )
+                seen.add(project.project)
+                for gate in (c.Infra.LINT, c.Infra.PYREFLY):
+                    execution = project.gates.get(gate)
+                    if execution is None:
+                        continue
+                    if execution.result.gate != gate or (
+                        execution.outcome == c.Infra.ToolOutcome.ERROR
+                        or execution.result.project != project.project
+                        or (not execution.result.passed and not execution.issues)
+                        or (
+                            execution.outcome == c.Infra.ToolOutcome.CLEAN
+                            and (execution.issues or not execution.result.passed)
+                        )
+                        or (
+                            execution.outcome == c.Infra.ToolOutcome.FINDINGS
+                            and not execution.issues
+                        )
+                        or execution.raw_receipt is None
+                        or not execution.raw_receipt.is_file()
+                        or not execution.raw_receipt.resolve().is_relative_to(
+                            path.parent
+                        )
+                    ):
+                        return r[t.MappingKV[tuple[Path, str], int]].fail(
+                            f"Invalid quality execution {project.project}/{gate}: {path}"
+                        )
+                    if summary.selected_files:
+                        continue
+                    key = (project_root.resolve(), gate)
+                    if key in counts:
+                        return r[t.MappingKV[tuple[Path, str], int]].fail(
+                            f"Ambiguous quality receipts for {project_root}/{gate}"
+                        )
+                    counts[key] = execution.finding_count
+        return r[t.MappingKV[tuple[Path, str], int]].ok(counts)
 
     @staticmethod
     def _codemod_findings(repo_root: Path) -> int:

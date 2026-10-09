@@ -189,7 +189,7 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
             raise ValueError(msg)
         receiver = cls._field_receiver(statement)
         if any(
-            receiver in cls._bound_identifiers(node)
+            receiver in cls.bound_identifiers(node)
             for body in function.body
             for node in ast.walk(body)
         ):

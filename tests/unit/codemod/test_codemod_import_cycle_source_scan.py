@@ -78,21 +78,28 @@ class TestsFlextInfraCodemodImportCycleSourceScan:
         facts = self._facts()
 
         verdict = u.Infra.codemod_context_admits(
-            project,
-            rule,
-            legado,
-            {"MODULE": {"text": "demo.live"}, "NAME": {"text": "value"}},
-            facts,
+            m.Infra.CodemodAdmission(
+                root=project,
+                rule=rule,
+                file_path=legado,
+                captures={"MODULE": {"text": "demo.live"}, "NAME": {"text": "value"}},
+                facts=facts,
+            ),
         )
 
         tm.that(verdict, eq=False)
         with pytest.raises(ValueError, match="absent from the project import graph"):
             u.Infra.codemod_context_admits(
-                project,
-                rule,
-                live,
-                {"MODULE": {"text": "demo.live"}, "NAME": {"text": "value"}},
-                facts,
+                m.Infra.CodemodAdmission(
+                    root=project,
+                    rule=rule,
+                    file_path=live,
+                    captures={
+                        "MODULE": {"text": "demo.live"},
+                        "NAME": {"text": "value"},
+                    },
+                    facts=facts,
+                ),
             )
 
     @staticmethod

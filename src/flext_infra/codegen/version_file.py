@@ -131,7 +131,7 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
         )
         published = FlextInfraMisePublication.publish_file_plan(
             planned,
-            phase="version-file",
+            phase=c.Infra.CodegenStagedFilePhase.VERSION_FILE,
         )
         if published.failure:
             return r[str].from_failure(published)

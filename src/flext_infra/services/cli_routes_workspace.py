@@ -86,13 +86,25 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                 success_message="workspace serial lifecycle validated",
             ),
             m.Cli.ResultCommandRoute(
-                name="verify-lanes",
-                help_text="Read-only lane inventory and fresh integration admission",
+                name="verify-lane",
+                help_text=(
+                    "Verify stash absence and declared live integration ancestry "
+                    "without effects"
+                ),
                 model_cls=m.Infra.GitLaneVerificationRequest,
                 handler=FlextInfraCliRouteBase.result_handler(
                     FlextInfraGitService.verify_lane,
                 ),
                 success_message="lane stash and live integration ancestry verified",
+            ),
+            m.Cli.ResultCommandRoute(
+                name="verify-lanes",
+                help_text="Read-only lane inventory, ownership census, and refusals",
+                model_cls=m.Infra.GitLaneVerificationRequest,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraGitService.verify_lanes,
+                ),
+                success_message="lane inventory verified",
             ),
             m.Cli.ResultCommandRoute(
                 name="identity",

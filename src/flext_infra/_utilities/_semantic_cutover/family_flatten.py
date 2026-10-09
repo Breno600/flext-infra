@@ -360,7 +360,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
                     or node.attr not in flatten.names
                 ):
                     continue
-                start, end = cls._expression_range(source, node)
+                start, end = cls.expression_range(source, node)
                 if any(edit.start <= start and end <= edit.end for edit in covered):
                     continue
                 scope = runtime.scope_at(module, start)

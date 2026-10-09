@@ -7,7 +7,6 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
-from collections.abc import Iterable
 from pathlib import Path
 
 from flext_infra import c, config, m, p, t
@@ -465,18 +464,19 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             module_name,
             name,
         )
-        if not isinstance(result, tuple):
+        if not isinstance(result, p.Infra.RopeRuntimeSequence):
             msg = "Rope add_import returned an invalid source and binding pair"
             raise TypeError(msg)
-        match result:
-            case (source, binding):
-                if not isinstance(source, str) or not isinstance(binding, str):
-                    msg = "Rope add_import returned non-text source or binding"
-                    raise TypeError(msg)
-                return (source, binding)
-            case _:
-                msg = "Rope add_import returned an invalid source and binding pair"
-                raise TypeError(msg)
+        pair = result
+        if not isinstance(result, tuple) or len(pair) != 2:
+            msg = "Rope add_import returned an invalid source and binding pair"
+            raise TypeError(msg)
+        source = pair[0]
+        binding = pair[1]
+        if not isinstance(source, str) or not isinstance(binding, str):
+            msg = "Rope add_import returned non-text source or binding"
+            raise TypeError(msg)
+        return (source, binding)
 
     @classmethod
     def build_string_module(
@@ -526,14 +526,16 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             resources=resources,
             in_hierarchy=in_hierarchy,
         )
-        if not isinstance(raw_locations, Iterable):
-            msg = "rope find_occurrences returned non-iterable locations"
+        if not isinstance(raw_locations, p.Infra.RopeRuntimeSequence):
+            msg = "rope find_occurrences returned non-sequence locations"
             raise TypeError(msg)
-        return tuple(
-            location
-            for location in raw_locations
-            if isinstance(location, p.Infra.RopeLocation)
-        )
+        locations: t.MutableSequenceOf[t.Infra.RopeLocation] = []
+        for location in raw_locations:
+            if not isinstance(location, p.Infra.RopeLocation):
+                msg = "rope find_occurrences returned an invalid location"
+                raise TypeError(msg)
+            locations.append(location)
+        return tuple(locations)
 
     @classmethod
     def from_import(

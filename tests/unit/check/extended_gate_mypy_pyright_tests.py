@@ -135,7 +135,10 @@ class TestsFlextInfraTypeGates:
         ])
         informative = gate in config.Infra.codegen.make.ci.informative_check_gates
         tm.that(code, eq=0 if informative else 1)
-        findings = tm.ok(u.Infra.check_report_findings(project, reports_dir=reports))
+        (report_path,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_SARIF_FILENAME}")
+        findings = tm.ok(
+            u.Infra.check_report_findings(project, reports_dir=report_path.parent),
+        )
         tm.that(findings, empty=False)
         tm.that(
             any(
@@ -450,7 +453,8 @@ class TestsFlextInfraTypeGates:
         )
 
         tm.that(results[0].gates, empty=True)
-        markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
+        (report_path,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_MARKDOWN_FILENAME}")
+        markdown = report_path.read_text(
             encoding="utf-8",
         )
         tm.that(markdown, lacks=f"- {FlextInfraPyrightGate.gate_id}:")

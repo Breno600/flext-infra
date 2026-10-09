@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping, Sequence
 from pathlib import Path
-from typing import ClassVar
+from typing import Annotated, ClassVar
 
 from flext_cli import t
 

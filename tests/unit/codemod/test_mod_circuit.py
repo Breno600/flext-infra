@@ -124,7 +124,11 @@ class TestsFlextInfraModCliRoute:
             TestsFlextInfraModCliRoute._run_mod_scan(mod_workspace, capsys)
         )
 
-        tm.that(second_exit, eq=0)
+        tm.that(
+            second_exit,
+            eq=0,
+            msg=second_console + second_evidence.model_dump_json(indent=2),
+        )
         tm.that(second_evidence.findings, eq=0)
         tm.that(second_evidence.actionable, eq=0)
         tm.that(second_evidence.detection_only, eq=0)

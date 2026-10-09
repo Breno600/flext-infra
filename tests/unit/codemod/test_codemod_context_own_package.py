@@ -63,11 +63,13 @@ class TestsFlextInfraCodemodContextOwnPackage:
 
         rule = self._private_import_rule()
         verdict = u.Infra.codemod_context_admits(
-            project,
-            rule,
-            consumer,
-            {"MOD": {"text": module}},
-            u.Infra.codemod_project_facts(project, (rule,)),
+            m.Infra.CodemodAdmission(
+                root=project,
+                rule=rule,
+                file_path=consumer,
+                captures={"MOD": {"text": module}},
+                facts=u.Infra.codemod_project_facts(project, (rule,)),
+            ),
         )
 
         tm.that(verdict, eq=admitted)
