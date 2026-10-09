@@ -20,20 +20,23 @@ class TestsFlextInfraLintRecipes:
 
     @staticmethod
     @pytest.mark.parametrize(
-        "recipe",
+        "code",
         [
-            c.Infra.LintFixRecipe.NORMALIZE_IMPORTS,
-            c.Infra.LintFixRecipe.WRAP_LONG_LINE,
+            code
+            for code, recipe in (
+                config.Infra.tooling.tools.ruff.lint.fix_recipes.items()
+            )
+            if recipe
+            in {
+                c.Infra.LintFixRecipe.NORMALIZE_IMPORTS,
+                c.Infra.LintFixRecipe.WRAP_LONG_LINE,
+            }
         ],
     )
     def test_gate_owned_recipe_requires_its_runtime_owner(
-        recipe: c.Infra.LintFixRecipe,
+        code: str,
     ) -> None:
         """Reject a whole-module recipe instead of silently returning its input."""
-        recipes = config.Infra.tooling.tools.ruff.lint.fix_recipes
-        code = next(
-            code for code, configured in recipes.items() if configured is recipe
-        )
         with pytest.raises(ValueError, match="requires the Ruff lint gate"):
             TestsFlextInfraLintRecipes._apply(
                 "import os\n",

@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import FlextInfraRuffLintGate, config
 from tests import c, m, u
 
 if TYPE_CHECKING:
@@ -106,36 +106,39 @@ class TestsFlextInfraCodegenMakeLintFixSafety:
         pyproject = u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME)
         config_file = root / c.PYPROJECT_FILENAME
         config_file.write_text(pyproject, encoding="utf-8")
-        module = root / "native_descriptors.py"
+        module = root / c.Infra.DEFAULT_SRC_DIR / "native_descriptors.py"
+        module.parent.mkdir()
+        properties = "".join(
+            "    @property\n"
+            f"    def {name}(self) -> "
+            f"{'tuple[type, ...]' if name == '__bases__' else 'type | None'}: ...\n"
+            for name in (
+                config.Infra.tooling.tools.ruff.lint.pylint.allow_dunder_method_names
+            )
+        )
         module.write_text(
             "from typing import Protocol\n\n"
             "class NativeType(Protocol):\n"
-            "    @property\n"
-            "    def __base__(self) -> type | None: ...\n"
-            "    @property\n"
-            "    def __bases__(self) -> tuple[type, ...]: ...\n"
+            f"{properties}"
             "    @property\n"
             "    def __basse__(self) -> type | None: ...\n",
             encoding="utf-8",
         )
-        checked = u.Cli.run_raw(
-            [
-                "ruff",
-                "check",
-                "--no-fix",
-                "--preview",
-                "--select",
-                "PLW3201",
-                "--config",
-                str(config_file),
-                str(module),
-            ],
-            cwd=root,
-        ).unwrap()
+        checked = FlextInfraRuffLintGate(root).check(
+            root,
+            m.Infra.GateContext(
+                repository_root=root,
+                reports_dir=root,
+                ruff_args=(
+                    "--select",
+                    "bad-dunder-method-name",
+                    "--config",
+                    str(config_file),
+                ),
+            ),
+        )
 
-        tm.that(checked.outcome.raw_return_code, eq=1)
-        tm.that(checked.stdout, has="__basse__")
-        for (
-            name
-        ) in config.Infra.tooling.tools.ruff.lint.pylint.allow_dunder_method_names:
-            tm.that(checked.stdout, lacks=name)
+        tm.that(checked.result.passed, eq=False)
+        tm.that(len(checked.issues), eq=1)
+        tm.that(checked.issues[0].code, eq="bad-dunder-method-name")
+        tm.that(checked.issues[0].message, has="__basse__")
