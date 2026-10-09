@@ -10,23 +10,22 @@ from pathlib import Path
 from typing import Self, override
 
 from flext_infra import c, config, m, p, r, t, u
-from flext_infra.codegen import (
-    FlextInfraCodegenLazyInit,
-    FlextInfraCodegenMiseArtifacts,
-    FlextInfraCodegenTransaction,
+from flext_infra.codegen import FlextInfraCodegenTransaction
+from flext_infra.codegen._conform.execute_directed import (
+    FlextInfraCodegenConformExecuteDirected,
 )
-from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
-from flext_infra.workspace import FlextInfraWorkspaceDetector
+from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
+from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 
 
-class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
+class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteDirected):
     """Transactional execution of conformance plans.
 
     The chain is linear in dependency order, so execution statically inherits
     everything it calls: bootstrap (service root, request state) <- gitignore
     <- docs ownership <- beads routes <- file plans <- pyproject policy <-
     context render <- artifact render <- existing plan <- scaffold plan <- plan
-    <- execute.
+    <- execute scaffold <- directed file publication <- execute.
     """
 
     @classmethod
@@ -49,104 +48,18 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         root = request.root.expanduser().resolve()
         bootstrap: t.VariadicTuple[m.Cli.AtomicDirectoryState] = ()
         initialized_git = False
-        if initial_workspace is not None and not (root / c.PYPROJECT_FILENAME).exists():
-            source = u.Infra.flext_integration_line(
-                codegen=config.Infra.codegen,
-                repository_root=root,
-                bootstrap_source=initial_workspace.flext_source,
-            )
-            if source.failure:
-                return r[m.Infra.CodegenResult].from_failure(source)
-            # The project's declared scaffold source is validated before any
-            # filesystem effect: a silent acceptance would materialize a whole
-            # tree whose declared provenance was never a direct Git
-            # requirement, and the declaration is the scaffold's provenance
-            # input, not decoration.
-            declared = (
-                initial_workspace.project.flext_source
-                if initial_workspace.project is not None
-                else None
-            )
-            if declared is not None:
-                distribution = config.Infra.codegen.infra_repository.distribution
-                if u.Infra.dep_name(declared) != distribution:
-                    return r[m.Infra.CodegenResult].fail(
-                        f"scaffold source must declare {distribution}: {declared}",
-                    )
-                parsed = u.Infra.declared_git_source(declared)
-                if parsed.failure:
-                    return r[m.Infra.CodegenResult].from_failure(parsed)
-                requirement_url, requirement_ref = parsed.value
-                if (
-                    not requirement_url.startswith("https://")
-                    or not requirement_ref
-                    or u.Infra.ref_is_commit(requirement_ref)
-                ):
-                    return r[m.Infra.CodegenResult].fail(
-                        "infrastructure source must declare an HTTPS Git URL "
-                        f"and integration line (never a commit): {declared}",
-                    )
-        # The supplied WorkspaceSpec already owns the declared integration branch.
-        # Require it before materialization instead of a second divergent input.
-        if (
-            initial_workspace is not None
-            and not (root / c.Infra.GIT_DIR).exists()
-            and initial_workspace.integration is None
-        ):
-            return r[m.Infra.CodegenResult].fail(
-                "initial integration is required to initialize repository Git: "
-                "declare --repository-branch",
-            )
+        prelude = cls._validated_request_prelude(root, initial_workspace)
+        if prelude.failure:
+            return r[m.Infra.CodegenResult].from_failure(prelude)
         if initial_workspace is not None and not root.is_dir():
-            planned = u.Cli.atomic_plan_directory_chain(root)
-            if planned.failure:
-                return r[m.Infra.CodegenResult].from_failure(planned)
-            created = u.Cli.atomic_create_directory_chain_guarded(
-                planned.value,
-                permission_mode=0o755,
-            )
+            created = cls._bootstrap_request_root(root)
             if created.failure:
                 return r[m.Infra.CodegenResult].from_failure(created)
             bootstrap = tuple(created.value)
         if initial_workspace is not None and not (root / c.Infra.GIT_DIR).exists():
-            # Git owns no answer for an unborn repository: the caller declares
-            # the integration branch and a missing declaration fails loudly.
-            if initial_workspace.integration is None:
-                return r[m.Infra.CodegenResult].fail(
-                    "initial branch is required to initialize the repository "
-                    "Git: declare --repository-branch",
-                )
-            initialized = u.Cli.run_checked([
-                c.Infra.GIT,
-                "init",
-                "--initial-branch",
-                initial_workspace.integration.branch,
-                str(root),
-            ])
+            initialized = cls._initialize_request_git(root, initial_workspace)
             if initialized.failure:
                 return r[m.Infra.CodegenResult].from_failure(initialized)
-            remote = u.Cli.run_checked([
-                c.Infra.GIT,
-                "-C",
-                str(root),
-                "remote",
-                "add",
-                c.Infra.GIT_DEFAULT_REMOTE,
-                initial_workspace.repository.url,
-            ])
-            if remote.failure:
-                return r[m.Infra.CodegenResult].from_failure(remote)
-            committed = u.Cli.run_checked([
-                c.Infra.GIT,
-                "-C",
-                str(root),
-                "commit",
-                "--allow-empty",
-                "-m",
-                "chore: initialize generated project",
-            ])
-            if committed.failure:
-                return r[m.Infra.CodegenResult].from_failure(committed)
             initialized_git = True
         service = cls(
             repository_root=root,
@@ -178,6 +91,166 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 f"scaffold bootstrap rollback failed: {rollback.error}",
             )
         return result
+
+    @staticmethod
+    def _validated_request_prelude(
+        root: Path,
+        initial_workspace: m.Infra.WorkspaceSpec | None,
+    ) -> p.Result[bool]:
+        """Validate the scaffold provenance and the declared integration branch.
+
+        The project's declared scaffold source is validated before any
+        filesystem effect: a silent acceptance would materialize a whole tree
+        whose declared provenance was never a direct Git requirement, and the
+        declaration is the scaffold's provenance input, not decoration. The
+        supplied WorkspaceSpec already owns the declared integration branch;
+        require it before materialization instead of a second divergent input.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        if initial_workspace is None:
+            return r[bool].ok(value=True)
+        if not (root / c.PYPROJECT_FILENAME).exists():
+            source = FlextInfraCodegenConformExecute._validated_scaffold_source(
+                root,
+                initial_workspace,
+            )
+            if source.failure:
+                return r[bool].from_failure(source)
+        if (
+            not (root / c.Infra.GIT_DIR).exists()
+            and initial_workspace.integration is None
+        ):
+            return r[bool].fail(
+                "initial integration is required to initialize repository Git: "
+                "declare --repository-branch",
+            )
+        return r[bool].ok(value=True)
+
+    @staticmethod
+    def _validated_scaffold_source(
+        root: Path,
+        initial_workspace: m.Infra.WorkspaceSpec,
+    ) -> p.Result[bool]:
+        """Validate the declared scaffold provenance before any filesystem effect.
+
+        A silent acceptance would materialize a whole tree whose declared
+        provenance was never a direct Git requirement, and the declaration is
+        the scaffold's provenance input, not decoration.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        source = u.Infra.flext_integration_line(
+            codegen=config.Infra.codegen,
+            repository_root=root,
+            bootstrap_source=initial_workspace.flext_source,
+        )
+        if source.failure:
+            return r[bool].from_failure(source)
+        declared = (
+            initial_workspace.project.flext_source
+            if initial_workspace.project is not None
+            else None
+        )
+        if declared is None:
+            return r[bool].ok(value=True)
+        distribution = config.Infra.codegen.infra_repository.distribution
+        if u.Infra.dep_name(declared) != distribution:
+            return r[bool].fail(
+                f"scaffold source must declare {distribution}: {declared}",
+            )
+        parsed = u.Infra.declared_git_source(declared)
+        if parsed.failure:
+            return r[bool].from_failure(parsed)
+        requirement_url, requirement_ref = parsed.value
+        if (
+            not requirement_url.startswith("https://")
+            or not requirement_ref
+            or u.Infra.ref_is_commit(requirement_ref)
+        ):
+            return r[bool].fail(
+                "infrastructure source must declare an HTTPS Git URL "
+                f"and integration line (never a commit): {declared}",
+            )
+        return r[bool].ok(value=True)
+
+    @staticmethod
+    def _bootstrap_request_root(
+        root: Path,
+    ) -> p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]:
+        """Plan and create the guarded root directory chain for a new project.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]
+            ``.
+
+        """
+        planned = u.Cli.atomic_plan_directory_chain(root)
+        if planned.failure:
+            return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].from_failure(planned)
+        created = u.Cli.atomic_create_directory_chain_guarded(
+            planned.value,
+            permission_mode=0o755,
+        )
+        if created.failure:
+            return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].from_failure(created)
+        return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].ok(tuple(created.value))
+
+    @staticmethod
+    def _initialize_request_git(
+        root: Path,
+        initial_workspace: m.Infra.WorkspaceSpec,
+    ) -> p.Result[bool]:
+        """Initialize the unborn repository Git from its declared integration.
+
+        Git owns no answer for an unborn repository: the caller declares the
+        integration branch and a missing declaration fails loudly.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        if initial_workspace.integration is None:
+            return r[bool].fail(
+                "initial branch is required to initialize the repository "
+                "Git: declare --repository-branch",
+            )
+        initialized = u.Cli.run_checked([
+            c.Infra.GIT,
+            "init",
+            "--initial-branch",
+            initial_workspace.integration.branch,
+            str(root),
+        ])
+        if initialized.failure:
+            return r[bool].from_failure(initialized)
+        remote = u.Cli.run_checked([
+            c.Infra.GIT,
+            "-C",
+            str(root),
+            "remote",
+            "add",
+            c.Infra.GIT_DEFAULT_REMOTE,
+            initial_workspace.repository.url,
+        ])
+        if remote.failure:
+            return r[bool].from_failure(remote)
+        committed = u.Cli.run_checked([
+            c.Infra.GIT,
+            "-C",
+            str(root),
+            "commit",
+            "--allow-empty",
+            "-m",
+            "chore: initialize generated project",
+        ])
+        if committed.failure:
+            return r[bool].from_failure(committed)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _rollback_request_bootstrap(
@@ -214,13 +287,32 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             root=self.repository_root,
         )
         surface = c.Infra.CodegenConformSurface(request.what)
+        if surface in {
+            c.Infra.CodegenConformSurface.LAZY_INIT,
+            c.Infra.CodegenConformSurface.FACADES,
+        }:
+            return self._execute_lazy_init(request)
         if surface is c.Infra.CodegenConformSurface.ALL:
             return self._execute_managed(request)
+        if (
+            surface is c.Infra.CodegenConformSurface.MISE_CONFIG
+            and c.Infra.CodegenConformMode(request.mode)
+            is c.Infra.CodegenConformMode.CHECK
+        ):
+            transaction = FlextInfraCodegenTransaction(
+                FlextInfraCodegenMiseArtifacts(repository_root=request.root),
+            )
+            return transaction.run_files_locked(
+                {"@bootstrap-0": request.root.expanduser().resolve()},
+                lambda _scope_root: self._execute_plan(request),
+                prepare=False,
+            )
         if c.Infra.CodegenConformMode(request.mode) is c.Infra.CodegenConformMode.APPLY:
             if surface in {
                 c.Infra.CodegenConformSurface.MAKEFILE,
                 c.Infra.CodegenConformSurface.DOCS_CONFIG,
                 c.Infra.CodegenConformSurface.PYPROJECT,
+                c.Infra.CodegenConformSurface.MISE_CONFIG,
             }:
                 return self._execute_plan(request)
             mise_owner = FlextInfraCodegenMiseArtifacts(repository_root=request.root)
@@ -258,12 +350,19 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             if changed:
                 paths = ", ".join(str(file.path) for file in changed)
                 return r[m.Infra.CodegenResult].fail(f"codegen drift detected: {paths}")
+            if request.what == c.Infra.CodegenConformSurface.MISE_CONFIG:
+                checked = FlextInfraCodegenMiseArtifacts.validate_config_file(
+                    request.root / c.Infra.MISE_TOML_FILENAME,
+                )
+                if checked.failure:
+                    return r[m.Infra.CodegenResult].from_failure(checked)
             return r[m.Infra.CodegenResult].ok(m.Infra.CodegenResult(plan=plan))
         surface = c.Infra.CodegenConformSurface(request.what)
         if surface not in {
             c.Infra.CodegenConformSurface.MAKEFILE,
             c.Infra.CodegenConformSurface.DOCS_CONFIG,
             c.Infra.CodegenConformSurface.PYPROJECT,
+            c.Infra.CodegenConformSurface.MISE_CONFIG,
         }:
             return r[m.Infra.CodegenResult].fail(
                 "partial codegen apply is prohibited; use the complete all surface",
@@ -298,17 +397,54 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         if planned.failure:
             return r[m.Infra.CodegenResult].from_failure(planned)
         plan = planned.value
+        written = self._publish_bootstrap_phase(
+            request,
+            plan,
+            transaction,
+            roots,
+            scope_root,
+        )
+        if written.failure:
+            return r[m.Infra.CodegenResult].from_failure(written)
+        verified = self.plan(request)
+        if verified.failure:
+            return r[m.Infra.CodegenResult].from_failure(verified)
+        fixed_point = u.Infra.codegen_fixed_point(
+            verified.value.files,
+            subject="Makefile bootstrap",
+        )
+        if fixed_point.failure:
+            return r[m.Infra.CodegenResult].from_failure(fixed_point)
+        return r[m.Infra.CodegenResult].ok(
+            m.Infra.CodegenResult(plan=verified.value, written_files=written.value),
+        )
+
+    def _publish_bootstrap_phase(
+        self,
+        request: m.Infra.CodegenConformRequest,
+        plan: m.Infra.CodegenPlan,
+        transaction: FlextInfraCodegenTransaction,
+        roots: t.MappingKV[str, Path],
+        scope_root: Path,
+    ) -> p.Result[t.VariadicTuple[Path]]:
+        """Authorize the surface contract, then publish its changed files.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]`` with the written
+            bootstrap files.
+
+        """
         surface = c.Infra.CodegenConformSurface(request.what)
         destinations = self.surface_contract(surface).destinations
         if not destinations:
-            return r[m.Infra.CodegenResult].fail(
+            return r[t.VariadicTuple[Path]].fail(
                 f"bootstrap requires declared destinations for {surface}",
             )
         expected_paths = {
             request.root.expanduser().resolve() / path for path in destinations
         }
         if {file.path for file in plan.files} != expected_paths:
-            return r[m.Infra.CodegenResult].fail(
+            return r[t.VariadicTuple[Path]].fail(
                 f"bootstrap plan does not own the declared destinations for {surface}",
             )
         changed = tuple(
@@ -318,50 +454,64 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             file.desired_content is None or file.desired_mode is None
             for file in changed
         ):
-            return r[m.Infra.CodegenResult].fail(
+            return r[t.VariadicTuple[Path]].fail(
                 f"bootstrap cannot delete a declared destination for {surface}",
             )
-        written: t.VariadicTuple[Path] = ()
-        if changed:
-            inputs = {
-                state.path: state for file in plan.files for state in file.source_states
-            }
-            analysis = m.Infra.CodegenPhaseAnalysis(
-                phase="conform-bootstrap",
-                files=plan.files,
-                inputs=tuple(inputs.values()),
-            )
-            published = transaction.publish_file_phase_locked(
-                scope_root,
-                roots,
-                analysis,
-                tuple(
+        if not changed:
+            if surface is c.Infra.CodegenConformSurface.MISE_CONFIG:
+                checked = self._verify_bootstrap(request)
+                if checked.failure:
+                    return r[t.VariadicTuple[Path]].from_failure(checked)
+            return r[t.VariadicTuple[Path]].ok(())
+        inputs = {
+            state.path: state for file in plan.files for state in file.source_states
+        }
+        analysis = m.Infra.CodegenPhaseAnalysis(
+            phase=c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
+            files=plan.files,
+            inputs=tuple(inputs.values()),
+        )
+        return transaction.publish_file_phase_locked(
+            scope_root,
+            roots,
+            analysis,
+            m.Infra.CodegenPhasePublicationPolicy(
+                directories=tuple(
                     sorted({
                         file.path.parent
                         for file in changed
                         if not file.path.parent.is_dir()
                     }),
                 ),
-                lambda: self._verify_bootstrap(request),
-            )
-            if published.failure:
-                return r[m.Infra.CodegenResult].from_failure(published)
-            written = published.value
-        verified = self.plan(request)
-        if verified.failure:
-            return r[m.Infra.CodegenResult].from_failure(verified)
-        residual = tuple(
-            file
-            for file in verified.value.files
-            if u.Infra.codegen_file_requires_effect(file)
+                validator=lambda: self._verify_bootstrap(request),
+            ),
+            staged_validator=(
+                self._validate_mise_stage
+                if surface is c.Infra.CodegenConformSurface.MISE_CONFIG
+                else None
+            ),
         )
-        if residual:
-            return r[m.Infra.CodegenResult].fail(
-                f"Makefile bootstrap did not reach a fixed point: {residual[0].path}",
-            )
-        return r[m.Infra.CodegenResult].ok(
-            m.Infra.CodegenResult(plan=verified.value, written_files=written),
+
+    @staticmethod
+    def _validate_mise_stage(
+        session: m.Infra.CodegenTransactionSession,
+        publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
+    ) -> p.Result[m.Infra.CodegenTransactionSession]:
+        """Reject invalid staged TOML before the journal publishes its replacement.
+
+        Returns:
+            The unchanged session or the exact declaration failure.
+        """
+        result_type = r[m.Infra.CodegenTransactionSession]
+        if len(publications) != 1 or publications[0].replacement is None:
+            return result_type.fail("mise-config requires one staged replacement")
+        checked = FlextInfraCodegenMiseArtifacts.validate_config_file(
+            publications[0].replacement.path,
         )
+        if checked.failure:
+            return result_type.from_failure(checked)
+        u.Cli.info("stage=mise-config-staged-validation files=1 installs=0")
+        return result_type.ok(session)
 
     def _verify_bootstrap(
         self,
@@ -375,16 +525,13 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         planned = self.plan(request)
         if planned.failure:
             return r[bool].from_failure(planned)
-        residual = tuple(
-            file
-            for file in planned.value.files
-            if u.Infra.codegen_file_requires_effect(file)
-        )
-        if residual:
-            return r[bool].fail(
-                f"bootstrap did not reach a fixed point: {residual[0].path}",
+        if request.what == c.Infra.CodegenConformSurface.MISE_CONFIG:
+            checked = FlextInfraCodegenMiseArtifacts.validate_config_file(
+                request.root / c.Infra.MISE_TOML_FILENAME,
             )
-        return r[bool].ok(value=True)
+            if checked.failure:
+                return checked
+        return u.Infra.codegen_fixed_point(planned.value.files, subject="bootstrap")
 
     def _execute_managed(
         self,
@@ -403,8 +550,14 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 "ports; run it through FlextInfra.codegen_conform",
             )
         mode = c.Infra.CodegenConformMode(request.mode)
+        policy = ports.participant_policy(request.root)
+        if policy.failure:
+            return r[m.Infra.CodegenResult].from_failure(policy)
         mise_owner = FlextInfraCodegenMiseArtifacts(repository_root=request.root)
-        transaction = FlextInfraCodegenTransaction(mise_owner)
+        transaction = FlextInfraCodegenTransaction(
+            mise_owner,
+            participant_policy=policy.value,
+        )
         return transaction.run_locked(
             prepare=mode is c.Infra.CodegenConformMode.APPLY,
             operation=lambda scope_root: self._execute_managed_locked(
@@ -496,7 +649,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 inputs[state.path] = state
         return r[m.Infra.CodegenPhaseAnalysis].ok(
             m.Infra.CodegenPhaseAnalysis(
-                phase=c.Infra.CodegenStagedFilePhase.LAZY_INIT,
+                phase="lazy-init",
                 files=tuple(files),
                 inputs=tuple(inputs[path] for path in sorted(inputs)),
                 publications=tuple(publications),
@@ -525,72 +678,18 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         if planned.failure:
             return r[m.Infra.CodegenResult].from_failure(planned)
         plan = planned.value
-        # Why (X-47): DECLARED scope excludes the workspace root repository
-        # from `plan.repositories`; docs generation must not render the root
-        # as an output scope either, or its report_dir escapes the transaction
-        # layout that already excludes root for that same scope. Root guides
-        # remain readable sources for members regardless of this flag.
-        docs_include_root = any(
-            repository.name == plan.workspace.repository.name
-            for repository in plan.repositories
-        )
         config_plans = self.mise_config_plans(plan)
         if config_plans.failure:
             return r[m.Infra.CodegenResult].from_failure(config_plans)
-        changed = tuple(
-            file for file in plan.files if u.Infra.codegen_file_requires_effect(file)
-        )
         mode = c.Infra.CodegenConformMode(request.mode)
         if mode is c.Infra.CodegenConformMode.CHECK:
-            routes = self.conform_workspace_beads_routes(request)
-            if routes.failure:
-                return r[m.Infra.CodegenResult].from_failure(routes)
-            reality = transaction.validate_locked(scope_root, config_plans.value)
-            if reality.failure:
-                return r[m.Infra.CodegenResult].from_failure(reality)
-            if changed:
-                paths = ", ".join(str(file.path) for file in changed)
-                report = u.Infra.codegen_file_drift_report(changed)
-                return r[m.Infra.CodegenResult].fail(
-                    f"codegen drift detected: {paths}\n{report}",
-                )
-            lazy_analysis = self._lazy_phase(request, plan)
-            if lazy_analysis.failure:
-                return r[m.Infra.CodegenResult].from_failure(lazy_analysis)
-            lazy_changed = tuple(
-                file
-                for file in lazy_analysis.value.files
-                if u.Infra.codegen_file_requires_effect(file)
+            return self._execute_managed_check(
+                request,
+                transaction,
+                scope_root,
+                plan,
+                ports,
             )
-            if lazy_changed:
-                paths = ", ".join(str(file.path) for file in lazy_changed)
-                report = u.Infra.codegen_file_drift_report(lazy_changed)
-                return r[m.Infra.CodegenResult].fail(
-                    f"lazy-init drift detected: {paths}\n{report}",
-                )
-            docs_generator = ports.docs_planner(
-                repository_root=request.root,
-                projects=tuple(repository.name for repository in plan.repositories),
-                include_root=docs_include_root,
-            )
-            docs_bundle = docs_generator.prepare_bundle()
-            if docs_bundle.failure:
-                return r[m.Infra.CodegenResult].from_failure(docs_bundle)
-            docs_plans = docs_generator.plan_files(docs_bundle.value)
-            if docs_plans.failure:
-                return r[m.Infra.CodegenResult].from_failure(docs_plans)
-            docs_changed = tuple(
-                file
-                for file in self.owned_docs_files(request, docs_plans.value)
-                if u.Infra.codegen_file_requires_effect(file)
-            )
-            if docs_changed:
-                paths = ", ".join(str(file.path) for file in docs_changed)
-                report = u.Infra.codegen_file_drift_report(docs_changed)
-                return r[m.Infra.CodegenResult].fail(
-                    f"docs drift detected: {paths}\n{report}",
-                )
-            return r[m.Infra.CodegenResult].ok(m.Infra.CodegenResult(plan=plan))
         session = transaction.begin_locked(scope_root, config_plans.value, plan.files)
         if session.failure:
             return r[m.Infra.CodegenResult].from_failure(session)
@@ -599,19 +698,123 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             lambda current: self._publish_managed_locked(
                 request,
                 plan,
-                docs_include_root=docs_include_root,
                 transaction=transaction,
                 session=current,
                 ports=ports,
             ),
         )
 
+    def _execute_managed_check(
+        self,
+        request: m.Infra.CodegenConformRequest,
+        transaction: FlextInfraCodegenTransaction,
+        scope_root: Path,
+        plan: m.Infra.CodegenPlan,
+        ports: m.Infra.CodegenConformPorts,
+    ) -> p.Result[m.Infra.CodegenResult]:
+        """Prove the conform, lazy-init, and docs surfaces drift-free in check mode.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
+        config_plans = self.mise_config_plans(plan)
+        if config_plans.failure:
+            return r[m.Infra.CodegenResult].from_failure(config_plans)
+        static = self._check_codegen_and_lazy_drift(
+            request,
+            plan,
+            transaction,
+            scope_root,
+            config_plans.value,
+        )
+        if static.failure:
+            return r[m.Infra.CodegenResult].from_failure(static)
+        return self._check_docs_drift(request, plan, ports)
+
+    def _check_codegen_and_lazy_drift(
+        self,
+        request: m.Infra.CodegenConformRequest,
+        plan: m.Infra.CodegenPlan,
+        transaction: FlextInfraCodegenTransaction,
+        scope_root: Path,
+        config_plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
+    ) -> p.Result[bool]:
+        """Run the workspace routes, the locked reality check, and both drifts.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        routes = self.conform_workspace_beads_routes(request)
+        if routes.failure:
+            return r[bool].from_failure(routes)
+        reality = transaction.validate_locked(scope_root, config_plans)
+        if reality.failure:
+            return r[bool].from_failure(reality)
+        changed = tuple(
+            file for file in plan.files if u.Infra.codegen_file_requires_effect(file)
+        )
+        if (drift := self._drift_message(changed, "codegen")) is not None:
+            return r[bool].fail(drift)
+        lazy_analysis = self._lazy_phase(request, plan)
+        if lazy_analysis.failure:
+            return r[bool].from_failure(lazy_analysis)
+        lazy_changed = tuple(
+            file
+            for file in lazy_analysis.value.files
+            if u.Infra.codegen_file_requires_effect(file)
+        )
+        if (lazy_drift := self._drift_message(lazy_changed, "lazy-init")) is not None:
+            return r[bool].fail(lazy_drift)
+        return r[bool].ok(value=True)
+
+    def _check_docs_drift(
+        self,
+        request: m.Infra.CodegenConformRequest,
+        plan: m.Infra.CodegenPlan,
+        ports: m.Infra.CodegenConformPorts,
+    ) -> p.Result[m.Infra.CodegenResult]:
+        """Plan and drift-check the docs surface, then report the fixed point.
+
+        Why (X-47): DECLARED scope excludes the workspace root repository
+        from ``plan.repositories``; docs generation must not render the root
+        as an output scope either, or its report_dir escapes the transaction
+        layout that already excludes root for that same scope. Root guides
+        remain readable sources for members regardless of this flag.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
+        docs_include_root = any(
+            repository.name == plan.workspace.repository.name
+            for repository in plan.repositories
+        )
+        docs_generator = ports.docs_planner(
+            repository_root=request.root,
+            projects=tuple(repository.name for repository in plan.repositories),
+            include_root=docs_include_root,
+        )
+        docs_bundle = docs_generator.prepare_bundle()
+        if docs_bundle.failure:
+            return r[m.Infra.CodegenResult].from_failure(docs_bundle)
+        docs_plans = docs_generator.plan_files(docs_bundle.value)
+        if docs_plans.failure:
+            return r[m.Infra.CodegenResult].from_failure(docs_plans)
+        docs_changed = tuple(
+            file
+            for file in self.owned_docs_files(request, docs_plans.value)
+            if u.Infra.codegen_file_requires_effect(file)
+        )
+        if (docs_drift := self._drift_message(docs_changed, "docs")) is not None:
+            return r[m.Infra.CodegenResult].fail(docs_drift)
+        return r[m.Infra.CodegenResult].ok(m.Infra.CodegenResult(plan=plan))
+
     def _publish_managed_locked(
         self,
         request: m.Infra.CodegenConformRequest,
         plan: m.Infra.CodegenPlan,
-        *,
-        docs_include_root: bool,
         transaction: FlextInfraCodegenTransaction,
         session: m.Infra.CodegenTransactionSession,
         ports: m.Infra.CodegenConformPorts,
@@ -622,80 +825,20 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
-        lazy_analysis = self._lazy_phase(request, plan)
-        if lazy_analysis.failure:
-            aborted = transaction.abort_locked(
-                session,
-                lazy_analysis.error or "lazy-init planning failed",
-            )
-            return r[m.Infra.CodegenResult].from_failure(aborted)
-        # A path already planned by conform has exactly one publication owner
-        # in the transaction: the lazy-init phase keeps only the paths conform
-        # does not plan, and that same filtered receipt is published and
-        # verified at the fixed point.
-        conform_paths = frozenset(file.path for file in plan.files)
-        owned_lazy_analysis = m.Infra.CodegenPhaseAnalysis(
-            phase=lazy_analysis.value.phase,
-            files=tuple(
-                file
-                for file in lazy_analysis.value.files
-                if file.path not in conform_paths
-            ),
-            inputs=lazy_analysis.value.inputs,
-            publications=lazy_analysis.value.publications,
-        )
-        extended = transaction.append_phase_locked(
-            session,
-            owned_lazy_analysis.phase,
-            owned_lazy_analysis.files,
-        )
-        if extended.failure:
-            return r[m.Infra.CodegenResult].from_failure(extended)
-        docs_generator = ports.docs_planner(
-            repository_root=request.root,
-            projects=tuple(repository.name for repository in plan.repositories),
-            include_root=docs_include_root,
-        )
-        docs_bundle = docs_generator.prepare_bundle()
-        if docs_bundle.failure:
-            return r[m.Infra.CodegenResult].from_failure(docs_bundle)
-        docs_directories = docs_generator.required_directories(docs_bundle.value)
-        if docs_directories.failure:
-            return r[m.Infra.CodegenResult].from_failure(docs_directories)
-        owned_docs_directories = self._owned_docs_directories(
-            request,
-            plan,
-            docs_directories.value,
-        )
-        with_directories = transaction.append_directories_locked(
-            extended.value,
-            "docs",
-            owned_docs_directories,
-        )
-        if with_directories.failure:
-            return r[m.Infra.CodegenResult].from_failure(with_directories)
-        docs_plans = docs_generator.plan_files(docs_bundle.value)
-        if docs_plans.failure:
-            return r[m.Infra.CodegenResult].from_failure(docs_plans)
-        owned_docs_files = self.owned_docs_files(request, docs_plans.value)
-        docs_analysis = m.Infra.CodegenPhaseAnalysis(
-            phase=c.Infra.CodegenStagedFilePhase.DOCS,
-            files=owned_docs_files,
-            inputs=docs_bundle.value.source_states,
-        )
-        with_docs = transaction.append_phase_locked(
-            with_directories.value,
-            "docs",
-            owned_docs_files,
-        )
-        if with_docs.failure:
-            return r[m.Infra.CodegenResult].from_failure(with_docs)
+        lazy = self._append_lazy_phase(request, plan, transaction, session)
+        if lazy.failure:
+            return r[m.Infra.CodegenResult].from_failure(lazy)
+        session, owned_lazy_analysis = lazy.value
+        docs = self._append_docs_phase(request, plan, transaction, session, ports)
+        if docs.failure:
+            return r[m.Infra.CodegenResult].from_failure(docs)
+        with_docs, docs_analysis = docs.value
         verified_plan: list[m.Infra.CodegenPlan] = []
         published = transaction.commit_locked(
-            with_docs.value,
+            with_docs,
             lambda: self._validate_managed_fixed_point(
                 request,
-                with_docs.value,
+                with_docs,
                 owned_lazy_analysis,
                 docs_analysis,
                 verified_plan,
@@ -713,108 +856,127 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             m.Infra.CodegenResult(plan=verified_plan[0], written_files=published.value),
         )
 
-    def _prepare_scaffold_directories(
+    def _append_lazy_phase(
         self,
         request: m.Infra.CodegenConformRequest,
-    ) -> p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]:
-        """Create config-declared scaffold parent chains under the generation lock.
+        plan: m.Infra.CodegenPlan,
+        transaction: FlextInfraCodegenTransaction,
+        session: m.Infra.CodegenTransactionSession,
+    ) -> p.Result[
+        t.Pair[m.Infra.CodegenTransactionSession, m.Infra.CodegenPhaseAnalysis]
+    ]:
+        """Plan and append the lazy-init phase owned by this transaction.
+
+        A path already planned by conform has exactly one publication owner
+        in the transaction: the lazy-init phase keeps only the paths conform
+        does not plan, and that same filtered receipt is published and
+        verified at the fixed point.
 
         Returns:
-            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]``.
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenTransactionSession,
+                m.Infra.CodegenPhaseAnalysis]]``.
 
         """
-        if (
-            c.Infra.CodegenConformMode(request.mode)
-            is not c.Infra.CodegenConformMode.APPLY
-        ):
-            return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].ok(())
-        scaffolding = self.initial_workspace
-        workspace = scaffolding
-        if workspace is None:
-            workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(
-                request.root.expanduser().resolve(),
+        result_type = r[
+            t.Pair[m.Infra.CodegenTransactionSession, m.Infra.CodegenPhaseAnalysis]
+        ]
+        lazy_analysis = self._lazy_phase(request, plan)
+        if lazy_analysis.failure:
+            aborted = transaction.abort_locked(
+                session,
+                lazy_analysis.error or "lazy-init planning failed",
             )
-            if workspace_result.failure:
-                return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].from_failure(
-                    workspace_result,
-                )
-            workspace = workspace_result.value
-        project = workspace.project
-        if project is None:
-            # Scaffolding a new project requires its declared metadata, and that
-            # path supplies the workspace explicitly. Conforming a repository
-            # that declares no project block has no scaffold chain to create —
-            # nothing to do is not invalid input, and treating it as an error
-            # made `make gen` unusable in every repository without its
-            # own manifest.
-            if scaffolding is not None:
-                return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].fail(
-                    "scaffold workspace has no project metadata",
-                )
-            return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].ok(())
-        profile = workspace.repository.role
-        root = request.root.expanduser().resolve()
-        directories = {root, root / c.Infra.MISE_LAUNCHER_DIRECTORY}
-        for entry in config.Infra.codegen.templates.entries:
-            if profile not in entry.profiles:
-                continue
-            if entry.requires_beads and workspace.beads is None:
-                continue
-            destination = entry.destination.format(
-                package_name=project.package_name,
-                ns=project.namespace_attribute,
-            )
-            relative = Path(destination)
-            if relative.is_absolute() or ".." in relative.parts:
-                return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].fail(
-                    f"template destination escapes repository root: {destination}",
-                )
-            directories.add((root / relative).parent)
-        created: list[m.Cli.AtomicDirectoryState] = []
-        for directory in sorted(directories, key=u.Infra.path_depth):
-            planned = u.Cli.atomic_plan_directory_chain(directory)
-            if planned.failure:
-                rollback = self._rollback_scaffold_directories(tuple(created))
-                if rollback.failure:
-                    return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].fail(
-                        f"{planned.error}; scaffold directory rollback failed: "
-                        f"{rollback.error}",
-                    )
-                return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].from_failure(
-                    planned,
-                )
-            materialized = u.Cli.atomic_create_directory_chain_guarded(
-                planned.value,
-                permission_mode=0o755,
-            )
-            if materialized.failure:
-                rollback = self._rollback_scaffold_directories(tuple(created))
-                if rollback.failure:
-                    return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].fail(
-                        f"{materialized.error}; scaffold directory rollback failed: "
-                        f"{rollback.error}",
-                    )
-                return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].from_failure(
-                    materialized,
-                )
-            created.extend(materialized.value)
-        return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].ok(tuple(created))
+            return result_type.from_failure(aborted)
+        conform_paths = frozenset(file.path for file in plan.files)
+        owned_lazy_analysis = m.Infra.CodegenPhaseAnalysis(
+            phase=lazy_analysis.value.phase,
+            files=tuple(
+                file
+                for file in lazy_analysis.value.files
+                if file.path not in conform_paths
+            ),
+            inputs=lazy_analysis.value.inputs,
+            publications=lazy_analysis.value.publications,
+        )
+        extended = transaction.append_phase_locked(
+            session,
+            owned_lazy_analysis.phase,
+            owned_lazy_analysis.files,
+        )
+        if extended.failure:
+            return result_type.from_failure(extended)
+        return result_type.ok((extended.value, owned_lazy_analysis))
 
-    @staticmethod
-    def _rollback_scaffold_directories(
-        created: t.VariadicTuple[m.Cli.AtomicDirectoryState],
-    ) -> p.Result[bool]:
-        """Remove only directories created by this locked scaffold attempt.
+    def _append_docs_phase(
+        self,
+        request: m.Infra.CodegenConformRequest,
+        plan: m.Infra.CodegenPlan,
+        transaction: FlextInfraCodegenTransaction,
+        session: m.Infra.CodegenTransactionSession,
+        ports: m.Infra.CodegenConformPorts,
+    ) -> p.Result[
+        t.Pair[m.Infra.CodegenTransactionSession, m.Infra.CodegenPhaseAnalysis]
+    ]:
+        """Authorize docs directories, publish the docs files, and analyze them.
+
+        Why (X-47): DECLARED scope excludes the workspace root repository
+        from ``plan.repositories``; docs generation must not render the root
+        as an output scope either, or its report_dir escapes the transaction
+        layout that already excludes root for that same scope. Root guides
+        remain readable sources for members regardless of this flag.
 
         Returns:
-            The resulting ``p.Result[bool]``.
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenTransactionSession,
+                m.Infra.CodegenPhaseAnalysis]]``.
 
         """
-        for state in reversed(created):
-            removed = u.Cli.atomic_delete_empty_directory_guarded(state)
-            if removed.failure:
-                return removed
-        return r[bool].ok(value=True)
+        result_type = r[
+            t.Pair[m.Infra.CodegenTransactionSession, m.Infra.CodegenPhaseAnalysis]
+        ]
+        docs_include_root = any(
+            repository.name == plan.workspace.repository.name
+            for repository in plan.repositories
+        )
+        docs_generator = ports.docs_planner(
+            repository_root=request.root,
+            projects=tuple(repository.name for repository in plan.repositories),
+            include_root=docs_include_root,
+        )
+        docs_bundle = docs_generator.prepare_bundle()
+        if docs_bundle.failure:
+            return result_type.from_failure(docs_bundle)
+        docs_directories = docs_generator.required_directories(docs_bundle.value)
+        if docs_directories.failure:
+            return result_type.from_failure(docs_directories)
+        owned_docs_directories = self._owned_docs_directories(
+            request,
+            plan,
+            docs_directories.value,
+        )
+        with_directories = transaction.append_directories_locked(
+            session,
+            "docs",
+            owned_docs_directories,
+        )
+        if with_directories.failure:
+            return result_type.from_failure(with_directories)
+        docs_plans = docs_generator.plan_files(docs_bundle.value)
+        if docs_plans.failure:
+            return result_type.from_failure(docs_plans)
+        owned_docs_files = self.owned_docs_files(request, docs_plans.value)
+        docs_analysis = m.Infra.CodegenPhaseAnalysis(
+            phase="docs",
+            files=owned_docs_files,
+            inputs=docs_bundle.value.source_states,
+        )
+        with_docs = transaction.append_phase_locked(
+            with_directories.value,
+            "docs",
+            owned_docs_files,
+        )
+        if with_docs.failure:
+            return result_type.from_failure(with_docs)
+        return result_type.ok((with_docs.value, docs_analysis))
 
     @staticmethod
     def _allow_direnv_after_apply(

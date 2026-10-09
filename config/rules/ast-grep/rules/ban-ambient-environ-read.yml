@@ -25,6 +25,7 @@ ignores:
   - "**/_config/**"
   - "**/_config.py"
   - "**/hook_client.py"
+  - "**/bootstrap.py"
 rule:
   any:
     - pattern: os.environ[$KEY]

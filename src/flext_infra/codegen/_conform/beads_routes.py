@@ -12,7 +12,7 @@ from flext_infra import c, m, p, r
 from flext_infra.codegen._conform.docs_ownership import (
     FlextInfraCodegenConformDocsOwnership,
 )
-from flext_infra.workspace import FlextInfraWorkspaceDetector
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership):

@@ -140,9 +140,11 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
             plan.api_url,
             plan.timeout_seconds,
             token,
-            "GET",
-            c.Infra.SONARCLOUD_API_SETTINGS_VALUES_PATH,
-            (("component", plan.project_key), ("keys", plan.setting_key)),
+            (
+                "GET",
+                c.Infra.SONARCLOUD_API_SETTINGS_VALUES_PATH,
+                (("component", plan.project_key), ("keys", plan.setting_key)),
+            ),
         )
         if body.failure:
             return r[m.Infra.SonarcloudSettingsValues].from_failure(body)
@@ -152,31 +154,81 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
             from_json=True,
         )
 
-    @override
-    def execute(self) -> p.Result[bool]:
-        """Converge the server value; the payload is whether a write happened.
+    def _write_settings(
+        self,
+        plan: m.Infra.SonarcloudSettingsPlan,
+        token: t.SecretStr,
+    ) -> p.Result[bool]:
+        """Write the SSOT settings, then prove the server readback holds them.
 
         Returns:
             The resulting ``p.Result[bool]``.
 
         """
-        token = self.required_token()
-        if token.failure:
-            return r[bool].from_failure(token)
-        key = self.project_key(self.repository_root)
-        if key.failure:
-            return r[bool].from_failure(key)
-        planned = self.settings_plan(config.Infra.codegen.sonarcloud, key.value)
-        if planned.failure:
-            return r[bool].from_failure(planned)
-        plan = planned.value
+        request = self.settings_write_request(plan)
+        written = self.call(
+            plan.api_url,
+            plan.timeout_seconds,
+            token,
+            ("POST", request.api_path, request.form),
+        )
+        if written.failure:
+            return r[bool].from_failure(written)
+        readback = self._server_values(plan, token)
+        if readback.failure:
+            return r[bool].from_failure(readback)
+        diverged = self._readback_divergence(plan, readback.value)
+        if diverged is not None:
+            return diverged
+        u.Cli.info(
+            f"sonarcloud-sync: {plan.project_key} now holds "
+            f"{len(plan.field_values)} SSOT issue exclusion(s)",
+        )
+        self.log.info(
+            "sonarcloud_settings_synced",
+            project_key=plan.project_key,
+            exclusions=len(plan.field_values),
+        )
+        return r[bool].ok(value=True)
+
+    def _readback_divergence(
+        self,
+        plan: m.Infra.SonarcloudSettingsPlan,
+        readback: m.Infra.SonarcloudSettingsValues,
+    ) -> p.Result[bool] | None:
+        """Report the divergent server state after a write, or ``None`` when synced.
+
+        Returns:
+            The divergence failure, or ``None`` when the server now holds the SSOT.
+
+        """
+        if self.in_sync_with(plan, readback):
+            return None
+        held = ", ".join(
+            value.model_dump_json(by_alias=True)
+            for value in self.current_field_values(plan, readback)
+        )
+        return r[bool].fail(
+            f"sonarcloud-sync: {plan.project_key} readback differs from the "
+            f"SSOT; server holds [{held}]",
+        )
+
+    def _authenticate(
+        self,
+        plan: m.Infra.SonarcloudSettingsPlan,
+        token: t.SecretStr,
+    ) -> p.Result[bool]:
+        """Prove the configured token against SonarCloud's auth validate endpoint.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         auth_body = self.call(
             plan.api_url,
             plan.timeout_seconds,
-            token.value,
-            "GET",
-            c.Infra.SONARCLOUD_API_AUTH_VALIDATE_PATH,
-            (),
+            token,
+            ("GET", c.Infra.SONARCLOUD_API_AUTH_VALIDATE_PATH, ()),
         )
         if auth_body.failure:
             return r[bool].from_failure(auth_body)
@@ -189,45 +241,80 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
             return r[bool].from_failure(auth)
         if not auth.value.valid:
             return r[bool].fail("SonarCloud rejected SONAR_TOKEN as invalid")
-        current = self._server_values(plan, token.value)
+        return r[bool].ok(value=True)
+
+    def _resolve_token_and_project_key(self) -> p.Result[t.Pair[t.SecretStr, str]]:
+        """Resolve the optional token and this checkout's project key.
+
+        The empty secret is the typed absence (operator ruling
+        run-if-available-else-skip, 2026-10-08): the token is provisioned by
+        the ai-hub credential ingress, and its absence skips the verb loudly
+        and green; a present but malformed token still fails.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.SecretStr, str]]``.
+        """
+        token_result = self.optional_token()
+        if token_result.failure:
+            return r[t.Pair[t.SecretStr, str]].from_failure(token_result)
+        token = token_result.value
+        if not token.get_secret_value():
+            u.Cli.info(
+                "SKIP: sonarcloud-sync — SONAR_TOKEN not available "
+                "(ai-hub credential ingress); operator ruling 2026-10-08 "
+                "run-if-available-else-skip",
+            )
+            return r[t.Pair[t.SecretStr, str]].ok((token, ""))
+        key_result = self.project_key(self.repository_root)
+        if key_result.failure:
+            return r[t.Pair[t.SecretStr, str]].from_failure(key_result)
+        return r[t.Pair[t.SecretStr, str]].ok((token, key_result.value))
+
+    def _converge(
+        self,
+        plan: m.Infra.SonarcloudSettingsPlan,
+        token: t.SecretStr,
+    ) -> p.Result[bool]:
+        """Authenticate, read the server value, and write only on divergence.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+        """
+        authentication = self._authenticate(plan, token)
+        if authentication.failure:
+            return r[bool].from_failure(authentication)
+        current = self._server_values(plan, token)
         if current.failure:
             return r[bool].from_failure(current)
         if self.in_sync_with(plan, current.value):
             u.Cli.info(f"sonarcloud-sync: {plan.project_key} already matches the SSOT")
             return r[bool].ok(value=False)
-        request = self.settings_write_request(plan)
-        written = self.call(
-            plan.api_url,
-            plan.timeout_seconds,
-            token.value,
-            "POST",
-            request.api_path,
-            request.form,
-        )
-        if written.failure:
-            return r[bool].from_failure(written)
-        readback = self._server_values(plan, token.value)
-        if readback.failure:
-            return r[bool].from_failure(readback)
-        if not self.in_sync_with(plan, readback.value):
-            held = ", ".join(
-                value.model_dump_json(by_alias=True)
-                for value in self.current_field_values(plan, readback.value)
-            )
-            return r[bool].fail(
-                f"sonarcloud-sync: {plan.project_key} readback differs from the "
-                f"SSOT; server holds [{held}]",
-            )
-        u.Cli.info(
-            f"sonarcloud-sync: {plan.project_key} now holds "
-            f"{len(plan.field_values)} SSOT issue exclusion(s)",
-        )
-        self.log.info(
-            "sonarcloud_settings_synced",
-            project_key=plan.project_key,
-            exclusions=len(plan.field_values),
-        )
-        return r[bool].ok(value=True)
+        return self._write_settings(plan, token)
+
+    @override
+    def execute(self) -> p.Result[bool]:
+        """Converge the server value; the payload is whether a write happened.
+
+        A missing ``SONAR_TOKEN`` is the operator-ruled declared skip
+        (run-if-available-else-skip, 2026-10-08): the token is provisioned by
+        the ai-hub credential ingress, so its absence means the environment
+        has not declared it yet — loud, green, and never a failure. A present
+        but malformed token still fails.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        resolved = self._resolve_token_and_project_key()
+        if resolved.failure:
+            return r[bool].from_failure(resolved)
+        token, key = resolved.value
+        if not token.get_secret_value():
+            return r[bool].ok(value=False)
+        planned = self.settings_plan(config.Infra.codegen.sonarcloud, key)
+        if planned.failure:
+            return r[bool].from_failure(planned)
+        return self._converge(planned.value, token)
 
 
 __all__: list[str] = ["FlextInfraSonarcloudSettingsSync"]

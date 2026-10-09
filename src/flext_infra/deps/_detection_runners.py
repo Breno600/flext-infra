@@ -47,6 +47,48 @@ class FlextInfraDependencyDetectionRunnersMixin:
         if not settings.exists():
             return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].ok(([], 0))
         out_file = json_output_path or project_path / ".deptry-report.json"
+        result = u.Cli.run_raw(
+            self._deptry_command(venv_bin, settings, out_file, extend_exclude),
+            cwd=project_path,
+            timeout=c.Infra.TIMEOUT_MEDIUM,
+        )
+        if result.failure:
+            return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].from_failure(result)
+        issues: t.SequenceOf[t.JsonMapping] = []
+        if out_file.exists():
+            loaded_result = u.Cli.files_read_json(out_file)
+            if loaded_result.failure:
+                return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].from_failure(
+                    loaded_result,
+                )
+            normalized = self._normalized_deptry_issues(loaded_result)
+            if normalized.failure:
+                return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].from_failure(
+                    normalized,
+                )
+            issues = normalized.value
+            cleaned = self._cleanup_deptry_output(out_file, json_output_path)
+            if cleaned.failure:
+                return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].from_failure(cleaned)
+        cmd_result: p.Cli.CommandOutput = result.value
+        return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].ok((
+            issues,
+            cmd_result.outcome.raw_return_code,
+        ))
+
+    @staticmethod
+    def _deptry_command(
+        venv_bin: Path,
+        settings: Path,
+        out_file: Path,
+        extend_exclude: t.StrSequence | None,
+    ) -> t.MutableSequenceOf[str]:
+        """Compose the deptry invocation for one project.
+
+        Returns:
+            The composed deptry command line.
+
+        """
         cmd: t.MutableSequenceOf[str] = [
             str(venv_bin / c.Infra.DEPTRY),
             ".",
@@ -59,52 +101,59 @@ class FlextInfraDependencyDetectionRunnersMixin:
         if extend_exclude:
             for excluded in extend_exclude:
                 cmd.extend(["--extend-exclude", excluded])
-        result = u.Cli.run_raw(cmd, cwd=project_path, timeout=c.Infra.TIMEOUT_MEDIUM)
-        if result.failure:
-            return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].from_failure(result)
-        issues: t.SequenceOf[t.JsonMapping] = []
-        if out_file.exists():
-            loaded_result = u.Cli.files_read_json(out_file)
-            if loaded_result.failure:
-                return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].from_failure(
-                    loaded_result,
+        return cmd
+
+    def _normalized_deptry_issues(
+        self,
+        loaded_result: p.Result[t.JsonValue],
+    ) -> p.Result[t.SequenceOf[t.JsonMapping]]:
+        """Validate and convert every deptry JSON issue mapping.
+
+        Returns:
+            The resulting converted issues, keeping only issues whose conversion
+            preserves the declared key surface.
+
+        """
+        if not isinstance(loaded_result.value, list):
+            return r[t.SequenceOf[t.JsonMapping]].ok(())
+        normalized: t.MutableSequenceOf[t.JsonMapping] = []
+        for index, item in enumerate(loaded_result.value):
+            if not isinstance(item, Mapping):
+                return r[t.SequenceOf[t.JsonMapping]].fail(
+                    f"deptry JSON issue {index} must be a mapping",
                 )
-            validation_failure: (
-                p.Result[t.Pair[t.SequenceOf[t.JsonMapping], int]] | None
-            ) = None
-            if isinstance(loaded_result.value, list):
-                normalized_issues: t.MutableSequenceOf[t.JsonMapping] = []
-                for index, item in enumerate(loaded_result.value):
-                    if not isinstance(item, Mapping):
-                        return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail(
-                            f"deptry JSON issue {index} must be a mapping",
-                        )
-                    try:
-                        typed_item = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(item)
-                    except c.ValidationError as exc:
-                        return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail_op(
-                            "validate deptry issue",
-                            exc,
-                        )
-                    converted_issue = self._to_toml_config(typed_item)
-                    if len(converted_issue) == len(typed_item):
-                        normalized_issues.append(converted_issue)
-                issues = normalized_issues
-            if json_output_path is None:
-                try:
-                    out_file.unlink()
-                except OSError as exc:
-                    return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail(
-                        f"failed to cleanup deptry temp output: {exc}",
-                        exception=exc,
-                    )
-            if validation_failure is not None:
-                return validation_failure
-        cmd_result: p.Cli.CommandOutput = result.value
-        return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].ok((
-            issues,
-            cmd_result.outcome.raw_return_code,
-        ))
+            try:
+                typed_item = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(item)
+            except c.ValidationError as exc:
+                return r[t.SequenceOf[t.JsonMapping]].fail_op(
+                    "validate deptry issue",
+                    exc,
+                )
+            converted_issue = self._to_toml_config(typed_item)
+            if len(converted_issue) == len(typed_item):
+                normalized.append(converted_issue)
+        return r[t.SequenceOf[t.JsonMapping]].ok(normalized)
+
+    @staticmethod
+    def _cleanup_deptry_output(
+        out_file: Path,
+        json_output_path: Path | None,
+    ) -> p.Result[bool]:
+        """Remove the deptry temp report unless the caller owns the output path.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        if json_output_path is None:
+            try:
+                out_file.unlink()
+            except OSError as exc:
+                return r[bool].fail(
+                    f"failed to cleanup deptry temp output: {exc}",
+                    exception=exc,
+                )
+        return r[bool].ok(value=True)
 
     @staticmethod
     def run_mypy_stub_hints(
@@ -177,7 +226,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
             [str(pip), c.Infra.VERB_CHECK],
             cwd=repository_root,
             timeout=c.Infra.TIMEOUT_SHORT,
-            env=env,
+            options=m.Cli.ProcessOptions(env=env),
         )
         if result.failure:
             return r[t.Pair[t.StrSequence, int]].from_failure(result)

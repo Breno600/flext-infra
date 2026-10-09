@@ -142,6 +142,42 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             The resulting ``p.Result[t.StrSequence]``.
 
         """
+        tables = cls._archive_targets(hatch)
+        if tables.failure:
+            return r[t.StrSequence].from_failure(tables)
+        _build, wheel, sdist = tables.value
+        includes = cls._matching_includes(wheel, sdist)
+        if includes.failure:
+            return r[t.StrSequence].from_failure(includes)
+        sources = cls._forced_sources(wheel, sdist)
+        if sources.failure:
+            return r[t.StrSequence].from_failure(sources)
+        policy = cls._target_policy_verdicts(
+            wheel,
+            sdist,
+            includes.value,
+            sources.value,
+        )
+        if policy.failure:
+            return r[t.StrSequence].from_failure(policy)
+        bounded = cls._bounded_sources(includes.value, sources.value)
+        if bounded.failure:
+            return r[t.StrSequence].from_failure(bounded)
+        return r[t.StrSequence].ok(bounded.value)
+
+    @staticmethod
+    def _archive_targets(
+        hatch: t.Cli.TomlTable,
+    ) -> p.Result[t.Triple[t.Cli.TomlTable | None, t.Cli.TomlTable, t.Cli.TomlTable]]:
+        """Navigate to the declared Hatch build targets.
+
+        Returns:
+            The resulting ``(build, wheel, sdist)`` archive target tables.
+
+        """
+        result_type = r[
+            t.Triple[t.Cli.TomlTable | None, t.Cli.TomlTable, t.Cli.TomlTable]
+        ]
         build = u.Cli.toml_table_child(hatch, "build")
         targets = (
             u.Cli.toml_table_child(build, "targets") if build is not None else None
@@ -153,15 +189,28 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             u.Cli.toml_table_child(targets, "sdist") if targets is not None else None
         )
         if targets is None or wheel is None or sdist is None:
-            return r[t.StrSequence].fail(
+            return result_type.fail(
                 "release pyproject must define Hatch wheel and sdist targets",
             )
         if build is not None and any(
             key in build for key in ("only-include", "packages", "exclude")
         ):
-            return r[t.StrSequence].fail(
+            return result_type.fail(
                 "Hatch build must use target source patterns without exclusions",
             )
+        return result_type.ok((build, wheel, sdist))
+
+    @staticmethod
+    def _matching_includes(
+        wheel: t.Cli.TomlTable,
+        sdist: t.Cli.TomlTable,
+    ) -> p.Result[t.StrSequence]:
+        """Validate and match the wheel and sdist source patterns.
+
+        Returns:
+            The resulting wheel source patterns.
+
+        """
         wheel_includes: p.Result[t.StrSequence] = u.validate_value(
             t.Infra.STR_SEQ_ADAPTER,
             u.Cli.json_as_sequence(u.Cli.toml_value(wheel, "include")),
@@ -188,13 +237,19 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             return r[t.StrSequence].fail(
                 "Hatch wheel and sdist source patterns must match",
             )
-        roots = tuple(
-            sorted({
-                PurePosixPath(pattern.removeprefix("/").removesuffix("/**")).parts[0]
-                for pattern in wheel_includes.value
-                if pattern.startswith("/") and pattern.endswith("/**")
-            }),
-        )
+        return r[t.StrSequence].ok(wheel_includes.value)
+
+    @staticmethod
+    def _forced_sources(
+        wheel: t.Cli.TomlTable,
+        sdist: t.Cli.TomlTable,
+    ) -> p.Result[t.StrSequence]:
+        """Prove the sdist retains every forced wheel source.
+
+        Returns:
+            The resulting forced wheel source keys.
+
+        """
         wheel_forced = u.Cli.toml_table_child(wheel, "force-include")
         sdist_forced = u.Cli.toml_table_child(sdist, "force-include")
         sources = (
@@ -210,63 +265,133 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             return r[t.StrSequence].fail(
                 "Hatch sdist must retain every forced wheel source",
             )
-        wheel_excludes = u.Cli.json_as_sequence(u.Cli.toml_value(wheel, "exclude"))
-        sdist_excludes = u.Cli.json_as_sequence(u.Cli.toml_value(sdist, "exclude"))
-        if wheel_excludes != sdist_excludes:
-            return r[t.StrSequence].fail("Hatch wheel and sdist exclusions must match")
-        for excluded in wheel_excludes:
-            if not isinstance(excluded, str) or not excluded.startswith("/"):
-                return r[t.StrSequence].fail(f"invalid Hatch exclusion: {excluded}")
-            path = PurePosixPath(excluded.removeprefix("/"))
-            if (
-                ".." in path.parts
-                or path.as_posix() != excluded.removeprefix("/")
-                or len(path.parts) <= 1
-                or path.parts[0] == c.Infra.DEFAULT_SRC_DIR
-                or not any(
-                    excluded.startswith(pattern.removesuffix("**"))
-                    for pattern in wheel_includes.value
-                )
-            ):
-                return r[t.StrSequence].fail(
-                    f"Hatch exclusion is outside declared data: {excluded}",
-                )
+        return r[t.StrSequence].ok(sources)
+
+    @classmethod
+    def _target_policy_verdicts(
+        cls,
+        wheel: t.Cli.TomlTable,
+        sdist: t.Cli.TomlTable,
+        wheel_includes: t.StrSequence,
+        sources: t.StrSequence,
+    ) -> p.Result[bool]:
+        """Enforce the bounded source patterns and exclusion policy of both targets.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         for target in (wheel, sdist):
             if any(key in target for key in ("only-include", "packages")):
-                return r[t.StrSequence].fail(
+                return r[bool].fail(
                     "Hatch targets must use bounded source patterns",
                 )
-        for pattern in wheel_includes.value:
+        for pattern in wheel_includes:
             if not pattern.startswith("/") or not pattern.endswith("/**"):
-                return r[t.StrSequence].fail(
+                return r[bool].fail(
                     f"Hatch source pattern is not a directory: {pattern}",
                 )
         for source in sources:
             if PurePosixPath(source).is_absolute():
-                return r[t.StrSequence].fail(
+                return r[bool].fail(
                     f"Hatch source path is outside the release boundary: {source}",
                 )
-        for source in (*wheel_includes.value, *sources):
-            relative = (
-                source.removeprefix("/").removesuffix("/**")
-                if source in wheel_includes.value
-                else source
+        wheel_excludes = u.Cli.json_as_sequence(u.Cli.toml_value(wheel, "exclude"))
+        sdist_excludes = u.Cli.json_as_sequence(u.Cli.toml_value(sdist, "exclude"))
+        if wheel_excludes != sdist_excludes:
+            return r[bool].fail("Hatch wheel and sdist exclusions must match")
+        for excluded in wheel_excludes:
+            error = cls._excluded_error(excluded, wheel_includes)
+            if error:
+                return r[bool].fail(error)
+        return r[bool].ok(value=True)
+
+    @classmethod
+    def _excluded_error(
+        cls,
+        excluded: t.JsonValue,
+        wheel_includes: t.StrSequence,
+    ) -> str:
+        """Return why one exclusion leaves the declared data, or an empty string.
+
+        Returns:
+            Why one exclusion leaves the declared data, or an empty string.
+
+        """
+        if not isinstance(excluded, str) or not excluded.startswith("/"):
+            return f"invalid Hatch exclusion: {excluded}"
+        path = PurePosixPath(excluded.removeprefix("/"))
+        if (
+            ".." in path.parts
+            or path.as_posix() != excluded.removeprefix("/")
+            or len(path.parts) <= 1
+            or path.parts[0] == c.Infra.DEFAULT_SRC_DIR
+            or not any(
+                excluded.startswith(pattern.removesuffix("**"))
+                for pattern in wheel_includes
             )
-            path = PurePosixPath(relative)
-            safe_path = (
-                bool(relative)
-                and not path.is_absolute()
-                and ".." not in path.parts
-                and path.as_posix() == relative
-            )
-            if not safe_path or (
-                cls._path_error(relative, "release source", root_index=0)
-                or not cls._sdist_member_allowed(("release-root", *path.parts), roots)
-            ):
-                return r[t.StrSequence].fail(
-                    f"Hatch source path is outside the release boundary: {source}",
-                )
+        ):
+            return f"Hatch exclusion is outside declared data: {excluded}"
+        return ""
+
+    @classmethod
+    def _bounded_sources(
+        cls,
+        wheel_includes: t.StrSequence,
+        sources: t.StrSequence,
+    ) -> p.Result[t.StrSequence]:
+        """Prove every declared source stays inside the release boundary.
+
+        Returns:
+            The resulting sorted release source roots.
+
+        """
+        roots = tuple(
+            sorted({
+                PurePosixPath(
+                    pattern.removeprefix("/").removesuffix("/**"),
+                ).parts[0]
+                for pattern in wheel_includes
+                if pattern.startswith("/") and pattern.endswith("/**")
+            }),
+        )
+        for source in (*wheel_includes, *sources):
+            error = cls._bounded_source_error(source, wheel_includes, roots)
+            if error:
+                return r[t.StrSequence].fail(error)
         return r[t.StrSequence].ok(roots)
+
+    @classmethod
+    def _bounded_source_error(
+        cls,
+        source: str,
+        wheel_includes: t.StrSequence,
+        roots: t.StrSequence,
+    ) -> str:
+        """Return why one source leaves the release boundary, or an empty string.
+
+        Returns:
+            Why one source leaves the release boundary, or an empty string.
+
+        """
+        relative = (
+            source.removeprefix("/").removesuffix("/**")
+            if source in wheel_includes
+            else source
+        )
+        path = PurePosixPath(relative)
+        safe_path = (
+            bool(relative)
+            and not path.is_absolute()
+            and ".." not in path.parts
+            and path.as_posix() == relative
+        )
+        if not safe_path or (
+            cls._path_error(relative, "release source", root_index=0)
+            or not cls._sdist_member_allowed(("release-root", *path.parts), roots)
+        ):
+            return f"Hatch source path is outside the release boundary: {source}"
+        return ""
 
 
 __all__: list[str] = ["FlextInfraReleaseMetadataMixin"]

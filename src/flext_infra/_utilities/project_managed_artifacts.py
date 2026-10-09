@@ -14,11 +14,128 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities.git import FlextInfraUtilitiesGit
+from flext_infra._utilities import FlextInfraUtilitiesGit
 
 
 class FlextInfraUtilitiesProjectManagedArtifacts:
     """Single owner for ``ManagedArtifacts`` across ``config/*.yaml`` files."""
+
+    @classmethod
+    def _validated_config_roots(
+        cls,
+        project_dir: Path,
+    ) -> p.Result[
+        t.Quad[Path, t.VariadicTuple[int], t.VariadicTuple[int], t.VariadicTuple[Path]]
+    ]:
+        """Validate the physical project and config directories, list yaml paths.
+
+        An absent ``config/`` directory keeps the validated identity empty; the
+        caller renders that as a project with no config sources.
+
+        Returns:
+            The resulting
+                ``(config dir, project identity, config identity, yaml paths)``
+                quadruple.
+
+        """
+        quad = r[
+            t.Quad[
+                Path,
+                t.VariadicTuple[int],
+                t.VariadicTuple[int],
+                t.VariadicTuple[Path],
+            ]
+        ]
+        project_identity = cls._required_directory_identity(
+            project_dir,
+            purpose="project root",
+        )
+        if project_identity.failure:
+            return quad.from_failure(project_identity)
+        config_dir = project_dir / c.CONFIG_DIR_NAME
+        identity = cls._config_directory_identity(config_dir)
+        if identity.failure:
+            return quad.from_failure(identity)
+        if not identity.value:
+            return quad.ok((config_dir, project_identity.value, (), ()))
+        paths = cls._config_yaml_paths(config_dir, identity.value)
+        if paths.failure:
+            return quad.from_failure(paths)
+        return quad.ok((
+            config_dir,
+            project_identity.value,
+            identity.value,
+            paths.value,
+        ))
+
+    @classmethod
+    def _stable_snapshot_identity(
+        cls,
+        project_dir: Path,
+        config_dir: Path,
+        identity_value: t.VariadicTuple[int],
+        paths_value: t.VariadicTuple[Path],
+        project_identity_value: t.VariadicTuple[int],
+    ) -> p.Result[t.VariadicTuple[int]]:
+        """Re-read both identities and require the snapshot topology to hold.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[int]]``.
+
+        """
+        stable_paths = cls._config_yaml_paths(config_dir, identity_value)
+        if stable_paths.failure:
+            return r[t.VariadicTuple[int]].from_failure(stable_paths)
+        if stable_paths.value != paths_value:
+            return r[t.VariadicTuple[int]].fail(
+                f"{c.Infra.CONFIG_SNAPSHOT_TOPOLOGY_RACE_MARKER}: {config_dir}",
+            )
+        stable_project = cls._required_directory_identity(
+            project_dir,
+            purpose="project root",
+        )
+        if stable_project.failure:
+            return r[t.VariadicTuple[int]].from_failure(stable_project)
+        if stable_project.value != project_identity_value:
+            return r[t.VariadicTuple[int]].fail(
+                f"{c.Infra.CONFIG_SNAPSHOT_ROOT_RACE_MARKER}: {project_dir}",
+            )
+        return stable_project
+
+    @classmethod
+    def _snapshot_sources(
+        cls,
+        project_dir: Path,
+        config_dir: Path,
+        identity_value: t.VariadicTuple[int],
+        paths_value: t.VariadicTuple[Path],
+        project_identity_value: t.VariadicTuple[int],
+    ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
+        """Read every config source, then require the topology to stay stable.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
+
+        """
+        sources: list[m.Cli.AtomicFileState] = []
+        for path in paths_value:
+            source = u.Cli.atomic_read_binary_file_state(path, required=True)
+            if source.failure:
+                return r[t.VariadicTuple[m.Cli.AtomicFileState]].from_failure(source)
+            sources.append(source.value)
+        stable_project = cls._stable_snapshot_identity(
+            project_dir,
+            config_dir,
+            identity_value,
+            paths_value,
+            project_identity_value,
+        )
+        if stable_project.failure:
+            return r[t.VariadicTuple[m.Cli.AtomicFileState]].from_failure(
+                stable_project,
+            )
+        return r[t.VariadicTuple[m.Cli.AtomicFileState]].ok(tuple(sources))
 
     @classmethod
     def snapshot_config_sources(
@@ -36,45 +153,19 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         """
         if not project_dir.exists() and not project_dir.is_symlink():
             return r[tuple[m.Cli.AtomicFileState, ...]].ok(())
-        project_identity = cls._required_directory_identity(
-            project_dir,
-            purpose="project root",
-        )
-        if project_identity.failure:
-            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(project_identity)
-        config_dir = project_dir / c.CONFIG_DIR_NAME
-        identity = cls._config_directory_identity(config_dir)
-        if identity.failure:
-            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(identity)
-        if not identity.value:
+        roots = cls._validated_config_roots(project_dir)
+        if roots.failure:
+            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(roots)
+        config_dir, project_identity, identity, paths = roots.value
+        if not identity:
             return r[tuple[m.Cli.AtomicFileState, ...]].ok(())
-        paths = cls._config_yaml_paths(config_dir, identity.value)
-        if paths.failure:
-            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(paths)
-        sources: list[m.Cli.AtomicFileState] = []
-        for path in paths.value:
-            source = u.Cli.atomic_read_binary_file_state(path, required=True)
-            if source.failure:
-                return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(source)
-            sources.append(source.value)
-        stable_paths = cls._config_yaml_paths(config_dir, identity.value)
-        if stable_paths.failure:
-            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(stable_paths)
-        if stable_paths.value != paths.value:
-            return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                f"{c.Infra.CONFIG_SNAPSHOT_TOPOLOGY_RACE_MARKER}: {config_dir}",
-            )
-        stable_project = cls._required_directory_identity(
+        return cls._snapshot_sources(
             project_dir,
-            purpose="project root",
+            config_dir,
+            identity,
+            paths,
+            project_identity,
         )
-        if stable_project.failure:
-            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(stable_project)
-        if stable_project.value != project_identity.value:
-            return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                f"{c.Infra.CONFIG_SNAPSHOT_ROOT_RACE_MARKER}: {project_dir}",
-            )
-        return r[tuple[m.Cli.AtomicFileState, ...]].ok(tuple(sources))
 
     @classmethod
     def _required_directory_identity(
@@ -131,6 +222,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 artifacts=m.Infra.ProjectManagedArtifactsConfig(
                     Mise=m.Infra.ProjectMiseConfig(tools={}),
                     Gitignore=m.Infra.ProjectGitignoreConfig(patterns=()),
+                    Ruff=m.Infra.ProjectRuffConfig(per_file_ignores={}),
                 ),
                 mise_tool_sources={},
             ),
@@ -319,61 +411,160 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             return r[m.Infra.ProjectManagedArtifactsResolution].ok(
                 cls.empty_snapshot().resolution,
             )
+        fragments: list[tuple[Path, m.Infra.ProjectManagedArtifactsFragment]] = []
+        for source, content in sorted(payloads.items()):
+            parsed = cls._parse_project_fragment(source, content)
+            if parsed.failure:
+                return r[m.Infra.ProjectManagedArtifactsResolution].from_failure(parsed)
+            fragments.append((source, parsed.value))
+        return cls._compose_project_fragments(fragments)
+
+    @staticmethod
+    def _parse_project_fragment(
+        source: Path,
+        content: bytes,
+    ) -> p.Result[m.Infra.ProjectManagedArtifactsFragment]:
+        """Decode one project YAML source into its managed-artifact fragment.
+
+        Returns:
+            The fragment, empty when the source declares no ``ManagedArtifacts``.
+
+        """
+        try:
+            source_text = content.decode(c.Cli.ENCODING_DEFAULT)
+        except UnicodeDecodeError as exc:
+            return r[m.Infra.ProjectManagedArtifactsFragment].fail_op(
+                f"decode project config source {source}",
+                exc,
+            )
+        loaded = u.Cli.yaml_parse(source_text)
+        if loaded.failure:
+            return r[m.Infra.ProjectManagedArtifactsFragment].from_failure(loaded)
+        managed = loaded.value.get("ManagedArtifacts")
+        if not managed:
+            return r[m.Infra.ProjectManagedArtifactsFragment].ok(
+                m.Infra.ProjectManagedArtifactsFragment(),
+            )
+        project_config = m.Infra.ProjectConfigDocument.model_validate({
+            "ManagedArtifacts": managed,
+        })
+        return r[m.Infra.ProjectManagedArtifactsFragment].ok(
+            project_config.ManagedArtifacts,
+        )
+
+    @staticmethod
+    def _merge_unique_keys[V](
+        label: str,
+        source: Path,
+        items: t.MappingKV[str, V],
+        merged: MutableMapping[str, V],
+        owners: MutableMapping[str, Path],
+    ) -> str | None:
+        """Merge keyed entries of one source, refusing keys another source owns.
+
+        Returns:
+            The duplicate-key failure message, or ``None`` when every key merged.
+
+        """
+        for key, value in items.items():
+            previous = owners.get(key)
+            if previous is not None:
+                return f"duplicate project {label} {key!r}: {previous} and {source}"
+            merged[key] = value
+            owners[key] = source
+        return None
+
+    @staticmethod
+    def _merge_gitignore(
+        source: Path,
+        gitignore: m.Infra.ProjectGitignoreConfig | None,
+        patterns: list[str],
+        blocks: list[m.Infra.ProjectGitignorePreservedBlock],
+        markers: MutableMapping[str, Path],
+    ) -> str | None:
+        """Merge one source's gitignore patterns and uniquely owned blocks.
+
+        Returns:
+            The duplicate-marker failure message, or ``None`` when all merged.
+
+        """
+        if gitignore is None:
+            return None
+        patterns.extend(
+            pattern
+            for pattern in dict.fromkeys(gitignore.patterns)
+            if pattern not in patterns
+        )
+        for block in gitignore.preserved_blocks:
+            failure = FlextInfraUtilitiesProjectManagedArtifacts._merge_unique_keys(
+                "gitignore preserved marker",
+                source,
+                dict.fromkeys((block.begin, block.end), source),
+                markers,
+                markers,
+            )
+            if failure is not None:
+                return failure
+            blocks.append(block)
+        return None
+
+    @classmethod
+    def _compose_project_fragments(
+        cls,
+        fragments: t.SequenceOf[tuple[Path, m.Infra.ProjectManagedArtifactsFragment]],
+    ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
+        """Compose source fragments in path order into one resolution.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ProjectManagedArtifactsResolution]``.
+
+        """
         mise_tools: MutableMapping[str, m.Infra.ProjectMiseTool] = {}
         mise_sources: MutableMapping[str, Path] = {}
+        ruff_ignores: MutableMapping[str, t.SequenceOf[t.Infra.RuffRule]] = {}
+        ruff_sources: MutableMapping[str, Path] = {}
         gitignore_patterns: list[str] = []
         gitignore_blocks: list[m.Infra.ProjectGitignorePreservedBlock] = []
-        gitignore_block_markers: dict[str, Path] = {}
-
-        for source, content in sorted(payloads.items()):
-            try:
-                source_text = content.decode(c.Cli.ENCODING_DEFAULT)
-            except UnicodeDecodeError as exc:
-                return r[m.Infra.ProjectManagedArtifactsResolution].fail_op(
-                    f"decode project config source {source}",
-                    exc,
+        gitignore_markers: MutableMapping[str, Path] = {}
+        for source, fragment in fragments:
+            failure = (
+                cls._merge_gitignore(
+                    source,
+                    fragment.Gitignore,
+                    gitignore_patterns,
+                    gitignore_blocks,
+                    gitignore_markers,
                 )
-            loaded = u.Cli.yaml_parse(source_text)
-            if loaded.failure:
-                return r[m.Infra.ProjectManagedArtifactsResolution].from_failure(loaded)
-            managed = loaded.value.get("ManagedArtifacts")
-            if not managed:
-                continue
-            project_config = m.Infra.ProjectConfigDocument.model_validate({
-                "ManagedArtifacts": managed,
-            })
-            artifacts = project_config.ManagedArtifacts
-            if artifacts.Gitignore is not None:
-                for pattern in artifacts.Gitignore.patterns:
-                    if pattern not in gitignore_patterns:
-                        gitignore_patterns.append(pattern)
-                for block in artifacts.Gitignore.preserved_blocks:
-                    for marker in (block.begin, block.end):
-                        previous = gitignore_block_markers.get(marker)
-                        if previous is not None:
-                            return r[m.Infra.ProjectManagedArtifactsResolution].fail(
-                                "duplicate project gitignore preserved marker "
-                                f"{marker!r}: {previous} and {source}",
-                            )
-                        gitignore_block_markers[marker] = source
-                    gitignore_blocks.append(block)
-            if artifacts.Mise is None:
-                continue
-            for selector, tool in artifacts.Mise.tools.items():
-                previous = mise_sources.get(selector)
-                if previous is not None:
-                    return r[m.Infra.ProjectManagedArtifactsResolution].fail(
-                        "duplicate project Mise selector "
-                        f"{selector!r}: {previous} and {source}",
-                    )
-
-                mise_tools[selector] = tool
-                mise_sources[selector] = source
+                or cls._merge_unique_keys(
+                    "Ruff per-file ignore",
+                    source,
+                    {
+                        pattern: tuple(rules)
+                        for pattern, rules in fragment.Ruff.per_file_ignores.items()
+                    }
+                    if fragment.Ruff
+                    else {},
+                    ruff_ignores,
+                    ruff_sources,
+                )
+                or cls._merge_unique_keys(
+                    "Mise selector",
+                    source,
+                    fragment.Mise.tools if fragment.Mise else {},
+                    mise_tools,
+                    mise_sources,
+                )
+            )
+            if failure is not None:
+                return r[m.Infra.ProjectManagedArtifactsResolution].fail(failure)
         artifacts = m.Infra.ProjectManagedArtifactsConfig(
             Mise=m.Infra.ProjectMiseConfig(tools=dict(sorted(mise_tools.items()))),
             Gitignore=m.Infra.ProjectGitignoreConfig(
                 patterns=tuple(gitignore_patterns),
                 preserved_blocks=tuple(gitignore_blocks),
+            ),
+            Ruff=m.Infra.ProjectRuffConfig(
+                per_file_ignores=dict(sorted(ruff_ignores.items())),
             ),
         )
         return r[m.Infra.ProjectManagedArtifactsResolution].ok(

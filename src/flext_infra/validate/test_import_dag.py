@@ -131,29 +131,55 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
                 return "shared test infrastructure cannot import consumer packages"
         if not in_tests:
             return None
-        source_facet = cls._facet(file_path)
-        imported_facet = cls._imported_facet(imported)
         imports_test_support = (
             imported_parts[0] == c.Infra.DIR_TESTS
             and imported != c.Infra.DIR_TESTS
-            and imported_facet is None
+            and cls._imported_facet(imported) is None
         )
-        if source_facet is not None:
-            if imported == c.Infra.DIR_TESTS:
-                return "test facets cannot import the tests package root"
-            if imports_test_support:
-                return "test facets cannot import fixtures, conftest, or test modules"
-            facade_order = tuple(u.Infra.facade_families())
-            if imported_facet is not None and facade_order.index(
-                imported_facet,
-            ) < facade_order.index(source_facet):
-                return "reverse canonical test-facet edge"
+        facet_violation = cls._facet_violation(
+            imported,
+            imported_parts,
+            cls._facet(file_path),
+        )
+        if facet_violation is not None:
+            return facet_violation
         if (
             file_path.name == c.Infra.INIT_PY
             and relative.parent.name == c.Infra.DIR_TESTS
             and imports_test_support
         ):
             return "tests package root cannot import fixtures, conftest, or tests"
+        return None
+
+    @classmethod
+    def _facet_violation(
+        cls,
+        imported: str,
+        imported_parts: t.StrSequence,
+        source_facet: str | None,
+    ) -> str | None:
+        """Return the canonical test-facet edge violation, or ``None``.
+
+        Returns:
+            The canonical test-facet edge violation, or ``None``.
+
+        """
+        if source_facet is None:
+            return None
+        if imported == c.Infra.DIR_TESTS:
+            return "test facets cannot import the tests package root"
+        imported_facet = cls._imported_facet(imported)
+        if (
+            imported_parts[0] == c.Infra.DIR_TESTS
+            and imported != c.Infra.DIR_TESTS
+            and imported_facet is None
+        ):
+            return "test facets cannot import fixtures, conftest, or test modules"
+        facade_order = tuple(u.Infra.facade_families())
+        if imported_facet is not None and facade_order.index(
+            imported_facet,
+        ) < facade_order.index(source_facet):
+            return "reverse canonical test-facet edge"
         return None
 
     @override

@@ -1,0 +1,90 @@
+id: ban-nested-payload-outside-models
+snapshots:
+  ? |
+    class Utilities:
+        class Payload(AliasedPreset[str]):
+            value: str = Field(default="payload")
+  : labels:
+    - source: |-
+        class Payload(AliasedPreset[str]):
+                value: str = Field(default="payload")
+      style: primary
+      start: 21
+      end: 101
+    - source: Payload
+      style: secondary
+      start: 27
+      end: 34
+    - source: str
+      style: secondary
+      start: 71
+      end: 74
+    - source: 'value: str = Field(default="payload")'
+      style: secondary
+      start: 64
+      end: 101
+    - source: 'value: str = Field(default="payload")'
+      style: secondary
+      start: 64
+      end: 101
+    - source: 'value: str = Field(default="payload")'
+      style: secondary
+      start: 64
+      end: 101
+    - source: |-
+        class Utilities:
+            class Payload(AliasedPreset[str]):
+                value: str = Field(default="payload")
+      style: secondary
+      start: 0
+      end: 101
+    - source: |-
+        class Payload(AliasedPreset[str]):
+                value: str = Field(default="payload")
+      style: secondary
+      start: 21
+      end: 101
+  ? |
+    class Utilities:
+        class Payload(BaseModel):
+            value: str
+  : labels:
+    - source: |-
+        class Payload(BaseModel):
+                value: str
+      style: primary
+      start: 21
+      end: 65
+    - source: Payload
+      style: secondary
+      start: 27
+      end: 34
+    - source: str
+      style: secondary
+      start: 62
+      end: 65
+    - source: 'value: str'
+      style: secondary
+      start: 55
+      end: 65
+    - source: 'value: str'
+      style: secondary
+      start: 55
+      end: 65
+    - source: 'value: str'
+      style: secondary
+      start: 55
+      end: 65
+    - source: |-
+        class Utilities:
+            class Payload(BaseModel):
+                value: str
+      style: secondary
+      start: 0
+      end: 65
+    - source: |-
+        class Payload(BaseModel):
+                value: str
+      style: secondary
+      start: 21
+      end: 65

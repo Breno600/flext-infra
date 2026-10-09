@@ -23,8 +23,10 @@ class FlextInfraConstantsSourceCode:
         ("incoming", ">>>>>>> "),
     )
     "Git merge-control kinds and their immutable protocol tokens."
+    TOML_MULTILINE_QUOTE_LENGTH: ClassVar[int] = 3
+    "Length of the multiline string delimiter in the TOML protocol."
     TOML_SECTION_HEADER_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*\[([^\[\]]+)\]\s*(?:#.*)?$",
+        r"^\s*\[\[?([^\[\]]+)\]\]?\s*(?:#.*)?$",
     )
     "Regex: one complete TOML table header with an optional comment."
 
@@ -113,6 +115,11 @@ class FlextInfraConstantsSourceCode:
         "venv",
     }
     "Path parts to skip during file iteration (superset of COMMON_EXCLUDED_DIRS)."
+    TRANSIENT_PYTEST_SCRATCH_PART: ClassVar[t.RegexPattern] = re.compile(
+        r"^\.flext-.+\.pytest-scratch\.",
+    )
+    "Transient per-run pytest basetemp directories the runners create inside"
+    " the repository; analyzers must never descend into them."
     VALIDATION_CLONE_EXCLUDES: ClassVar[frozenset[str]] = COMMON_EXCLUDED_DIRS | {
         ".archive",
         ".ropeproject",
@@ -145,6 +152,8 @@ class FlextInfraConstantsSourceCode:
         "FlextModelsBase",
     })
     "Pydantic bases that resolve class-body annotations at runtime, not statically."
+    PROTOCOL_BASE: ClassVar[str] = "Protocol"
+    "typing base that must stay last in a protocol class's base list."
     ENCODING_COOKIE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^[ \t\f]*#.*?coding[:=][ \t]*[-\w.]+",
     )

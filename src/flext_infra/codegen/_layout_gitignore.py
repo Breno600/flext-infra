@@ -83,10 +83,7 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             owner="codegen",
             policy="full",
         )
-        written = FlextInfraMisePublication.publish_file_plan(
-            planned,
-            phase=c.Infra.CodegenStagedFilePhase.LAYOUT,
-        )
+        written = FlextInfraMisePublication.publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
         applied_status: t.Infra.LayoutStatus = "applied"
@@ -138,10 +135,7 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             owner="codegen",
             policy="merge",
         )
-        written = FlextInfraMisePublication.publish_file_plan(
-            planned,
-            phase=c.Infra.CodegenStagedFilePhase.LAYOUT,
-        )
+        written = FlextInfraMisePublication.publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
         applied_status: t.Infra.LayoutStatus = "applied"

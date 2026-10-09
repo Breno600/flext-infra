@@ -1,0 +1,8 @@
+id: codegen-test-public-utility-namespace
+valid:
+  - u.CodegenTestSupport.Ci
+  - 'payload = "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"'
+  - 'kind: Literal["utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"]'
+invalid:
+  - utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci
+  - tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci

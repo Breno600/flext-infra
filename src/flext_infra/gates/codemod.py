@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m, u
+from flext_infra import c, config, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
@@ -122,12 +122,34 @@ class FlextInfraCodemodGate(FlextInfraGate):
             )
 
         rules_by_id = {rule.id: rule for rule in planned.value.rules}
+        binary = u.Infra.managed_mise_binary(c.Infra.SG, self._repository_root)
+        if binary.failure:
+            failure = binary.error
+            if not failure:
+                msg = "managed scanner resolution failed without a diagnostic"
+                raise RuntimeError(msg)
+            return self._build_check_gate_execution(
+                project_dir,
+                passed=False,
+                issues=(
+                    m.Infra.Issue(
+                        file=c.PYPROJECT_FILENAME,
+                        line=1,
+                        column=0,
+                        code=self.gate_id,
+                        message=failure,
+                        severity=str(c.Infra.GateSeverity.ERROR.value),
+                    ),
+                ),
+                raw_output=failure,
+                started=started,
+            )
         findings: list[m.Infra.Issue] = []
         failures: list[m.Infra.Issue] = []
         raw_output: list[str] = []
         for ruleset in planned.value.rulesets:
             scan = self._run(
-                self._scan_command(ruleset, targets),
+                self._scan_command(ruleset, targets, binary.value),
                 project_dir,
                 timeout=self._check_timeout(project_dir, ctx),
             )
@@ -159,7 +181,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
             # matching error count and the exact terminal diagnostic below.
             # Additional native diagnostics make that scan incomplete.
             report, expected_stderr = self._validated_scan_report(scan, ruleset)
-            if scan.stderr != expected_stderr:
+            if scan.stderr.strip() != expected_stderr:
                 # ast-grep can continue after a traversal error and still return
                 # DiagnosticError because another file has an error match.
                 # Only the complete terminal diagnostic proves a clean walk.
@@ -188,13 +210,11 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 )
                 for finding in report.root
                 if u.Infra.codemod_context_admits(
-                    m.Infra.CodemodAdmission(
-                        root=project_dir,
-                        rule=rules_by_id[finding.rule_id],
-                        file_path=Path(finding.file),
-                        captures={**finding.captures, **finding.transformed},
-                        facts=facts,
-                    ),
+                    project_dir,
+                    rules_by_id[finding.rule_id],
+                    Path(finding.file),
+                    {**finding.captures, **finding.transformed},
+                    facts,
                 )
             )
 
@@ -209,6 +229,13 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 started=started,
             ),
             issues=issues,
+            outcome=(
+                c.Infra.ToolOutcome.ERROR
+                if failures
+                else c.Infra.ToolOutcome.FINDINGS
+                if findings
+                else c.Infra.ToolOutcome.CLEAN
+            ),
             raw_output="\n".join((
                 (f"{len(findings)} policy findings; {len(failures)} native failures"),
                 *raw_output,
@@ -243,8 +270,10 @@ class FlextInfraCodemodGate(FlextInfraGate):
             msg = f"{ruleset.provider}: ast-grep reported an unelected rule"
             raise ValueError(msg)
         expected_stderr = (
-            f"Error: {error_count} error(s) found in code.\n"
-            "Help: Scan succeeded; error-level diagnostics found in the codebase.\n\n"
+            "\n".join((
+                c.Infra.AST_GREP_ERROR_FINDING_RECEIPT.format(count=error_count),
+                c.Infra.AST_GREP_ERROR_FINDING_HELP,
+            ))
             if error_count
             else ""
         )
@@ -254,6 +283,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
     def _scan_command(
         ruleset: m.Infra.CodemodRuleset,
         targets: t.StrSequence,
+        binary: Path,
     ) -> t.StrSequence:
         """Canonical ast-grep invocation for one composed provider ruleset.
 
@@ -261,11 +291,18 @@ class FlextInfraCodemodGate(FlextInfraGate):
             The resulting ``t.StrSequence``.
 
         """
+        # The gate scans the same inventory `make mod` rewrites: trees the
+        # codegen artifact SSOT ignores for source scans (generated sources
+        # included) stay outside it even when Git tracks them.
         globs: t.StrSequence = tuple(
-            f"!{dir_name}/" for dir_name in c.Infra.CHECK_EXCLUDED_DIRS
+            f"!{dir_name}/"
+            for dir_name in sorted({
+                *c.Infra.CHECK_EXCLUDED_DIRS,
+                *config.Infra.codegen.source_scan_ignored,
+            })
         )
         cmd: list[str] = [
-            c.Infra.SG,
+            str(binary),
             c.Infra.SCAN,
             "--config",
             str(ruleset.config),

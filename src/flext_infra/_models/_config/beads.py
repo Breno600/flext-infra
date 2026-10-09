@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._models._config.contract import FlextInfraConfigModelsContract
@@ -37,6 +37,14 @@ class FlextInfraConfigModelsBeads:
             t.NonEmptyStr,
             m.Field(description="Repository-owned issue prefix"),
         ]
+        ownership_command_prefix: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Declared public wrapper for ownership reads"),
+        ] = ()
+        ownership_command_cwd: Annotated[
+            Path | None,
+            m.Field(description="Declared city/rig scope of ownership reads"),
+        ] = None
         custom_issue_types: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -46,7 +54,7 @@ class FlextInfraConfigModelsBeads:
             ),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_custom_issue_types(self) -> Self:
             """Reject duplicate project extensions before projection.
 
@@ -198,5 +206,9 @@ class FlextInfraConfigModelsBeads:
         @m.computed_field
         @property
         def changed(self) -> bool:
-            """Whether the sync altered any environment file."""
+            """Whether the sync altered any environment file.
+
+            Returns:
+                The resulting ``bool``.
+            """
             return bool(self.changed_files)

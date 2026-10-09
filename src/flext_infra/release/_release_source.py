@@ -210,7 +210,9 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
             ],
             cwd=gitleaks_config.parent,
             timeout=c.Infra.TIMEOUT_LONG,
-            remove_env_keys=c.Infra.GITLEAKS_POLICY_ENV_KEYS,
+            options=m.Cli.ProcessOptions(
+                remove_env_keys=c.Infra.GITLEAKS_POLICY_ENV_KEYS,
+            ),
         )
         if scan.failure:
             return r[bool].from_failure(scan)

@@ -75,6 +75,7 @@ class FlextInfraPytestRunnerExecution(
             overrides.update(dict.fromkeys(testmon_keys, str(self.testmon_db)))
         remove_keys = (
             *c.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS,
+            "GITHUB_OUTPUT",
             *(testmon_keys if coverage else ()),
         )
         return u.Cli.process_env(remove_keys=remove_keys, overrides=overrides)
@@ -101,6 +102,7 @@ class FlextInfraPytestRunnerExecution(
                 inventory.
 
         """
+        complete = complete or self.target_file is not None
         selection = self._collect_selection(
             report_dir,
             complete=complete,
@@ -162,8 +164,10 @@ class FlextInfraPytestRunnerExecution(
             command,
             selection_log,
             cwd=self.root,
-            env=self._selection_env(execution_mode=execution_mode),
-            deadline=self._process_deadline(),
+            options=m.Cli.ProcessOptions(
+                env=self._selection_env(execution_mode=execution_mode),
+                deadline=self._process_deadline(),
+            ),
         ).unwrap()
         self._record_process_outcome(
             report_dir,
@@ -175,11 +179,13 @@ class FlextInfraPytestRunnerExecution(
         # For a zero-test project (no test module under the config-owned
         # roots) rc=5 is the DECLARED inventory outcome in both phases.
         owns_no_tests = self._owns_no_tests()
-        # A project may declare no slow-marked item at all, so the slow phase
-        # accepts an empty complete inventory as its declared outcome.
+        # A slow phase may own no slow item, and a declared file may sit
+        # entirely outside this phase's marker. Both are empty scopes. A
+        # whole-suite budgeted inventory that collects nothing stays a failure.
+        scope_may_be_empty = self.slow_phase or self.target_file is not None
         accepted = {pytest.ExitCode.OK} | (
             set()
-            if complete and not self.slow_phase
+            if complete and not scope_may_be_empty
             else {pytest.ExitCode.NO_TESTS_COLLECTED}
         )
         if owns_no_tests:
@@ -192,6 +198,8 @@ class FlextInfraPytestRunnerExecution(
             detail = log_text.strip()
             msg = f"testmon selection failed ({outcome.raw_return_code}): {detail}"
             raise RuntimeError(msg)
+        if self.collection_command_prefix:
+            self._bind_child_profile(report_dir, manifest_path.with_suffix(".pstats"))
         if not owns_no_tests:
             self._collection_diagnostics(report_log)
         if (
@@ -213,13 +221,15 @@ class FlextInfraPytestRunnerExecution(
         if outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED and node_ids:
             msg = "pytest reported no collection with a nonempty manifest"
             raise RuntimeError(msg)
-        if complete and not node_ids and not owns_no_tests and not self.slow_phase:
+        if complete and not node_ids and not owns_no_tests and not scope_may_be_empty:
             msg = "complete pytest inventory must contain at least one test"
             raise RuntimeError(msg)
-        # A slow phase whose complete inventory holds no slow-marked item owns
-        # no test in its scope: it publishes the typed zero-test receipt, the
-        # same declared outcome as a project without test modules.
-        owns_no_tests = owns_no_tests or (complete and self.slow_phase and not node_ids)
+        # An empty complete inventory in an allowed scope owns no in-scope
+        # test. Collection diagnostics already ran, so a collection failure
+        # never becomes this receipt.
+        owns_no_tests = owns_no_tests or (
+            complete and not node_ids and scope_may_be_empty
+        )
         u.Cli.atomic_write_text_file(
             report_dir / f"{artifact}.txt",
             "\n".join(node_ids) + "\n",
@@ -295,9 +305,11 @@ class FlextInfraPytestRunnerExecution(
             command,
             report_dir / "pytest.log",
             cwd=self.root,
-            env=self._selection_env(execution_mode=execution_mode),
-            live=True,
-            deadline=self._process_deadline(),
+            options=m.Cli.ProcessOptions(
+                env=self._selection_env(execution_mode=execution_mode),
+                live=True,
+                deadline=self._process_deadline(),
+            ),
         ).unwrap()
         self._record_process_outcome(report_dir, "suite", outcome)
         return outcome
@@ -421,6 +433,15 @@ class FlextInfraPytestRunnerExecution(
                 == accounting.inventory_count
             )
         )
+        markdown_complete = (
+            True
+            if context.execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+            else self._reconcile_markdown(
+                report_dir,
+                diagnostics,
+                cache_hit=cache_hit,
+            )
+        )
         rejected = any((
             diagnostics.failed_count,
             diagnostics.error_count,
@@ -429,10 +450,11 @@ class FlextInfraPytestRunnerExecution(
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
             not accounting_complete,
+            not markdown_complete,
         ))
         accepted_cache_hit = cache_hit and not rejected
-        # The zero-test receipt exits green: the suite owns nothing to execute
-        # and the run published its typed accounting.
+        # A file's empty phase retains pytest's native status so Make can
+        # distinguish it from execution and reject an aggregate zero-run.
         accepted_zero_tests = accounting.owns_no_tests and not rejected
         selected_count = (
             None
@@ -440,19 +462,25 @@ class FlextInfraPytestRunnerExecution(
             else accounting.inventory_count - accounting.deselected_count
         )
         final_exit = (
-            0
-            if (accepted_cache_hit or accepted_zero_tests)
+            int(pytest.ExitCode.NO_TESTS_COLLECTED)
+            if accepted_zero_tests and self.target_file is not None
+            else 0
+            if accepted_cache_hit or accepted_zero_tests
             else raw_return_code or int(rejected)
         )
         # A graceful stop at the suite stop instant publishes the executed
         # prefix and remains red: the unexecuted remainder is the next run's
         # testmon selection.
-        incomplete = (
+        # A graceful stop at the suite stop instant publishes the executed
+        # prefix and remains red: the unexecuted remainder is the next run's
+        # testmon selection.
+        if accepted_zero_tests and self.target_file is not None:
+            result = "not_executed"
+        elif final_exit and (
             selected_count is not None
             and accounting.executed_count < selected_count
             and not (diagnostics.failed_count or diagnostics.error_count)
-        )
-        if final_exit and incomplete:
+        ):
             result = "incomplete"
         elif final_exit:
             result = "failed"
@@ -460,15 +488,6 @@ class FlextInfraPytestRunnerExecution(
             result = "cache_hit"
         else:
             result = "executed"
-        external_gates = (
-            ""
-            if context.execution_mode == c.Infra.PytestExecutionMode.FULL
-            else ",".join(config.Infra.tooling.tools.pytest.external_gate_markers)
-        )
-        ci_excluded = self.ci_excluded_markers(execution_mode=context.execution_mode)
-        phase_counts = "".join(
-            f"{phase}_warnings={item.warning_count}\n" for phase, item in phases
-        )
         summary = (
             f"outcome={result}\n"
             f"selected={selected_count}\n"
@@ -477,12 +496,12 @@ class FlextInfraPytestRunnerExecution(
             f"accounting_complete={accounting_complete}\n"
             f"deselected={accounting.deselected_count}\n"
             f"inventory={accounting.inventory_count}\n"
-            f"not_executed_external_gates={external_gates}\n"
-            f"not_executed_ci_markers={','.join(ci_excluded)}\n"
+            f"not_executed_external_gates={self._external_gate_markers(context)}\n"
+            f"not_executed_ci_markers={self._ci_marker_list(context)}\n"
             f"cache_restored={cache_restored}\n"
             f"failed={diagnostics.failed_count}\nerrors={diagnostics.error_count}\n"
             f"warnings={warnings}\n"
-            f"{phase_counts}"
+            f"{self._phase_warning_lines(phases)}"
             f"skipped={diagnostics.skipped_count}\n"
             f"collection_errors={diagnostics.collection_failed_count}\n"
             f"collection_skips={diagnostics.collection_skipped_count}\n"
@@ -494,7 +513,55 @@ class FlextInfraPytestRunnerExecution(
         ).unwrap()
         u.Cli.atomic_write_text_file(report_dir / "summary.txt", summary).unwrap()
         sys.stderr.write(f"Reports: {report_dir}\n")
+        if (
+            self.target_file is not None
+            and rejected
+            and final_exit == pytest.ExitCode.NO_TESTS_COLLECTED
+        ):
+            msg = f"empty file phase has rejected evidence: {report_dir}"
+            raise RuntimeError(msg)
         return r.ok(final_exit)
+
+    @staticmethod
+    def _external_gate_markers(context: m.Infra.PytestRunContext) -> str:
+        """Return the not-executed external gate marker list of one run.
+
+        Returns:
+            The not-executed external gate marker list of one run.
+
+        """
+        return (
+            ""
+            if context.execution_mode == c.Infra.PytestExecutionMode.FULL
+            else ",".join(config.Infra.tooling.tools.pytest.external_gate_markers)
+        )
+
+    def _ci_marker_list(self, context: m.Infra.PytestRunContext) -> str:
+        """Return the CI-excluded marker list of one run.
+
+        Returns:
+            The CI-excluded marker list of one run.
+
+        """
+        return ",".join(
+            self.ci_excluded_markers(
+                execution_mode=context.execution_mode,
+            ),
+        )
+
+    @staticmethod
+    def _phase_warning_lines(
+        phases: t.SequenceOf[t.Pair[str, m.Infra.PytestDiagnostics]],
+    ) -> str:
+        """Return one warnings line per phase.
+
+        Returns:
+            One warnings line per phase.
+
+        """
+        return "".join(
+            f"{phase}_warnings={item.warning_count}\n" for phase, item in phases
+        )
 
     @override
     def execute(self) -> p.Result[int]:
@@ -540,7 +607,11 @@ class FlextInfraPytestRunnerExecution(
                 f"pytest slow phase NOT EXECUTED: ci-excluded-markers declares "
                 f"{slow_marker!r}\n",
             )
-            return r.ok(0)
+            return r.ok(
+                int(pytest.ExitCode.NO_TESTS_COLLECTED)
+                if self.target_file is not None
+                else 0,
+            )
         u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
         # Selection, execution, and integrity inspection share one database.
         # Serialize competing worktrees within this invocation's typed deadline.
@@ -551,14 +622,45 @@ class FlextInfraPytestRunnerExecution(
             - deadline.termination_grace_seconds
             - time.monotonic(),
         )
+        self._cache_publication = None
         with u.Infra.codegen_transaction_lease(
             self.testmon_db,
             wait_seconds=wait_seconds,
         ):
-            return self._execute_testmon_leased(
+            result = self._execute_testmon_leased(
                 complete=complete,
                 execution_mode=execution_mode,
             )
+        # Only the parent publishes, after SQLite closure and lease release.
+        self._publish_cache_output()
+        return result
+
+    def _publish_cache_output(self) -> None:
+        """Publish the checkpoint produced by the completed leased operation.
+
+        Raises:
+            RuntimeError: If the database changed after the checkpoint receipt.
+            ValueError: If the database path contains output delimiters.
+
+        """
+        publication = self._cache_publication
+        output = self._optional_environment_path("GITHUB_OUTPUT")
+        if publication is not None and output is not None:
+            if (
+                FlextInfraTestmonDbInspector.digest_file(publication.database)
+                != publication.digest
+            ):
+                msg = "testmon database changed after the checkpoint receipt"
+                raise RuntimeError(msg)
+            if any(char in str(publication.database) for char in "\r\n"):
+                msg = "testmon publication path cannot contain output delimiters"
+                raise ValueError(msg)
+            with output.open("a", encoding=c.Cli.ENCODING_DEFAULT) as stream:
+                stream.write(
+                    f"testmon_database={publication.database}\n"
+                    f"testmon_digest={publication.digest}\n"
+                    f"testmon_saveable={str(publication.saveable).lower()}\n",
+                )
 
     def _execute_testmon_leased(
         self,
@@ -599,9 +701,14 @@ class FlextInfraPytestRunnerExecution(
         selection_plan = self._resolve_selection(
             report_dir,
             complete=complete,
-            # The slow phase always proves its inventory, so a project without
-            # slow-marked items reaches the zero-test receipt even on a cold cache.
-            verify_inventory=pre_digest is not None or self.slow_phase,
+            # The slow phase and a declared file always prove their inventory,
+            # so a scope with no matching item reaches the zero-test receipt
+            # even on a cold cache.
+            verify_inventory=(
+                pre_digest is not None
+                or self.slow_phase
+                or self.target_file is not None
+            ),
             execution_mode=execution_mode,
         )
         u.Cli.atomic_write_text_file(
@@ -609,7 +716,18 @@ class FlextInfraPytestRunnerExecution(
             selection_plan.model_dump_json(indent=2) + "\n",
         ).unwrap()
         selection = selection_plan.node_ids
-        if not selection and not cache_restored and not selection_plan.owns_no_tests:
+        # A declared file whose inventory was collected still runs: testmon may
+        # select nothing for a file that has in-scope tests, and noselect
+        # executes that file. An empty scope is owns_no_tests and is not this
+        # guard. A suite with no proved inventory stays a failure.
+        if (
+            not selection
+            and not cache_restored
+            and not selection_plan.owns_no_tests
+            and not (
+                self.target_file is not None and selection_plan.inventory_collected
+            )
+        ):
             msg = "empty incremental selection requires an integrity-checked cache"
             raise RuntimeError(msg)
         # Workers execute one centrally ordered selection. The collection plugin
@@ -621,8 +739,11 @@ class FlextInfraPytestRunnerExecution(
             execution_mode=execution_mode,
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
+        # A declared file always executes under noselect, so an empty testmon
+        # selection over a restored cache is never a cache hit for it.
         cache_hit = (
-            not complete
+            self.target_file is None
+            and not complete
             and outcome.raw_return_code
             in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
             and not outcome.timed_out
@@ -646,6 +767,14 @@ class FlextInfraPytestRunnerExecution(
             and not completed_zero_tests
             and not self._completed_failure(outcome)
         ):
+            if (
+                self.target_file is not None
+                and outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED
+            ):
+                msg = (
+                    f"file phase exited 5 without a completed empty scope: {report_dir}"
+                )
+                raise RuntimeError(msg)
             return r.ok(outcome.raw_return_code)
         state = self._inspect_cache(digest=pre_digest).unwrap()
         self._record_cache_state(report_dir, "cache-after", state)
@@ -655,11 +784,45 @@ class FlextInfraPytestRunnerExecution(
         if not state.restored_accepted and not state.saveable:
             msg = f"testmon cache is unusable: {state.reason}"
             raise RuntimeError(msg)
-        return self._finalize(
+        result = self._finalize(
             report_dir,
             cache_restored=cache_restored,
             raw_return_code=outcome.raw_return_code,
             cache_hit=cache_hit,
+        )
+        if result.success:
+            self._publish_cache_publication(report_dir, state, policy)
+        return result
+
+    def _publish_cache_publication(
+        self,
+        report_dir: Path,
+        state: m.Infra.TestmonCacheState,
+        policy: m.Infra.TestmonCachePolicySpec,
+    ) -> None:
+        """Publish the checkpointed database as the run's cache publication.
+
+        Raises:
+            RuntimeError: If completed testmon run has no checkpointed database.
+
+        """
+        accounting = m.Infra.TestmonRunAccounting.model_validate_json(
+            (report_dir / "run-accounting.json").read_text(encoding="utf-8"),
+        )
+        completed = (
+            accounting.executed_count == accounting.reported_count
+            and accounting.inventory_count is not None
+            and accounting.executed_count + accounting.deselected_count
+            == accounting.inventory_count
+        )
+        digest = FlextInfraTestmonDbInspector.digest_file(self.testmon_db)
+        if digest is None:
+            msg = "completed testmon run has no checkpointed database"
+            raise RuntimeError(msg)
+        self._cache_publication = m.Infra.TestmonCachePublication(
+            database=self.testmon_db,
+            digest=digest,
+            saveable=policy.save_enabled and state.saveable and completed,
         )
 
     def execute_coverage(self) -> p.Result[int]:

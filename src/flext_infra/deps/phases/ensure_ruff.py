@@ -223,19 +223,6 @@ class FlextInfraEnsureRuffConfigPhase:
                 toml.PhaseConfig(
                     name="ruff",
                     root_path=(),
-                    table_path=(c.Infra.LINT_SECTION, "pylint"),
-                    operations=(
-                        toml.SetOp(
-                            key="allow-dunder-method-names",
-                            value=u.normalize_to_json_value(
-                                sorted(ruff_cfg.lint.pylint.allow_dunder_method_names),
-                            ),
-                        ),
-                    ),
-                ),
-                toml.PhaseConfig(
-                    name="ruff",
-                    root_path=(),
                     table_path=(c.Infra.LINT_SECTION, "flake8-tidy-imports"),
                     operations=(
                         toml.SetOp(
@@ -308,6 +295,7 @@ class FlextInfraEnsureRuffConfigPhase:
         """
         # One fleet exemption map, declared with its authority at the tooling
         # owner, reaches every project unchanged.
+
         effective_ignores = self._tool_config.tools.ruff.lint.per_file_ignores
         current_ignores = u.Cli.toml_mapping_path(
             payload,

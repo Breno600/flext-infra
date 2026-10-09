@@ -7,14 +7,70 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from pathlib import Path
 
-from flext_infra import c, config, p, t
+from flext_infra import c, config, m, p, t
 from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities.rope_runtime_types import (
+    FlextInfraUtilitiesRopeRuntimeTypes,
+)
 
 
 class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
     """Load Rope project/module/import objects behind protocols."""
+
+    @classmethod
+    def native_class(
+        cls,
+        native: p.Infra.NativeClassMetadata,
+    ) -> t.Infra.RopePyObject:
+        """Wrap an observed native class without requiring a module export.
+
+        Returns:
+            Rope's class object retaining the exact native identity.
+
+        Raises:
+            TypeError: If the input is not a class or Rope changes its identity.
+
+        """
+        if not isinstance(native, type):
+            msg = "Rope native class input is not a class"
+            raise TypeError(msg)
+        wrapped = cls._runtime_callable("rope.base.builtins", "BuiltinClass")(
+            native,
+            {},
+        )
+        if not FlextInfraUtilitiesRopeRuntimeTypes.abstract_class(wrapped):
+            msg = "Rope native class factory did not return a class"
+            raise TypeError(msg)
+        if (
+            not isinstance(wrapped, p.Infra.RopeBuiltinClass)
+            or wrapped.builtin is not native
+        ):
+            msg = "Rope native class factory did not preserve native identity"
+            raise TypeError(msg)
+        return wrapped
+
+    @classmethod
+    def native_class_primary_base(
+        cls,
+        native: p.Infra.NativeClassMetadata,
+    ) -> t.Infra.RopePyObject:
+        """Resolve the native type descriptor, not an inherited class member.
+
+        Returns:
+            Rope's wrapper retaining the observed primary base identity.
+
+        Raises:
+            TypeError: If the primary base is None rather than a class.
+
+        """
+        base = native.__base__
+        if base is None:
+            msg = "Rope native primary base is not a class"
+            raise TypeError(msg)
+        return cls.native_class(base)
 
     @classmethod
     def parse_rope_module(cls, source: str, *, filename: str) -> t.Infra.RopeAstNode:
@@ -41,6 +97,8 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         cls,
         project: p.Infra.RopeProject,
         sources: t.MappingKV[Path, str],
+        *,
+        captured: m.Infra.CodemodBindingSnapshot | None = None,
     ) -> p.Infra.RopeProject:
         """Capture a complete identity graph with proposed sources authoritative.
 
@@ -59,10 +117,20 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             ValueError: If Rope proposed source is outside its input inventory.
 
         """
-        inventory = {
-            Path(resource.real_path).resolve(): resource.read()
-            for resource in project.get_python_files()
-        }
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeTypes
+
+        inventory = (
+            {
+                Path(resource.real_path).resolve(): resource.read()
+                for resource in project.get_python_files()
+            }
+            if captured is None
+            else {
+                state.path.resolve(): state.content.decode("utf-8")
+                for state in captured.states
+                if state.content is not None
+            }
+        )
         root = Path(project.root.real_path).resolve()
         for path, source in sources.items():
             resolved = path.resolve()
@@ -72,7 +140,13 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
                 except ValueError as error:
                     msg = f"Rope proposed source is outside its input inventory: {path}"
                     raise ValueError(msg) from error
-                resource = project.get_resource(relative.as_posix())
+                candidate_resource = project.get_resource(relative.as_posix())
+                if not FlextInfraUtilitiesRopeRuntimeTypes.file_resource(
+                    candidate_resource,
+                ):
+                    msg = f"Rope proposed source is outside its input inventory: {path}"
+                    raise ValueError(msg)
+                resource = candidate_resource
                 if not Path(resource.real_path).is_file():
                     msg = f"Rope proposed source is outside its input inventory: {path}"
                     raise ValueError(msg)
@@ -112,6 +186,43 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         resolver = cls._runtime_callable("rope.base.evaluate", "eval_location")
         result = resolver(pymodule, offset)
         return result if isinstance(result, p.Infra.RopeImportedName) else None
+
+    @classmethod
+    def name_definition_resource_path(
+        cls,
+        pymodule: t.Infra.RopePyModule,
+        offset: int,
+        *,
+        expected_binding: p.Infra.RopePyName | None = None,
+    ) -> str | None:
+        """Resolve the defining module's on-disk path of the name at ``offset``.
+
+        Imported chains (``ImportedName``/``ImportedModule``) resolve through
+        to their foreign definition; a builtin, dynamic, or unresolvable name
+        resolves to ``None`` so callers can refuse unsafe rewrites.
+        When supplied, ``expected_binding`` must match through Rope's existing
+        name-identity comparator before the defining path is returned.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
+        resolver = cls._runtime_callable("rope.base.evaluate", "eval_location")
+        result = resolver(pymodule, offset)
+        if not isinstance(result, p.Infra.RopePyName):
+            return None
+        if expected_binding is not None and not cls.same_name(
+            expected_binding,
+            result,
+        ):
+            return None
+        holder, _lineno = result.get_definition_location()
+        if holder is None:
+            return None
+        resource = holder.get_resource()
+        if resource is None:
+            return None
+        return resource.real_path
 
     @staticmethod
     def source_offset(source: str, node: p.Infra.RopeAstNode) -> int:
@@ -275,9 +386,21 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         *,
         ropefolder: str,
         save_objectdb: bool,
-        ignored_resources: t.SequenceOf[str],
-        source_folders: t.SequenceOf[str],
+        filter_lists: t.Triple[t.SequenceOf[str], t.SequenceOf[str], t.SequenceOf[str]],
     ) -> t.Infra.RopeProject:
+        """Create one Rope project.
+
+        ``filter_lists`` carries the Rope filter sequences in order:
+        ignored resources, source folders, extension modules.
+
+        Returns:
+            The resulting ``t.Infra.RopeProject``.
+
+        Raises:
+            TypeError: If Rope project does not satisfy its project contract.
+
+        """
+        ignored_resources, source_folders, extension_modules = filter_lists
         project_factory = cls._runtime_callable(
             "flext_infra._utilities._rope.project",
             "FlextInfraRopeProject",
@@ -295,6 +418,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             save_history=False,
             ignored_resources=list(ignored_resources),
             source_folders=list(source_folders),
+            extension_modules=list(extension_modules),
         )
         if not isinstance(project, p.Infra.RopeProject):
             msg = "rope Project does not satisfy p.Infra.RopeProject"
@@ -341,19 +465,18 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             module_name,
             name,
         )
-        if not isinstance(result, p.Infra.RopeRuntimeSequence):
+        if not isinstance(result, tuple):
             msg = "Rope add_import returned an invalid source and binding pair"
             raise TypeError(msg)
-        pair = result
-        if not isinstance(result, tuple) or len(pair) != 2:
-            msg = "Rope add_import returned an invalid source and binding pair"
-            raise TypeError(msg)
-        source = pair[0]
-        binding = pair[1]
-        if not isinstance(source, str) or not isinstance(binding, str):
-            msg = "Rope add_import returned non-text source or binding"
-            raise TypeError(msg)
-        return (source, binding)
+        match result:
+            case (source, binding):
+                if not isinstance(source, str) or not isinstance(binding, str):
+                    msg = "Rope add_import returned non-text source or binding"
+                    raise TypeError(msg)
+                return (source, binding)
+            case _:
+                msg = "Rope add_import returned an invalid source and binding pair"
+                raise TypeError(msg)
 
     @classmethod
     def build_string_module(
@@ -403,16 +526,14 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             resources=resources,
             in_hierarchy=in_hierarchy,
         )
-        if not isinstance(raw_locations, p.Infra.RopeRuntimeSequence):
-            msg = "rope find_occurrences returned non-sequence locations"
+        if not isinstance(raw_locations, Iterable):
+            msg = "rope find_occurrences returned non-iterable locations"
             raise TypeError(msg)
-        locations: t.MutableSequenceOf[t.Infra.RopeLocation] = []
-        for location in raw_locations:
-            if not isinstance(location, p.Infra.RopeLocation):
-                msg = "rope find_occurrences returned an invalid location"
-                raise TypeError(msg)
-            locations.append(location)
-        return tuple(locations)
+        return tuple(
+            location
+            for location in raw_locations
+            if isinstance(location, p.Infra.RopeLocation)
+        )
 
     @classmethod
     def from_import(

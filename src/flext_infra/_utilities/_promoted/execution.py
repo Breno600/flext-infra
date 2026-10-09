@@ -12,10 +12,11 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c
-from flext_infra._utilities._promoted.invocation import (
-    FlextInfraUtilitiesPromotedInvocation,
-)
+from flext_cli import u
+
+from flext_infra import c, m
+from flext_infra._settings import settings
+from flext_infra._utilities import FlextInfraUtilitiesPromotedInvocation
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -39,8 +40,6 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
             PromotedRegistryError: If ``result.failure``.
 
         """
-        from flext_infra import settings, u
-
         message, env_name = c.Infra.PromotedMessage, c.Infra.PromotedEnv
         project_root = cls.promoted_find_owner_root(command.path)
         if project_root is None:
@@ -83,8 +82,10 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
         result = u.Cli.run_raw(
             (*interpreter, str(command.path)),
             cwd=project_root,
-            env=env,
-            remove_env_keys=(c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,),
+            options=m.Cli.ProcessOptions(
+                env=env,
+                remove_env_keys=(c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,),
+            ),
             capture=False,
         )
         if result.failure:

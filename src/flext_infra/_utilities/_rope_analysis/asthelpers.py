@@ -12,8 +12,11 @@ from pathlib import Path
 from typing import ClassVar, TypeGuard
 
 from flext_infra import m, p, t
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._settings import settings
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 
 class FlextInfraUtilitiesRopeAnalysisAstHelpers:
@@ -146,8 +149,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             # settings SSOT, with cwd as last resort — both exist where CLI runs.
             # Path() coercion keeps this correct while settings migrates the
             # field from str to Path (both accepted).
-            from flext_infra import settings
-
             repository_root = settings.Infra.repository_root
             anchor = Path(repository_root) if repository_root else Path.cwd()
             cached = FlextInfraUtilitiesRopeCore.init_rope_project(anchor)

@@ -325,7 +325,7 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         )
         spans: list[t.Quad[int, int, int, int]] = []
         for node in ast.walk(module):
-            annotations = []
+            annotations: t.MutableSequenceOf[ast.expr | None] = []
             if isinstance(node, ast.AnnAssign | ast.arg):
                 annotations.append(node.annotation)
             elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):

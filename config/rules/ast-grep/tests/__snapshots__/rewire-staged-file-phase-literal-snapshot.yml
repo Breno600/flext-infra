@@ -1,0 +1,104 @@
+id: rewire-staged-file-phase-literal
+snapshots:
+  ? |
+    publish_file_plan(planned, phase="layout")
+  : fixed: |
+      publish_file_plan(planned, phase=c.Infra.CodegenStagedFilePhase.LAYOUT)
+    labels:
+    - source: '"layout"'
+      style: primary
+      start: 33
+      end: 41
+    - source: phase
+      style: secondary
+      start: 27
+      end: 32
+    - source: phase="layout"
+      style: secondary
+      start: 27
+      end: 41
+  ? |
+    publish_publication(publication, phase="semantic")
+  : fixed: |
+      publish_publication(publication, phase=c.Infra.CodegenStagedFilePhase.SEMANTIC)
+    labels:
+    - source: '"semantic"'
+      style: primary
+      start: 39
+      end: 49
+    - source: phase
+      style: secondary
+      start: 33
+      end: 38
+    - source: phase="semantic"
+      style: secondary
+      start: 33
+      end: 49
+  ? |
+    record(layout, phase="mod-text")
+  : fixed: |
+      record(layout, phase=c.Infra.CodegenStagedFilePhase.MOD_TEXT)
+    labels:
+    - source: '"mod-text"'
+      style: primary
+      start: 21
+      end: 31
+    - source: phase
+      style: secondary
+      start: 15
+      end: 20
+    - source: phase="mod-text"
+      style: secondary
+      start: 15
+      end: 31
+  ? |
+    recover(phase="lazy-init")
+  : fixed: |
+      recover(phase=c.Infra.CodegenStagedFilePhase.LAZY_INIT)
+    labels:
+    - source: '"lazy-init"'
+      style: primary
+      start: 14
+      end: 25
+    - source: phase
+      style: secondary
+      start: 8
+      end: 13
+    - source: phase="lazy-init"
+      style: secondary
+      start: 8
+      end: 25
+  ? |
+    stage(layout, phase="conform")
+  : fixed: |
+      stage(layout, phase=c.Infra.CodegenStagedFilePhase.CONFORM)
+    labels:
+    - source: '"conform"'
+      style: primary
+      start: 20
+      end: 29
+    - source: phase
+      style: secondary
+      start: 14
+      end: 19
+    - source: phase="conform"
+      style: secondary
+      start: 14
+      end: 29
+  ? |
+    stage(phase="version-file")
+  : fixed: |
+      stage(phase=c.Infra.CodegenStagedFilePhase.VERSION_FILE)
+    labels:
+    - source: '"version-file"'
+      style: primary
+      start: 12
+      end: 26
+    - source: phase
+      style: secondary
+      start: 6
+      end: 11
+    - source: phase="version-file"
+      style: secondary
+      start: 6
+      end: 26

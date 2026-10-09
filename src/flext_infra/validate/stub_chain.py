@@ -29,51 +29,6 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
     ] = False
     _runner: p.Cli.CommandRunner | None = m.PrivateAttr(default=None)
 
-    def __init__(
-        self,
-        *,
-        repository_root: Path | None = None,
-        apply_changes: bool = False,
-        check_only: bool = False,
-        dry_run: bool = False,
-        output_format: str = "text",
-        project_filter: str | None = None,
-        target_module: str | None = None,
-        target_namespace: str | None = None,
-        report_path: Path | None = None,
-        output_dir: Path | None = None,
-        selected_projects: t.StrSequence | None = None,
-        all_projects: bool = False,
-        runner: p.Cli.CommandRunner | None = None,
-        settings_type: t.SettingsClass | None = None,
-        runtime_settings: p.Settings | None = None,
-        settings_overrides: t.JsonMapping | None = None,
-        initial_context: p.Context | None = None,
-    ) -> None:
-        """Initialize with an internal command runner dependency."""
-        model_data: t.Infra.StubChainRuntimeState = {
-            "repository_root": repository_root or Path.cwd(),
-            "apply_changes": apply_changes,
-            "check_only": check_only,
-            "dry_run": dry_run,
-            "output_format": output_format,
-            "project_filter": project_filter,
-            "target_module": target_module,
-            "target_namespace": target_namespace,
-            "report_path": report_path,
-            "output_dir": output_dir,
-            "selected_projects": selected_projects,
-            "all_projects": all_projects,
-            # FlextMixins bootstrap inputs are native Pydantic fields validated
-            # with the rest of model_data.
-            "settings_type": settings_type,
-            "runtime_settings": runtime_settings,
-            "settings_overrides": settings_overrides,
-            "initial_context": initial_context,
-        }
-        self.__pydantic_validator__.validate_python(model_data, self_instance=self)
-        self._runner = runner
-
     @property
     def runner(self) -> p.Cli.CommandRunner | None:
         """Optional command runner dependency for tests and command execution."""
@@ -237,9 +192,9 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return r[m.Infra.StubAnalysisReport].ok(
             m.Infra.StubAnalysisReport(
                 project=proj.name,
-                mypy_hints=mypy_hints,
-                internal_missing=internal,
-                unresolved_missing=unresolved,
+                mypy_hints=list(mypy_hints),
+                internal_missing=list(internal),
+                unresolved_missing=list(unresolved),
                 total_missing=len(missing_imports),
             ),
         )

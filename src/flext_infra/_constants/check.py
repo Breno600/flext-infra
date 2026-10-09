@@ -26,6 +26,23 @@ class FlextInfraConstantsCheck:
     PYTEST_SELECTED_COLLECTION_OPTION: ClassVar[str] = "--flext-selected-collection"
     PYTEST_SUITE_STOP_OPTION: ClassVar[str] = "--flext-suite-stop-monotonic"
     PYTEST_COLLECTION_MANIFEST_OPTION: ClassVar[str] = "--flext-collection-manifest"
+    PYTEST_PROFILE_LAUNCHER: ClassVar[str] = (
+        "import cProfile, runpy, sys\n"
+        "output = sys.argv.pop(1)\n"
+        "profile = cProfile.Profile()\n"
+        "try:\n"
+        "    profile.runcall(\n"
+        "        runpy.run_module, 'pytest', run_name='__main__', alter_sys=True\n"
+        "    )\n"
+        "finally:\n"
+        "    profile.dump_stats(output)\n"
+    )
+    """``python -c`` profiled pytest child: ``<output.pstats> <pytest args...>``.
+
+    Stdlib only, so pytest installs assertion rewriting before any plugin
+    package (``flext_infra`` included) is imported; pytest's ``SystemExit``
+    still sets the exit status, unlike ``python -m cProfile``.
+    """
 
     @unique
     class SarifSchema(StrEnum):
@@ -63,12 +80,12 @@ class FlextInfraConstantsCheck:
 
     @unique
     class GateKind(StrEnum):
-        """Who owns a gate's rule catalog, which decides where the gate blocks.
+        """Who owns a gate's rule catalog.
 
-        Only ``EXTERNAL`` gates run in the fast contexts (CI and pre-commit):
-        an external tool applying its own per-file rule catalog. Whole-program
-        type checkers and the validators whose rules this package owns run
-        locally and at pre-push, where they block.
+        ``EXTERNAL`` is an external tool applying its own per-file rule
+        catalog, ``TYPE_CHECKER`` a whole-program type checker, and ``INFRA``
+        a validator whose rules this package owns. The CI partition is
+        declared by ``make.ci.local_check_gates``, not by the kind.
         """
 
         EXTERNAL = "external"
@@ -113,7 +130,7 @@ class FlextInfraConstantsCheck:
                 "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
                 "security": ("Bandit", "https://bandit.readthedocs.io/"),
                 "markdown": ("rumdl", "https://rumdl.dev/"),
-                "markdown-format": ("Prettier", "https://prettier.io/"),
+                "markdown-format": ("rumdl", "https://rumdl.dev/"),
                 "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
                 "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
             }),
@@ -187,13 +204,18 @@ class FlextInfraConstantsCheck:
     MARKDOWN_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$",
     )
+    MARKDOWN_FIXED_SUFFIX: ClassVar[str] = "[fixed]"
+    "rumdl text-output suffix marking a finding its mutating pass repaired."
+    MARKDOWN_FORMAT_DIFF_HEADERS: ClassVar[t.StrPair] = ("--- ", "+++ ")
     MARKDOWN_FORMAT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$",
+        # Prettier applies terminal SGR styling to the warning label in CI.
+        r"^\[(?:\x1b\[[0-9;]*m)*warn(?:\x1b\[[0-9;]*m)*\]"
+        r"\s+(?P<file>\S+\.md)\s*$",
         re.MULTILINE,
     )
     (
-        "Prettier ``--check`` unformatted-file line "
-        "(``[warn] <file.md>``); config warns never match."
+        "``rumdl fmt --check`` unified-diff header pair naming one file the "
+        "formatter would rewrite; consecutive lines carry the same path."
     )
     MARKDOWN_PY_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^```(?P<info>python\S*(?:\s+notest)?)\s*$\n(?P<code>.*?)^```\s*$",
@@ -210,15 +232,10 @@ class FlextInfraConstantsCheck:
         "Existing fence marker (pytest-markdown-docs) "
         "opting a block out of code validation."
     )
-    MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+",
+    MARKDOWN_CODE_SOURCE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"(?P<file>[^\s/:]+_b\d+\.py)(?::(?P<line>\d+))?",
     )
-    "Ruff format ``--check`` concise verdict line over extracted sources."
-    MARKDOWN_CODE_FORMAT_ERROR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^error: Failed to format (?P<file>\S+):",
-        re.MULTILINE,
-    )
-    "Ruff format hard-failure line over extracted sources (parse errors)."
+    "Extracted-source name (``MARKDOWN_CODE_SOURCE_FORMAT``) inside any ruff line."
     VALID_GATE_SEVERITIES: ClassVar[frozenset[str]] = frozenset(GateSeverity)
     "Severity levels accepted by gate output parsers — derived from GateSeverity."
     PYRIGHT_DIAGNOSTICS_KEY: ClassVar[str] = "generalDiagnostics"
@@ -269,18 +286,10 @@ class FlextInfraConstantsCheck:
     # rendered from this typed SSOT at scan time, never a hand-maintained file).
     JSCPD_BINARY: ClassVar[str] = "jscpd"
     (
-        "Provisioned by mise from codegen.toolchain.jscpd_version; "
+        "Provisioned by mise from codegen.toolchain.tools entry 'jscpd'; "
         "never a runner or a version here."
     )
 
-    # --- markdown-format gate SSOT (operator 2026-09-18: prettier is the
-    # markdown formatter owned by `make fmt`; rumdl stays the linter owned by
-    # `make fix`. The binary is mise-provisioned, never a runner or version).
-    PRETTIER_BINARY: ClassVar[str] = "prettier"
-    (
-        "Provisioned by mise from codegen.toolchain.prettier_version; "
-        "never a runner or a version here."
-    )
     JSCPD_MODE: ClassVar[str] = "strict"
     JSCPD_MIN_LINES: ClassVar[int] = 10
     "Minimum lines for a clone (R2: 10 lines = 62 tokens per consumption-law.md)."

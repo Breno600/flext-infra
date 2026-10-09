@@ -128,14 +128,13 @@ class FlextInfraCodegenProjectNew(
     conform_collaborators: Annotated[
         m.Infra.CodegenConformPorts | None,
         m.Field(
-            default=None,
             exclude=True,
             description=(
                 "Docs port bound by FlextInfra.codegen_new; the scaffold "
                 "conform fails before any effect without it"
             ),
         ),
-    ]
+    ] = None
 
     @override
     def execute(self) -> p.Result[m.Infra.CodegenResult]:
@@ -150,41 +149,23 @@ class FlextInfraCodegenProjectNew(
         # Every identity fact is an explicit caller declaration: for a
         # repository that does not exist yet there is nothing to detect and no
         # catalog to consult.
-        repository_url = self.repository_url.strip()
-        if not repository_url:
-            return r[m.Infra.CodegenResult].fail(
-                "repository URL is required: declare --repository-url",
-            )
-        repository_branch = self.repository_branch.strip()
-        if not repository_branch:
-            return r[m.Infra.CodegenResult].fail(
-                "repository branch is required: declare --repository-branch",
-            )
-        # Declared remotes are the only provenance a repository that does not
-        # exist yet can carry, so both URLs and the FLEXT ref are validated to
-        # a usable shape here — before any model, directory, or Git effect.
-        origin_url = u.Infra.validate_git_remote_url(repository_url)
-        if origin_url.failure:
-            return r[m.Infra.CodegenResult].from_failure(origin_url)
-        flext_url = u.Infra.validate_git_remote_url(self.flext_repository_url)
-        if flext_url.failure:
-            return r[m.Infra.CodegenResult].from_failure(flext_url)
-        flext_ref = self.flext_repository_ref.strip()
-        if not flext_ref:
-            return r[m.Infra.CodegenResult].fail(
-                "flext repository ref is required: declare --flext-repository-ref",
-            )
+        declared = self._validated_remote_declarations()
+        if declared.failure:
+            return r[m.Infra.CodegenResult].from_failure(declared)
+        repository_url, repository_branch, origin_url, flext_url, flext_ref = (
+            declared.value
+        )
         package_name = self.package_name or self.name.replace("-", "_")
         class_stem = u.derive_class_stem(self.name)
         derived_namespace = class_stem.removeprefix("Flext")
         project_namespace = self.project_namespace or derived_namespace or class_stem
         alias = u.Infra.package_alias(package_name=package_name)
-        repository_page = origin_url.value.removesuffix(".git")
+        repository_page = origin_url.removesuffix(".git")
         repository = m.Infra.RepositoryRef(
             name=self.name,
             distribution=self.name,
             provider=self.provider,
-            url=origin_url.value,
+            url=origin_url,
             path=Path(),
             role=c.Infra.MakeProfile.STANDALONE,
             state=c.Infra.RepositoryState.ACTIVE,
@@ -197,7 +178,7 @@ class FlextInfraCodegenProjectNew(
         workspace = m.Infra.WorkspaceSpec(
             name=self.name,
             flext_source=m.Infra.CodegenBootstrapSource(
-                url=flext_url.value,
+                url=flext_url,
                 ref=flext_ref,
             ),
             beads=m.Infra.BeadsProjectSpec(
@@ -254,6 +235,50 @@ class FlextInfraCodegenProjectNew(
             initial_workspace=workspace,
             ports=self.conform_collaborators,
         )
+
+    def _validated_remote_declarations(
+        self,
+    ) -> p.Result[tuple[str, str, str, str, str]]:
+        """Validate every caller-declared remote fact before any effect.
+
+        Declared remotes are the only provenance a repository that does not
+        exist yet can carry, so both URLs and the FLEXT ref are validated to
+        a usable shape here — before any model, directory, or Git effect.
+
+        Returns:
+            The resulting ``p.Result[tuple[str, str, str, str, str]]`` holding
+            the repository URL, repository branch, origin URL, FLEXT URL, and
+            FLEXT ref, all stripped and validated.
+
+        """
+        repository_url = self.repository_url.strip()
+        if not repository_url:
+            return r[tuple[str, str, str, str, str]].fail(
+                "repository URL is required: declare --repository-url",
+            )
+        repository_branch = self.repository_branch.strip()
+        if not repository_branch:
+            return r[tuple[str, str, str, str, str]].fail(
+                "repository branch is required: declare --repository-branch",
+            )
+        origin_url = u.Infra.validate_git_remote_url(repository_url)
+        if origin_url.failure:
+            return r[tuple[str, str, str, str, str]].from_failure(origin_url)
+        flext_url = u.Infra.validate_git_remote_url(self.flext_repository_url)
+        if flext_url.failure:
+            return r[tuple[str, str, str, str, str]].from_failure(flext_url)
+        flext_ref = self.flext_repository_ref.strip()
+        if not flext_ref:
+            return r[tuple[str, str, str, str, str]].fail(
+                "flext repository ref is required: declare --flext-repository-ref",
+            )
+        return r[tuple[str, str, str, str, str]].ok((
+            repository_url,
+            repository_branch,
+            origin_url.value,
+            flext_url.value,
+            flext_ref,
+        ))
 
 
 __all__: list[str] = ["FlextInfraCodegenProjectNew"]

@@ -12,7 +12,10 @@ from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, t
-from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDiscovery,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 
 class FlextInfraUtilitiesRopeSource:
@@ -209,7 +212,7 @@ class FlextInfraUtilitiesRopeSource:
     @staticmethod
     def rewrite_source_at_offsets(
         rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        resource: t.Infra.RopeFile,
         changes: t.SequenceOf[t.Triple[int, int, str]],
         *,
         apply: bool = True,
@@ -219,8 +222,14 @@ class FlextInfraUtilitiesRopeSource:
         Returns:
             The resulting ``str``.
 
+        Raises:
+            TypeError: If the resource is not a Rope file resource.
+
         """
         _ = rope_project
+        if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
+            msg = f"expected a Rope file resource: {resource.path}"
+            raise TypeError(msg)
         source: str = resource.read()
         for start, end, replacement in sorted(changes, key=itemgetter(0), reverse=True):
             source = source[:start] + replacement + source[end:]

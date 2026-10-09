@@ -55,6 +55,46 @@ snapshots:
       start: 34
       end: 55
   ? |
+    from flext_cli import p
+    class FlextFooProtocols(p):
+        pass
+    p = FlextFooProtocols
+    __all__ = ["FlextFooProtocols", "p"]
+  : labels:
+    - source: p = FlextFooProtocols
+      style: primary
+      start: 61
+      end: 82
+    - source: |
+        from flext_cli import p
+        class FlextFooProtocols(p):
+            pass
+        p = FlextFooProtocols
+        __all__ = ["FlextFooProtocols", "p"]
+      style: secondary
+      start: 0
+      end: 120
+    - source: p
+      style: secondary
+      start: 61
+      end: 62
+    - source: p = FlextFooProtocols
+      style: secondary
+      start: 61
+      end: 82
+    - source: p
+      style: secondary
+      start: 22
+      end: 23
+    - source: p
+      style: secondary
+      start: 22
+      end: 23
+    - source: from flext_cli import p
+      style: secondary
+      start: 0
+      end: 23
+  ? |
     from flext_core import FlextConstants
     c = FlextConstants
     __all__ = ["c"]
@@ -78,3 +118,163 @@ snapshots:
       style: secondary
       start: 38
       end: 56
+  ? |
+    from flext_core import FlextService as s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]
+  : labels:
+    - source: s = FlextFooServiceBase
+      style: primary
+      start: 80
+      end: 103
+    - source: |
+        from flext_core import FlextService as s
+        class FlextFooServiceBase(s):
+            pass
+        s = FlextFooServiceBase
+        __all__ = ["FlextFooServiceBase", "s"]
+      style: secondary
+      start: 0
+      end: 143
+    - source: s
+      style: secondary
+      start: 80
+      end: 81
+    - source: s = FlextFooServiceBase
+      style: secondary
+      start: 80
+      end: 103
+    - source: s
+      style: secondary
+      start: 39
+      end: 40
+    - source: FlextService as s
+      style: secondary
+      start: 23
+      end: 40
+    - source: from flext_core import FlextService as s
+      style: secondary
+      start: 0
+      end: 40
+  ? |
+    from flext_core import FlextSettings, FlextService as s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]
+  : labels:
+    - source: s = FlextFooServiceBase
+      style: primary
+      start: 95
+      end: 118
+    - source: |
+        from flext_core import FlextSettings, FlextService as s
+        class FlextFooServiceBase(s):
+            pass
+        s = FlextFooServiceBase
+        __all__ = ["FlextFooServiceBase", "s"]
+      style: secondary
+      start: 0
+      end: 158
+    - source: s
+      style: secondary
+      start: 95
+      end: 96
+    - source: s = FlextFooServiceBase
+      style: secondary
+      start: 95
+      end: 118
+    - source: s
+      style: secondary
+      start: 54
+      end: 55
+    - source: FlextService as s
+      style: secondary
+      start: 38
+      end: 55
+    - source: from flext_core import FlextSettings, FlextService as s
+      style: secondary
+      start: 0
+      end: 55
+  ? |
+    from flext_core import FlextSettings, s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]
+  : labels:
+    - source: s = FlextFooServiceBase
+      style: primary
+      start: 79
+      end: 102
+    - source: |
+        from flext_core import FlextSettings, s
+        class FlextFooServiceBase(s):
+            pass
+        s = FlextFooServiceBase
+        __all__ = ["FlextFooServiceBase", "s"]
+      style: secondary
+      start: 0
+      end: 142
+    - source: s
+      style: secondary
+      start: 79
+      end: 80
+    - source: s = FlextFooServiceBase
+      style: secondary
+      start: 79
+      end: 102
+    - source: s
+      style: secondary
+      start: 38
+      end: 39
+    - source: s
+      style: secondary
+      start: 38
+      end: 39
+    - source: from flext_core import FlextSettings, s
+      style: secondary
+      start: 0
+      end: 39
+  ? |
+    from flext_core import s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]
+  : labels:
+    - source: s = FlextFooServiceBase
+      style: primary
+      start: 64
+      end: 87
+    - source: |
+        from flext_core import s
+        class FlextFooServiceBase(s):
+            pass
+        s = FlextFooServiceBase
+        __all__ = ["FlextFooServiceBase", "s"]
+      style: secondary
+      start: 0
+      end: 127
+    - source: s
+      style: secondary
+      start: 64
+      end: 65
+    - source: s = FlextFooServiceBase
+      style: secondary
+      start: 64
+      end: 87
+    - source: s
+      style: secondary
+      start: 23
+      end: 24
+    - source: s
+      style: secondary
+      start: 23
+      end: 24
+    - source: from flext_core import s
+      style: secondary
+      start: 0
+      end: 24

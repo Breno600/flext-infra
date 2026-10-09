@@ -6,17 +6,12 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from git import GitCommandError, HookExecutionError, InvalidGitRepositoryError, Repo
 
-from flext_infra import m, r
+from flext_infra import m, p, r
 from flext_infra._utilities._git.semantic_publish import (
     FlextInfraUtilitiesGitSemanticPublishMixin,
 )
-
-if TYPE_CHECKING:
-    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitSemanticPathsMixin(
