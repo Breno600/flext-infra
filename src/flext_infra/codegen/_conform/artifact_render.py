@@ -363,9 +363,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             # A repository without one must not render ledger activation.
             return r[p.Model].ok(
                 m.Infra.EnvrcRenderSpec(
-                    worktree_environment_directory=(
-                        codegen.toolchain.worktree_environment_directory
-                    ),
                     repository_root_rel=self._repository_root_rel(workspace),
                     environment_path_prepends=(
                         codegen.toolchain.environment_path_prepends
@@ -396,8 +393,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         if destination in {
             c.Infra.MARKDOWNLINT_CONFIG_FILENAME,
             c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
-            c.Infra.PRETTIER_CONFIG_FILENAME,
-            c.Infra.PRETTIER_IGNORE_FILENAME,
         }:
             return r[p.Model].ok(
                 m.Infra.MarkdownLintRenderSpec(tooling=config.Infra.tooling),
@@ -648,9 +643,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         )
         return r[m.Infra.MakefileRenderSpec].ok(
             m.Infra.MakefileRenderSpec(
-                worktree_environment_directory=(
-                    codegen.toolchain.worktree_environment_directory
-                ),
                 pytest=pytest,
                 dist=target.repository.distribution,
                 infra_cli=config.Infra.name,
@@ -665,6 +657,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 uv_link_mode=self.link_mode(target.repository, codegen.toolchain),
                 mise_selector=codegen.toolchain.mise_selector,
                 mise_version=codegen.toolchain.mise_version,
+                mise_install_tools=codegen.toolchain.mise_install_keys,
                 python_version=codegen.toolchain.python_version,
                 make=codegen.make,
                 extra_verbs=(

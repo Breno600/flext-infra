@@ -6,7 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisBase
+from flext_infra._utilities._rope_analysis.base import (
+    FlextInfraUtilitiesRopeAnalysisBase,
+)
 
 
 class FlextInfraUtilitiesRopeAnalysis(FlextInfraUtilitiesRopeAnalysisBase):

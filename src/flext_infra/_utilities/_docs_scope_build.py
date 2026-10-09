@@ -12,9 +12,11 @@ from flext_infra import c, m, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesBase,
     FlextInfraUtilitiesDocsScope,
-    FlextInfraUtilitiesDocsScopeSelectionMixin,
     FlextInfraUtilitiesPyproject,
     FlextInfraUtilitiesWorkspaceManifest,
+)
+from flext_infra._utilities._docs_scope_selection import (
+    FlextInfraUtilitiesDocsScopeSelectionMixin,
 )
 
 if TYPE_CHECKING:

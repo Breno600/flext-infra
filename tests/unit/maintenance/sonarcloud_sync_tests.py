@@ -97,6 +97,7 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
     @staticmethod
     def _cli(
+        self,
         repository_root: Path,
         env: t.StrMapping | None = None,
         *,
@@ -118,10 +119,8 @@ class TestsFlextInfraSonarcloudSettingsSync:
                     "--repository-root",
                     str(repository_root),
                 ],
-                options=u.Cli.ProcessOptions(
-                    env={"COLUMNS": "200", **(env or {})},
-                    remove_env_keys=() if env else ("SONAR_TOKEN",),
-                ),
+                env={"COLUMNS": "200", **(env or {})},
+                remove_env_keys=() if env else ("SONAR_TOKEN",),
             ),
         )
         return result.outcome.raw_return_code, result.stdout + result.stderr

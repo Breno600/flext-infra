@@ -12,7 +12,9 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 
 from flext_infra import c, m, r
-from flext_infra._utilities import FlextInfraUtilitiesGitSemanticWorktreeMixin
+from flext_infra._utilities._git.semantic_worktree import (
+    FlextInfraUtilitiesGitSemanticWorktreeMixin,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -64,7 +66,6 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        entered = False
         for step in (
             lambda: cls._git_enter_lane(request),
             produce,
@@ -72,12 +73,8 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
         ):
             outcome = step()
             if outcome.failure:
-                if entered:
-                    restore = cls._git_restore_base(request)
-                    if restore.failure:
-                        return restore
+                # Preserve partial output and the original failure for recovery.
                 return outcome
-            entered = True
         return r[bool].ok(value=True)
 
     @classmethod
@@ -102,6 +99,15 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
 
         """
         root = request.repo_root
+        admitted = cls.git_verify_lane(
+            m.Infra.GitLaneVerificationRequest(
+                repo_root=root,
+                operation="create",
+                candidate=request.base,
+            ),
+        )
+        if admitted.failure:
+            return r[bool].from_failure(admitted)
         base = cls._verified_lane_base(request)
         if base.failure:
             return r[bool].from_failure(base)
@@ -117,30 +123,6 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
         if ahead.value.strip() == "0":
             return cls._git_discard_empty_lane(request)
         return cls._git_open_pull_request(request)
-
-    @classmethod
-    def _git_restore_base(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Return the checkout to ``base`` after a failed ``produce`` step.
-
-        The lane carries only what ``produce`` wrote this run — machine
-        output the next rerun regenerates byte-identically — so dropping the
-        uncommitted output and switching back un-wedges the clean guard for
-        the rerun without discarding any committed lane history.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        root = request.repo_root
-        for command in (
-            [c.Infra.GIT, "reset", "--hard"],
-            [c.Infra.GIT, "clean", "-fd"],
-            [c.Infra.GIT, "switch", request.base],
-        ):
-            outcome = u.Cli.run_checked(command, cwd=root)
-            if outcome.failure:
-                return outcome
-        return r[bool].ok(value=False)
 
     @classmethod
     def _git_discard_empty_lane(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:

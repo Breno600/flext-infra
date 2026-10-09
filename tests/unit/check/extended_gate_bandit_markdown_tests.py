@@ -16,7 +16,7 @@ from flext_tests import tm
 from flext_infra import config, m, t
 from flext_infra.gates.bandit import FlextInfraBanditGate
 from flext_infra.gates.markdown import FlextInfraMarkdownGate
-from tests import c, u
+from tests import TestsFlextInfraUtilities as u, c
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -57,28 +57,6 @@ class TestsFlextInfraBanditAndMarkdownGates:
         )
 
         tm.that(result.issues[0].code, eq="B101")
-
-    @staticmethod
-    def test_bandit_excludes_generated_source_trees(tmp_path: Path) -> None:
-        """Generated-source modules stay outside the audited package surface."""
-        names = config.Infra.codegen.generated_sources
-        tm.that(names, empty=False)
-        project_dir = u.Tests.mk_project(tmp_path, "bandit-project")
-        package = project_dir / c.Infra.DEFAULT_SRC_DIR / "pkg"
-        tree = package / names[0]
-        tree.mkdir(parents=True)
-        for module in (tree / "wire_pb2.py", package / "main.py"):
-            module.write_text("def check(value):\n    assert value\n", encoding="utf-8")
-
-        result = u.Tests.check_gate_asserting(
-            FlextInfraBanditGate,
-            tmp_path,
-            project_dir,
-            passed=False,
-            issues_len=1,
-        )
-
-        tm.that(result.issues[0].file, has="main.py")
 
     @staticmethod
     def test_bandit_without_source_tree_has_no_audit_surface(

@@ -58,7 +58,7 @@ class FlextInfraRefactorCensusFiltersMixin:
                 m.Infra.DuplicateGroup(
                     name=definitions[0].name,
                     kind=definitions[0].kind,
-                    definitions=tuple(definitions),
+                    definitions=definitions,
                     canonical=canonical.project,
                     value_identical=len({item.fingerprint for item in definitions})
                     == 1,

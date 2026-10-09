@@ -1,0 +1,23 @@
+# A dynamic `importlib.import_module(...)` call in any of its spellings
+# (module attribute, aliased module, imported function).
+id: dynamic-import
+language: python
+rule:
+  any:
+    - pattern: importlib.import_module($$$ARGS)
+    - all:
+        - pattern: $ALIAS.import_module($$$ARGS)
+        - inside:
+            kind: module
+            stopBy: end
+            has:
+              stopBy: end
+              pattern: import importlib as $ALIAS
+    - all:
+        - pattern: import_module($$$ARGS)
+        - inside:
+            kind: module
+            stopBy: end
+            has:
+              stopBy: end
+              pattern: from importlib import import_module

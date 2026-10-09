@@ -10,15 +10,67 @@ import ast
 from collections.abc import Iterable
 from pathlib import Path
 
-from flext_infra import c, config, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesRopeRuntimeBase,
+from flext_infra import c, config, m, p, t
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities.rope_runtime_types import (
     FlextInfraUtilitiesRopeRuntimeTypes,
 )
 
 
 class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
     """Load Rope project/module/import objects behind protocols."""
+
+    @classmethod
+    def native_class(
+        cls,
+        native: p.Infra.NativeClassMetadata,
+    ) -> t.Infra.RopePyObject:
+        """Wrap an observed native class without requiring a module export.
+
+        Returns:
+            Rope's class object retaining the exact native identity.
+
+        Raises:
+            TypeError: If the input is not a class or Rope changes its identity.
+
+        """
+        if not isinstance(native, type):
+            msg = "Rope native class input is not a class"
+            raise TypeError(msg)
+        wrapped = cls._runtime_callable("rope.base.builtins", "BuiltinClass")(
+            native,
+            {},
+        )
+        if not FlextInfraUtilitiesRopeRuntimeTypes.abstract_class(wrapped):
+            msg = "Rope native class factory did not return a class"
+            raise TypeError(msg)
+        if (
+            not isinstance(wrapped, p.Infra.RopeBuiltinClass)
+            or wrapped.builtin is not native
+        ):
+            msg = "Rope native class factory did not preserve native identity"
+            raise TypeError(msg)
+        return wrapped
+
+    @classmethod
+    def native_class_primary_base(
+        cls,
+        native: p.Infra.NativeClassMetadata,
+    ) -> t.Infra.RopePyObject:
+        """Resolve the native type descriptor, not an inherited class member.
+
+        Returns:
+            Rope's wrapper retaining the observed primary base identity.
+
+        Raises:
+            TypeError: If the primary base is None rather than a class.
+
+        """
+        base = native.__base__
+        if base is None:
+            msg = "Rope native primary base is not a class"
+            raise TypeError(msg)
+        return cls.native_class(base)
 
     @classmethod
     def parse_rope_module(cls, source: str, *, filename: str) -> t.Infra.RopeAstNode:
@@ -45,6 +97,8 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         cls,
         project: p.Infra.RopeProject,
         sources: t.MappingKV[Path, str],
+        *,
+        captured: m.Infra.CodemodBindingSnapshot | None = None,
     ) -> p.Infra.RopeProject:
         """Capture a complete identity graph with proposed sources authoritative.
 
@@ -63,10 +117,20 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             ValueError: If Rope proposed source is outside its input inventory.
 
         """
-        inventory = {
-            Path(resource.real_path).resolve(): resource.read()
-            for resource in project.get_python_files()
-        }
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeTypes
+
+        inventory = (
+            {
+                Path(resource.real_path).resolve(): resource.read()
+                for resource in project.get_python_files()
+            }
+            if captured is None
+            else {
+                state.path.resolve(): state.content.decode("utf-8")
+                for state in captured.states
+                if state.content is not None
+            }
+        )
         root = Path(project.root.real_path).resolve()
         for path, source in sources.items():
             resolved = path.resolve()
@@ -128,12 +192,16 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         cls,
         pymodule: t.Infra.RopePyModule,
         offset: int,
+        *,
+        expected_binding: p.Infra.RopePyName | None = None,
     ) -> str | None:
         """Resolve the defining module's on-disk path of the name at ``offset``.
 
         Imported chains (``ImportedName``/``ImportedModule``) resolve through
         to their foreign definition; a builtin, dynamic, or unresolvable name
         resolves to ``None`` so callers can refuse unsafe rewrites.
+        When supplied, ``expected_binding`` must match through Rope's existing
+        name-identity comparator before the defining path is returned.
 
         Returns:
             The resulting ``str | None``.
@@ -142,6 +210,11 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         resolver = cls._runtime_callable("rope.base.evaluate", "eval_location")
         result = resolver(pymodule, offset)
         if not isinstance(result, p.Infra.RopePyName):
+            return None
+        if expected_binding is not None and not cls.same_name(
+            expected_binding,
+            result,
+        ):
             return None
         holder, _lineno = result.get_definition_location()
         if holder is None:

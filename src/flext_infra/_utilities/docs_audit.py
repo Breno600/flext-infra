@@ -13,10 +13,14 @@ from flext_infra import c, config, m, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDocs,
     FlextInfraUtilitiesDocsApi,
-    FlextInfraUtilitiesDocsAuditDetectorsMixin,
-    FlextInfraUtilitiesDocsCommandContractMixin,
     FlextInfraUtilitiesDocsGithubLinks,
     FlextInfraUtilitiesDocsScope,
+)
+from flext_infra._utilities._docs_audit_detectors import (
+    FlextInfraUtilitiesDocsAuditDetectorsMixin,
+)
+from flext_infra._utilities._docs_command_contract import (
+    FlextInfraUtilitiesDocsCommandContractMixin,
 )
 
 

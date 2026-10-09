@@ -12,9 +12,11 @@ from flext_infra import c, m, p, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDocsApi,
     FlextInfraUtilitiesDocsContract,
-    FlextInfraUtilitiesDocsGeneratePlanMixin,
     FlextInfraUtilitiesDocsGuidesMixin,
     FlextInfraUtilitiesDocsRender,
+)
+from flext_infra._utilities._docs_generate_plan import (
+    FlextInfraUtilitiesDocsGeneratePlanMixin,
 )
 
 

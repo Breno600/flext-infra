@@ -23,8 +23,10 @@ class FlextInfraConstantsSourceCode:
         ("incoming", ">>>>>>> "),
     )
     "Git merge-control kinds and their immutable protocol tokens."
+    TOML_MULTILINE_QUOTE_LENGTH: ClassVar[int] = 3
+    "Length of the multiline string delimiter in the TOML protocol."
     TOML_SECTION_HEADER_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*\[([^\[\]]+)\]\s*(?:#.*)?$",
+        r"^\s*\[\[?([^\[\]]+)\]\]?\s*(?:#.*)?$",
     )
     "Regex: one complete TOML table header with an optional comment."
 

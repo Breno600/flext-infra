@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import main
+from flext_infra import main as infra_main
 from tests import c
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ class TestsFlextInfraValidateCli:
         workspace.mkdir(parents=True, exist_ok=True)
 
         tm.that(
-            main([
+            infra_main([
                 "validate",
                 "stub-validate",
                 "--repository-root",
@@ -40,7 +40,7 @@ class TestsFlextInfraValidateCli:
     @staticmethod
     def test_stub_validate_help_returns_zero() -> None:
         """Test stub validate help returns zero."""
-        tm.that(main(["validate", "stub-validate", "--help"]), eq=0)
+        tm.that(infra_main(["validate", "stub-validate", "--help"]), eq=0)
 
     @staticmethod
     def _rule_project(tmp_path: Path, source: str) -> Path:
@@ -85,7 +85,7 @@ class TestsFlextInfraValidateCli:
             "from __future__ import annotations\n\nVALUE = 1\n",
         )
 
-        exit_code = main([
+        exit_code = infra_main([
             "validate",
             "namespace",
             "--repository-root",
@@ -101,7 +101,7 @@ class TestsFlextInfraValidateCli:
         """Test namespace validate exits nonzero for rule findings."""
         project = self._rule_project(tmp_path, "first(1)\n")
 
-        exit_code = main([
+        exit_code = infra_main([
             "validate",
             "namespace",
             "--repository-root",

@@ -13,8 +13,10 @@ import libcst as cst
 from libcst.codemod import CodemodContext
 from libcst.codemod.visitors import AddImportsVisitor
 
-from flext_infra._utilities import (
+from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.model_fields_bindings import (
     FlextInfraUtilitiesSemanticCutoverModelFieldsBindings,
 )
 

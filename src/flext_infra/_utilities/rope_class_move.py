@@ -206,6 +206,7 @@ class FlextInfraUtilitiesRopeClassMove:
         root: Path,
         file_path: Path,
     ) -> t.Infra.RopeFile:
+
         relative_path = file_path.relative_to(root).as_posix()
         resource = rope_project.get_resource(relative_path)
         if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):

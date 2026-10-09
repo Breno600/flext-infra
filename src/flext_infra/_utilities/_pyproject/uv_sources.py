@@ -12,9 +12,11 @@ from typing import TYPE_CHECKING
 from flext_cli import r, u
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDependencies,
+from flext_infra._utilities import FlextInfraUtilitiesDependencies
+from flext_infra._utilities._pyproject.requirements import (
     FlextInfraUtilitiesPyprojectRequirements,
+)
+from flext_infra._utilities._pyproject.session import (
     FlextInfraUtilitiesPyprojectSession,
 )
 
@@ -263,6 +265,27 @@ class FlextInfraUtilitiesPyprojectUvSources(
             owns_workspace_table=owns_workspace_table,
         )
         return r[bool].ok(value=True)
+
+    @classmethod
+    def _wanted_workspace_members(
+        cls,
+        document: t.Cli.TomlDocument,
+        workspace_members: t.StrSequence,
+    ) -> t.VariadicTuple[str]:
+        """Intersect the declared members with the document's requirements.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
+        required_names = {
+            name
+            for line in cls._document_requirement_lines(document).unwrap()
+            if (name := FlextInfraUtilitiesDependencies.dep_name(line)) is not None
+        }
+        return tuple(sorted(set(workspace_members) & required_names))
 
     @classmethod
     def _sync_member_sources(

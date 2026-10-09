@@ -20,6 +20,8 @@ from flext_infra import c, m, p, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesGitRemote,
     FlextInfraUtilitiesGitRepo,
+)
+from flext_infra._utilities._git.semantic_lane import (
     FlextInfraUtilitiesGitSemanticLaneMixin,
 )
 
@@ -77,11 +79,15 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
 
         Raises:
             GitCommandError: If ``status``.
+            TypeError: If symbolic-ref returned a non-text reference.
 
         """
         if repo.head.is_valid():
             return False
         branch_ref = repo.git.symbolic_ref("--quiet", "HEAD")
+        if not isinstance(branch_ref, str):
+            msg = "symbolic-ref returned a non-text reference"
+            raise TypeError(msg)
         status, stdout, stderr = repo.git.show_ref(
             "--exists",
             branch_ref,

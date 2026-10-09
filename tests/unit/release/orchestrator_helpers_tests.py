@@ -7,7 +7,6 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import hashlib
-import shutil
 from pathlib import Path
 
 import pytest
@@ -47,6 +46,8 @@ class TestsFlextInfraReleaseHelpers:
         @staticmethod
         def test_generate_notes_is_prettier_stable(tmp_path: Path) -> None:
             """The canonical formatter leaves generated notes byte-identical."""
+            import shutil
+
             prettier = shutil.which(c.Infra.PRETTIER_BINARY)
             tm.that(bool(prettier), eq=True)
             notes_path = tmp_path / "release" / c.Infra.RELEASE_NOTES_FILENAME

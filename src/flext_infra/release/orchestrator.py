@@ -36,14 +36,13 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
     conform_collaborators: Annotated[
         m.Infra.CodegenConformPorts | None,
         m.Field(
-            default=None,
             exclude=True,
             description=(
                 "Docs port bound by the FlextInfra facade; the settling "
                 "conform fails before any effect without it"
             ),
         ),
-    ]
+    ] = None
 
     @override
     def execute(self) -> p.Result[bool]:

@@ -128,14 +128,13 @@ class FlextInfraCodegenProjectNew(
     conform_collaborators: Annotated[
         m.Infra.CodegenConformPorts | None,
         m.Field(
-            default=None,
             exclude=True,
             description=(
                 "Docs port bound by FlextInfra.codegen_new; the scaffold "
                 "conform fails before any effect without it"
             ),
         ),
-    ]
+    ] = None
 
     @override
     def execute(self) -> p.Result[m.Infra.CodegenResult]:

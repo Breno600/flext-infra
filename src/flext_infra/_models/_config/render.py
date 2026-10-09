@@ -17,13 +17,11 @@ from flext_infra._constants import (
     FlextInfraConstantsDocs,
     FlextInfraConstantsWorkspace,
 )
-from flext_infra._models import (
-    FlextInfraConfigModelsContexts,
-    FlextInfraConfigModelsContract,
-    FlextInfraConfigModelsMake,
-    FlextInfraConfigModelsProvider,
-    FlextInfraModelsDepsToolConfig,
-)
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraConfigModelsRender:
@@ -101,13 +99,12 @@ class FlextInfraConfigModelsRender:
         workspace_repositories: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsContexts.RepositoryRef],
             m.Field(
-                default=(),
                 description=(
                     "Governed subproject repositories consumed by workspace-scoped "
                     "workflow templates (docs paths, dependabot directories)"
                 ),
             ),
-        ]
+        ] = ()
         ci_trigger_branches: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -259,14 +256,6 @@ class FlextInfraConfigModelsRender:
             t.NonEmptyStr,
             m.Field(description="Runtime-root-local development environment"),
         ] = FlextInfraConstantsWorkspace.ENVIRONMENT_DIRECTORY
-        worktree_environment_directory: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Declared sibling directory for linked worktree environments"
-                ),
-            ),
-        ]
 
     class SonarcloudIssueExclusionSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One SonarCloud issue exclusion applied as a server-side project setting.

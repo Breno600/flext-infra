@@ -17,6 +17,39 @@ from flext_infra import t
 class FlextInfraModelsCodegenToolchain:
     """Describe toolchain destinations and their coherent state snapshots."""
 
+    class CodegenParticipantPolicy(m.Value):
+        """Caller-authorized physical roots, independent of recorded capabilities."""
+
+        scope_root: Path = m.Field(description="Physical coordination root")
+        roots: t.VariadicTuple[m.Cli.AtomicDirectoryChainPlan] = m.Field(
+            min_length=1,
+            description="Existing root identities authorized by the request topology",
+        )
+
+        @m.model_validator(mode="after")
+        def _validate_roots(self) -> Self:
+            """Require unique existing physical anchors including the scope.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If generation authorization requires unique existing
+                    physical roots.
+            """
+            paths = tuple(root.target for root in self.roots)
+            if (
+                len(set(paths)) != len(paths)
+                or self.scope_root not in paths
+                or any(
+                    root.directories or root.target != root.anchor_path
+                    for root in self.roots
+                )
+            ):
+                msg = "generation authorization requires unique existing physical roots"
+                raise ValueError(msg)
+            return self
+
     class MiseToolchainProjectLayout(m.ArbitraryTypesModel):
         """Stable paths needed to validate and recover one project."""
 
@@ -115,7 +148,10 @@ class FlextInfraModelsCodegenToolchain:
 
         @m.model_validator(mode="after")
         def _validate_participants(self) -> Self:
-            participants = (*self.projects, *self.file_participants)
+            participants: t.VariadicTuple[
+                FlextInfraModelsCodegenToolchain.MiseToolchainProjectLayout
+                | FlextInfraModelsCodegenToolchain.CodegenFileParticipant
+            ] = (*self.projects, *self.file_participants)
             if not participants:
                 msg = "generation layout requires an explicit participant"
                 raise ValueError(msg)

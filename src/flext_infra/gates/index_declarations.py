@@ -85,10 +85,10 @@ class FlextInfraIndexDeclarationsGate(FlextInfraGate):
         gitlinks = u.Infra.git_index_gitlink_paths(project_dir)
         if gitlinks.failure:
             return r[t.StrSequence].from_failure(gitlinks)
-        declared = u.Infra.git_declared_submodule_paths(project_dir)
+        declared = u.Infra.git_submodule_declarations(project_dir)
         if declared.failure:
             return r[t.StrSequence].from_failure(declared)
-        declared_paths = {path.as_posix() for path in declared.unwrap()}
+        declared_paths = {item.path.as_posix() for item in declared.unwrap()}
         defects = tuple(
             f"{path}: gitlink is not declared in .gitmodules — Git cannot resolve"
             " a URL for it, so every consumer fetching this repository fails"

@@ -108,7 +108,16 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-        config_result = cls._read_toml(project_root / c.Infra.CONFIG_SPEC[0])
+        return cls.validate_config_file(project_root / c.Infra.CONFIG_SPEC[0])
+
+    @classmethod
+    def validate_config_file(cls, path: Path) -> p.Result[bool]:
+        """Validate an exact staged or live declaration without installing tools.
+
+        Returns:
+            The TOML consumer's first failure or the validated declaration.
+        """
+        config_result = cls._read_toml(path)
         if config_result.failure:
             return r[bool].from_failure(config_result)
         tools_result = cls._tool_specifiers(config_result.value)

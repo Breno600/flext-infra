@@ -21,8 +21,7 @@ class TestsFlextInfraFacadeEnvironmentSync:
     def _write_pyproject(root: Path) -> None:
         root.mkdir(parents=True, exist_ok=True)
         _ = (root / "pyproject.toml").write_text(
-            '[project]\nname = "workspace"\nversion = "0.1.0"\n'
-            'requires-python = ">=3.13"\n',
+            '[project]\nname = "workspace"\nversion = "0.1.0"\nrequires-python = ">=3.13"\n',
             encoding="utf-8",
         )
 
@@ -54,20 +53,16 @@ class TestsFlextInfraFacadeEnvironmentSync:
             u.Cli.run_checked(
                 ["direnv", "allow", str(workspace)],
                 cwd=workspace,
-                options=u.Cli.ProcessOptions(
-                    env=activation_env,
-                    remove_env_keys=isolation,
-                ),
+                env=activation_env,
+                remove_env_keys=isolation,
             ),
         )
         return tm.ok(
             u.Cli.capture(
                 ["direnv", "exec", str(workspace), "printenv", name],
                 cwd=workspace,
-                options=u.Cli.ProcessOptions(
-                    env=activation_env,
-                    remove_env_keys=isolation,
-                ),
+                env=activation_env,
+                remove_env_keys=isolation,
             ),
         )
 

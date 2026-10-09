@@ -1,0 +1,12 @@
+id: ban-model-rebuild
+# `valid` MUST NOT match: mentions inside strings, docstrings, or comments are
+# not calls; unrelated attribute names only share the suffix.
+valid:
+  - note = "call Node.model_rebuild() to patch forward refs"
+  - |
+    """Legacy flows used Node.model_rebuild(_types_namespace=ns)."""
+  - rebuilt = model.rebuild_all()
+invalid:
+  - Node.model_rebuild()
+  - Node.model_rebuild(_types_namespace=namespace)
+  - self._model.model_rebuild(force=True)

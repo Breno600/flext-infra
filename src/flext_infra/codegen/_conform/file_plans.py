@@ -23,7 +23,7 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
         relative_path: str,
         rendered: str,
         *,
-        mode: int | None = None,
+        mode: int = 0o644,
         source_states: t.VariadicTuple[m.Cli.AtomicFileState] = (),
     ) -> p.Result[m.Infra.CodegenFilePlan]:
         """Snapshot one target and bind it to exact desired bytes and mode.

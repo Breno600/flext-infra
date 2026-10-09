@@ -180,7 +180,7 @@ class TestsFlextInfraCodegenLayoutGitignore:
     def test_layout_preserves_tracked_ignored_files_and_ignores_local_artifacts(
         tmp_path: Path,
     ) -> None:
-        """Local ignored files are not layout inputs; tracked files stay."""
+        """Local ignored files are not layout inputs; tracked files remain reviewable."""
         project = build_loose_project(tmp_path)
         local = project / "local-artifact"
         tracked = project / "tracked-artifact"

@@ -34,6 +34,7 @@ class FlextInfraPytestEntry:
 
         Raises:
             ValueError: If unsupported pytest operation.
+            TypeError: If the runner returns a non-integer process status.
 
         """
         # Deliberately deferred past the pre-import clock snapshot: the
@@ -43,9 +44,14 @@ class FlextInfraPytestEntry:
 
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
         if mode == "profile":
-            return profile_module.FlextInfraPytestProfile(Path(sys.argv[2])).run_parent(
+            profile = profile_module.FlextInfraPytestProfile(Path(sys.argv[2]))
+            status = profile.run_parent(
                 started_at_monotonic=cls._STARTED_AT_MONOTONIC,
             )
+            if isinstance(status, int):
+                return status
+            msg = f"pytest profile returned a non-integer process status: {status!r}"
+            raise TypeError(msg)
 
         slow_phase = mode in {"slow", "full-slow", "file-slow"}
         runner = runner_module.FlextInfraPytestRunner.from_environment(
@@ -59,13 +65,18 @@ class FlextInfraPytestEntry:
             )
             raise ValueError(msg)
         if mode == "coverage":
-            return runner.execute_coverage().unwrap()
-        if mode in {"full", "full-slow"}:
-            return runner.execute_full().unwrap()
-        if mode in {"", "slow", "file", "file-slow"}:
-            return runner.execute().unwrap()
-        msg = f"unsupported pytest operation: {mode}"
-        raise ValueError(msg)
+            status = runner.execute_coverage().unwrap()
+        elif mode in {"full", "full-slow"}:
+            status = runner.execute_full().unwrap()
+        elif mode in {"", "slow", "file", "file-slow"}:
+            status = runner.execute().unwrap()
+        else:
+            msg = f"unsupported pytest operation: {mode}"
+            raise ValueError(msg)
+        if isinstance(status, int):
+            return status
+        msg = f"pytest runner returned a non-integer process status: {status!r}"
+        raise TypeError(msg)
 
 
 if __name__ == "__main__":

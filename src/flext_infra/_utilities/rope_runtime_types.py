@@ -6,10 +6,11 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TypeGuard
 
 from flext_infra import p, t
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
 
 
 class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
@@ -18,6 +19,30 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
     @classmethod
     def file_resource(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopeFile]:
         return isinstance(value, cls.runtime_type("rope.base.resources", "File"))
+
+    @classmethod
+    def require_file_resource(
+        cls,
+        value: p.AttributeProbe,
+        label: str | Path,
+    ) -> t.Infra.RopeFile:
+        """Narrow one Rope resource to the file shape or refuse the input.
+
+        Single owner for the ``get_resource`` result consumers read content
+        from: every caller that treats a project resource as a module file
+        narrows through here instead of restating the predicate and refusal.
+
+        Returns:
+            The resulting ``t.Infra.RopeFile``.
+
+        Raises:
+            TypeError: If the resource is not a Rope file (folder or absent).
+
+        """
+        if not cls.file_resource(value):
+            msg = f"expected a Rope file resource: {label}"
+            raise TypeError(msg)
+        return value
 
     @classmethod
     def pymodule(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyModule]:
@@ -101,6 +126,22 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
 
         """
         return type(value) is cls.runtime_type("rope.base.pyobjects", "PyObject")
+
+    @classmethod
+    def py_class(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:
+        """Return whether ``value`` is a Rope class declared in Python source.
+
+        Builtin classes (``Exception``, ``object``) are abstract classes too,
+        but they have no source scope.
+
+        Returns:
+            Whether ``value`` is a Rope source-declared class object.
+
+        """
+        return isinstance(
+            value,
+            cls.runtime_type("rope.base.pyobjectsdef", "PyClass"),
+        )
 
     @classmethod
     def py_function(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:

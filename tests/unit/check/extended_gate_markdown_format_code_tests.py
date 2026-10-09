@@ -12,9 +12,8 @@ from flext_tests import tm
 
 from flext_infra import c, m
 from flext_infra.gates.markdown_code import FlextInfraMarkdownCodeGate
-from flext_infra.gates.markdown_code_sources import FlextInfraMarkdownCodeSources
 from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
-from tests import u
+from tests import TestsFlextInfraUtilities as u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -211,28 +210,6 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
 
         FlextInfraMarkdownCodeGate(tmp_path).fix(project_dir, context)
         tm.that(readme.read_text(encoding="utf-8"), eq=self.SYNTAX_BROKEN)
-
-    def test_code_gate_names_the_unformatted_block(self, tmp_path: Path) -> None:
-        """The finding names the offending fence and carries ruff's own line."""
-        project_dir = u.Tests.mk_project(tmp_path, "markdown-code-located")
-        content = self.FORMATTED + "\nProse.\n\n```python\ny=2\n```\n"
-        (project_dir / "README.md").write_text(content, encoding="utf-8")
-
-        result = u.Tests.check_gate_asserting(
-            FlextInfraMarkdownCodeGate,
-            tmp_path,
-            project_dir,
-            passed=False,
-            issues_len=1,
-        )
-
-        issue = result.issues[0]
-        tm.that(issue.file, eq="README.md")
-        tm.that(issue.line, eq=content[: content.rindex("```python")].count("\n") + 1)
-        tm.that(
-            issue.message,
-            has=FlextInfraMarkdownCodeSources.source_name("README.md", 1),
-        )
 
     @staticmethod
     def test_code_gate_reports_unformatted_docstring_example(

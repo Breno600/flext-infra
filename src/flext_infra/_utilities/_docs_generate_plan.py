@@ -11,8 +11,8 @@ from pathlib import Path
 from flext_cli import u as cli_u
 
 from flext_infra import m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDocsContract,
+from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities._docs_generate_sources import (
     FlextInfraUtilitiesDocsGenerateSourcesMixin,
 )
 

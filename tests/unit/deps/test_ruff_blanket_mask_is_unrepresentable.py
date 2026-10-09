@@ -69,6 +69,20 @@ class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
 
         tm.that(masked, eq=set())
 
+    @pytest.mark.parametrize("name", ["__basse__", "__init_subclas__", "__custom__"])
+    def test_native_descriptor_policy_rejects_unapproved_names(
+        self,
+        name: str,
+    ) -> None:
+        """Unrelated or misspelled dunders cannot enter the native allowlist."""
+        payload = self._lint_policy()
+        payload["pylint"] = {"allow-dunder-method-names": [name]}
+
+        with pytest.raises(m.ValidationError) as failure:
+            _ = m.Infra.RuffLintConfig.model_validate(payload)
+
+        tm.that(str(failure.value), has=name)
+
     @pytest.mark.parametrize("files", ["src/flext_sample/generated.py", None])
     def test_typed_boundary_rejects_a_blanket_mask_for_any_scope(
         self,

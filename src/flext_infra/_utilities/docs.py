@@ -15,6 +15,8 @@ from flext_infra import c, m, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDocsContract,
     FlextInfraUtilitiesDocsScope,
+)
+from flext_infra._utilities._docs_scope_build import (
     FlextInfraUtilitiesDocsScopeBuildMixin,
 )
 

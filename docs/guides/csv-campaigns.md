@@ -2,6 +2,8 @@
 
 <!-- TOC START -->
 
+- No sections found
+
 <!-- TOC END -->
 
 For a recovery that only needs declarative Sed text rules, run `make mod-text`

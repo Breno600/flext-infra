@@ -13,13 +13,11 @@ from flext_cli import m
 
 from flext_infra import p, t
 from flext_infra._constants import FlextInfraConstantsCodegenProject
-from flext_infra._models import (
-    FlextInfraConfigModels,
-    FlextInfraModelsCodegenFixModels,
-    FlextInfraModelsCodegenLazyInitModels,
-    FlextInfraModelsCodegenScaffoldModels,
-    FlextInfraModelsMixins,
-)
+from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
+from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
+from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
+from flext_infra._models._config.base import FlextInfraConfigModels
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsCodegenPipelineModels:
@@ -110,7 +108,8 @@ class FlextInfraModelsCodegenPipelineModels:
         """Collaborators the complete conform crosses into, wired by the facade.
 
         Docs rendering is another service family; the composition root binds
-        its implementation once and conform only consumes this port.
+        its implementation once and conform only consumes this port. Participant
+        authorization is likewise supplied before any journal lease or recovery.
         """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
@@ -123,6 +122,9 @@ class FlextInfraModelsCodegenPipelineModels:
             p.Infra.DocsArtifactPlannerFactory,
             m.Field(description="Builds the docs planner for one conform scope"),
         ]
+        participant_policy: p.Infra.CodegenParticipantPolicyFactory = m.Field(
+            description="Authorizes physical generation participants before recovery",
+        )
 
     class CodegenPipelineState(m.ArbitraryTypesModel):
         """Typed inter-stage state for the codegen pipeline — Pydantic v2 model."""

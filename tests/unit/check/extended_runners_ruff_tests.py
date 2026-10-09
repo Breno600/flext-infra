@@ -117,6 +117,71 @@ class TestsFlextInfraRealGateRunners:
         tm.that(not after.result.passed, eq=True)
         tm.that(emitted.stderr, has='{"failed": true}')
 
+    @pytest.mark.slow
+    def test_ruff_lint_fix_hoists_inline_imports_and_wraps_long_literals(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Make fix repairs import-outside-top-level and line-too-long itself.
+
+        Ruff has no fix for either rule: the normalize-imports recipe hoists the
+        inline import through the import-law engine and the wrap-long-line
+        recipe splits the long literal; the module keeps running.
+        """
+        project_dir = u.Tests.mk_project(
+            tmp_path,
+            "fix-imports",
+            pyproject=u.Tests.scaffold_text(
+                tmp_path / "fixture-project",
+                c.PYPROJECT_FILENAME,
+            ),
+            with_src=True,
+        )
+        module = project_dir / "src" / "fix_imports" / "report.py"
+        long_words = " ".join(["payload"] * 14)
+        module.write_text(
+            '"""Render one report."""\n\n'
+            "from __future__ import annotations\n\n\n"
+            "def render() -> str:\n"
+            '    """Render the report payload."""\n'
+            "    import json\n\n"
+            f'    return json.dumps({{"message": "{long_words}"}})\n',
+            encoding="utf-8",
+        )
+        gate = FlextInfraRuffLintGate(tmp_path)
+
+        _ = gate.fix(
+            project_dir,
+            m.Infra.GateContext(
+                repository_root=tmp_path,
+                reports_dir=tmp_path,
+                apply_fixes=True,
+            ),
+        )
+        after = gate.check(project_dir, self.make_ctx(tmp_path))
+        repaired = module.read_text(encoding="utf-8")
+        emitted = tm.ok(
+            u.Cli.run_raw(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import sys; sys.path.insert(0, 'src'); "
+                        "from fix_imports.report import render; print(render())"
+                    ),
+                ],
+                cwd=project_dir,
+            ),
+        )
+
+        tm.that(
+            [issue.code for issue in after.issues],
+            lacks=["import-outside-top-level", "line-too-long"],
+        )
+        tm.that(repaired, has="\nimport json\n")
+        tm.that(repaired, lacks="    import json")
+        tm.that(emitted.stdout, has=long_words)
+
     def test_ruff_lint_scopes_nested_project_to_owned_source_dirs(
         self,
         tmp_path: Path,
@@ -183,15 +248,12 @@ class TestsFlextInfraRealGateRunners:
         tm.that(result.result.passed, eq=True)
         tm.that(source.read_text(encoding="utf-8"), eq="value = [1, 2, 3]\n")
 
-    @pytest.mark.requires_engine("pyright")
     def test_pyright_reports_real_type_error(self, tmp_path: Path) -> None:
         """Test pyright reports real type error."""
         project_dir = u.Tests.mk_project(
             tmp_path,
             "pyright-project",
-            pyproject=(
-                '[tool.pyright]\ninclude = ["src"]\ntypeCheckingMode = "strict"\n'
-            ),
+            pyproject='[tool.pyright]\ninclude = ["src"]\ntypeCheckingMode = "strict"\n',
             with_src=True,
         )
         (project_dir / "src" / "demo.py").write_text(

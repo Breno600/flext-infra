@@ -72,11 +72,6 @@ and `make fmt` never upgrade: they install frozen from those locks, which is the
 path. Git dependencies follow the tips of their declared integration branches, and `APPLY`
 stays removed.
 
-One `make upg` run converges. It upgrades `uv.lock`, installs the upgraded generator,
-projects the manifests through `make gen`, and then resolves `uv.lock` again from the
-projected `pyproject.toml` and installs it. A requirement that only the upgraded
-generator declares therefore reaches the lock and the environment in the same run.
-
 Each internal `flext-*` requirement declares its integration line in `pyproject.toml`,
 never a commit: the resolved commit exists only in `uv.lock`, and only `make upg` moves
 it to the line tip. The manifest does not pin revisions. A commit left in the
@@ -85,21 +80,17 @@ When the projection carries no line, a hand-written `project.flext_source` in th
 manifest declares it, and a commit in a hand-written source fails. Fix the setup or
 `upg` owner and regenerate through `make gen`; manual installs do not replace the cycle.
 
-A workspace root declares local-member requirements as bare distribution names and
-resolves them through `[tool.uv.sources]` entries with `workspace = true`. The root
-alone owns `[tool.uv.workspace]`; member manifests never declare a nested workspace.
-Publishable members retain their declared inline Git provenance and, while attached,
-redirect local sibling requirements through their own workspace-source overlay.
-Standalone conformance removes that overlay without removing the declared Git
-requirements. Dependencies outside the declared workspace retain their governed
-integration source rather than becoming local members.
+A workspace root declares each attached member, of any family, as an inline Git source
+on the workspace's own integration line, the same line the governed `.gitmodules` requires
+of that member. Only `flext-*` dependencies that are not members follow the FLEXT line.
+The root `uv.lock` therefore resolves every member without a `[tool.uv.workspace]`
+overlay.
 
 ## Runtime environment
 
 Code in a checkout runs in the environment of its `RUNTIME_ROOT`. The generated Makefile
 exports `RUNTIME_ROOT`, and flext-infra reads it as a typed declaration: the
-`fresh-import` validation runs its probes with the platform-specific
-Python interpreter in the derived `RUNTIME_VENV`, never
+`fresh-import` validation runs its probes with the platform-specific Python interpreter in the derived `RUNTIME_VENV`, never
 with the interpreter hosting the tool. Without a declaration, the owner derives the
 checkout's Git root; a declaration without an interpreter fails.
 
@@ -121,8 +112,7 @@ resolves the Mise release once, through Mise itself (`mise latest` of
 subject to Mise's `minimum_release_age`), and generates both launchers with
 `mise generate install-script --version <release> --windows`, run by that release. A
 held release carries its reason beside it in the configuration and returns to `latest`
-when the newest release outside the cooldown works. Each launcher embeds
-the release and its checksums, so
+when the newest release outside the cooldown works. Each launcher embeds the release and its checksums, so
 direct, PATH, or shim calls never query the network to choose a version.
 `mise.version` holds a generated header followed by the single release line.
 
@@ -161,11 +151,12 @@ conflict, or sidecars that no longer match stage 2, fails without changing the l
 
 Mise reaches GitHub only to install a tool missing from the persistent cache and inside
 `make upg`. Only `make upg` writes `mise.lock` and `uv.lock`; `make setup` never writes
-either. Every Mise call except `install --yes` runs with the offline settings declared
-once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`. Setup performs one install using the
-typed lock policy. A missing or incompatible lock entry fails with Mise's original
-diagnostic and exit status, without disabling lockfiles, retrying, or entering the
-lifecycle. Only `make upg` repairs the lock. On the uv side, setup syncs
+either and always runs. Every Mise call except `install --yes` runs with the offline
+settings declared once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`. An offline
+`install --dry-run` checks that the committed lock satisfies `.mise.toml`. When it does
+not, setup prints a `WARN`, installs from `.mise.toml` with `MISE_LOCKFILE=false` and
+`MISE_LOCKED=false` for the rest of that setup (the lifecycle inherits
+`SETUP_MISE_LOCK_DRIFT`), and leaves `mise.lock` untouched. On the uv side, setup syncs
 `--locked`; when `uv.lock` drifts from `pyproject.toml` it prints a `WARN` and syncs the
 committed lock `--frozen`, which never writes it. The next `make upg` rewrites both
 locks. `make upg` resolves once
@@ -232,81 +223,25 @@ the batch. Structural refactors go through `make mod`.
 
 ## Check gate partitions
 
-`make file-gate FILE=<repository-relative path>` delegates to the existing
-`check run --file` owner, never bare analyzers or a second gate engine. The raw
-Make value travels through an exported environment value, not interpolated shell
-source. Selection rejects empty, absolute, traversal, missing, non-Python and
-symlink-component paths before creating reports or invoking tools. Only the literal
-file reaches each gate's existing `check_files`; no mutation is permitted.
-The Make pre-gate explicitly selects registered lint, format, Pyrefly, Mypy,
-Pyright and codemod gates through the existing typed `RunCommand.gates` owner and
-`resolve_gates`; no separate gate vocabulary or configuration is introduced.
-The public `check run --file` requires explicit `--gates`, never silently falls
-back to whole-project gates, and rejects unknown names before scanner execution.
-Mypy and Pyright findings retain the existing informative SSOT policy; native
-errors, missing tools/configuration and malformed reports remain blocking.
-Codemod uses its elected, staged provider configurations and native report owner.
-
-The former bare `typos` hook existed only in the Make recipe, help and tests,
-always under `|| true`. This branch declares no canonical typos runner,
-configuration or provisioned toolchain capability. Removing that ownerless
-best-effort advertisement removes no supported acceptance capability: it never
-contributed a truthful verdict. Registered rule diagnostics remain unchanged;
-no dictionary, installation, provider or suppression replaces the hook.
-The pre-gate remains bounded; full `make check` is still required acceptance.
-
-Trailing comma layout has one owner: Ruff's formatter. The tooling SSOT records
-the removal of redundant `missing-trailing-comma` (COM812) lint enforcement using
-its official rule name and rationale. This must be regenerated before runtime
-validation; changing the SSOT alone does not update existing projections.
-
-Selected functional gates remain blocking. `make check` fails when the selection
+No check gate is suspendable: every finding of every selected gate blocks. The
+namespace laws are rule data of the codemod catalog and block through the codemod
+gate. `make check` fails when the selection
 contains no projects or when a selected project has no `pyproject.toml`; no project is
 skipped silently.
 
-Local runs, CI, and hooks derive their gates from the same active set: `CI=N make check`
-runs the intersection with `make.ci.local_check_gates`, `CI=Y make check` runs the
-complement, and `make check` without `CI` runs the union. The configuration excludes
-Mypy, Pyright, codemod and smells from CI, including advisory execution. Lint and
-remaining type findings follow `make.ci.informative_check_gates`: native `FINDINGS`
-remain reported without stopping tests; native `ERROR`, malformed reports, runtime
-failures and functional findings remain blocking. The `check` pre-push hook drops
-the inherited `CI` to run every active gate.
-
-Every workspace and standalone projection exposes `make pre-commit`. CI and the
-generated pre-commit hook invoke that same approval owner. Its typed workflow is
-`setup -> audit -> check -> test`, with the configured CI token enforced before
-topology or activation, even when the caller supplied a local token. Help, dry-run,
-question, touch and custom approval replacements cannot yield an approval receipt.
-Audit is read-only conformance and installed-lock provenance, not generation or a
-dirty-tree check; legitimate staged changes are not rejected simply for being staged.
-
-CI setup always reconciles the owned physical environment through locked,
-noneditable installation, including an existing venv. It does not initialize,
-activate or operate on members, and uses root-declared topology rather than reading
-sibling manifests. Local setup without the CI token retains local source routing.
-Only local upgrade resolves or writes locks; setup preserves the first install error
-without retrying under a different lock mode.
-
-Normal test verbs remain incremental testmon only and omit the configured slow
-markers. The filesystem cache lives at the typed XDG/HOME-derived project path.
-Actions restores only that project database and saves only on an allowed integration
-push with a fresh completed-run path/digest/saveability receipt. The SQLite owner
-checkpoints and checks integrity before the runner releases its lease and exports
-the receipt. PRs, forks, cancelled or incomplete runs cannot publish cache state;
-a completed failing test run may save without changing its failing status.
+Local runs, CI, and hooks derive their gates from the same active set, preserving the
+declared typing partition: `CI=N make check` runs the intersection with
+`make.ci.local_check_gates`, `CI=Y make check` runs the complement, and `make check`
+without `CI` runs the union. The `check` pre-push hook drops the inherited `CI` to run
+every active gate; the hook's other verbs keep the local token. The CI workflow runs
+both partitions without overlap. Validators keep their severity, and active functional
+gates still require execution without warnings or residual findings.
 
 `smells` is not part of the `make check` partitions. The selector-free `make smells`
 verb runs only the qlty smell scan and fails when it finds defects. The
 `runtime-census` gate stays in `make check` and grades every runtime enforcement
 finding, including rules that qlty also classifies as smells. An empty or
 malformed qlty SARIF response is a failed scan, not a zero-finding receipt.
-Native primary source spans and all `relatedLocations` pass through the typed issue
-and SARIF report contracts without dropping comparison locations outside the primary
-project. Coordinates are emitted only when the scanner supplies them, including explicit
-zeros; line-only and regionless native locations do not acquire invented coordinates.
-Point-only diagnostics from other gates remain point-only. The Markdown summary still
-uses the primary location, while the SARIF artifact carries the comparison evidence.
 
 ## Bounded Mypy failure status
 
@@ -350,13 +285,6 @@ and rejects extra output from the
 Timeouts, forwarded signals, other exit codes, malformed JSON, and disagreement between
 exit code and diagnostic severities remain failures, even when stdout exists. Both
 whole-project checks and `check_files` scan every elected provider rule.
-
-AST replacements publish through the authenticated file-plan boundary, then reuse
-the import normalizer on only the rewritten files. Unused imports and formatting
-are normalized before the next mod check; normalization failures remain blocking.
-The root facade export rule preserves literal tuple values and order while removing
-an unnecessary type-only annotation dependency. It does not change classes, aliases
-or inheritance, and it does not rewrite initializer projections.
 
 `GateExecution.issues` retains each finding's original file, position, rule, message,
 and severity. SARIF reports each finding at its native level; raw scanner output remains

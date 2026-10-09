@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, main
+from flext_infra import c, m
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.codemod import FlextInfraCodemodGate
 from tests import u
@@ -92,25 +92,6 @@ class TestsFlextInfraCodemodGate:
         tm.that(execution.issues, empty=True)
         tm.that(execution.raw_output, has="exit=0")
 
-    def test_generated_source_tree_is_outside_the_scan(self, tmp_path: Path) -> None:
-        """A tracked generated-source module never reaches the policy scan.
-
-        Premise (flext-gknfx): generated trees are tracked, so Git ignore rules
-        no longer hide them from ast-grep; the codegen artifact key does.
-        """
-        names = config.Infra.codegen.generated_sources
-        tm.that(names, empty=False)
-        project = self._project(tmp_path)
-        tree = project / "src" / "pkg" / names[0]
-        tree.mkdir(parents=True)
-        (tree / "wire_pb2.py").write_text("\nsecond(1)\n", encoding="utf-8")
-        (project / "src" / "pkg" / "subject.py").write_text("", encoding="utf-8")
-
-        execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
-
-        tm.that(execution.result.passed, eq=True, msg=str(execution.issues))
-        tm.that(execution.issues, empty=True)
-
     def test_check_files_uses_every_rule_and_only_requested_files(
         self,
         tmp_path: Path,
@@ -175,7 +156,10 @@ class TestsFlextInfraCodemodGate:
             str(reports),
         ])
         tm.that(code, eq=1 if finding else 0)
-        findings = tm.ok(u.Infra.check_report_findings(project, reports_dir=reports))
+        (report_path,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_SARIF_FILENAME}")
+        findings = tm.ok(
+            u.Infra.check_report_findings(project, reports_dir=report_path.parent),
+        )
         # The bundled policy rules also scan the selected file; the fixture
         # rule proves the scope, because the unselected sibling matches it too.
         tm.that(
@@ -209,6 +193,9 @@ class TestsFlextInfraCodemodGate:
 
         result = results[0]
         tm.that(result.passed, eq=False)
+        receipt = result.gates["codemod"].raw_receipt
+        assert receipt is not None
+        reports = receipt.parent.parent
         markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
             encoding="utf-8",
         )

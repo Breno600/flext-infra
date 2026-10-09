@@ -117,6 +117,7 @@ class FlextInfraModTextGateEngine:
         """
         # The packaged rules live at the same sub-path of whichever SSOT
         # config directory is active, including a declared relocation.
+
         provider = FlextInfraConfig.ssot_config_dir() / (
             c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.CONFIG_DIR_NAME)
         )
@@ -421,29 +422,31 @@ class FlextInfraModTextGateEngine:
         if selector.failure:
             return r[m.Infra.ModTextRule].from_failure(selector)
         distributions, captures, expected = selector.value
+        scopes: t.MutableMappingKV[str, t.VariadicTuple[str]] = {}
+        for key in (
+            c.Infra.CODEMOD_TEXT_KEY_INCLUDE,
+            c.Infra.CODEMOD_TEXT_KEY_EXCLUDE,
+        ):
+            if key not in entry.value:
+                continue
+            declared = entry.value[key]
+            if not isinstance(declared, (list, tuple)) or any(
+                not isinstance(glob, str) or not glob.strip() for glob in declared
+            ):
+                return r[m.Infra.ModTextRule].fail(
+                    f"text rule {key} must be a list of non-empty strings in {source}",
+                )
+            scopes[key] = tuple(glob for glob in declared if isinstance(glob, str))
         rule = m.Infra.ModTextRule(
             rule_id=str(entry.value.get(c.Infra.CODEMOD_TEXT_KEY_ID, "")),
             description=str(entry.value.get(c.Infra.CODEMOD_TEXT_KEY_DESCRIPTION, "")),
-            include=tuple(
-                str(glob)
-                for glob in FlextInfraModTextGateEngine._entry_sequence(
-                    entry.value,
-                    c.Infra.CODEMOD_TEXT_KEY_INCLUDE,
-                )
-            ),
-            exclude=tuple(
-                str(glob)
-                for glob in FlextInfraModTextGateEngine._entry_sequence(
-                    entry.value,
-                    c.Infra.CODEMOD_TEXT_KEY_EXCLUDE,
-                )
-            ),
             distributions=distributions,
             find=find,
             replace=str(entry.value.get(c.Infra.CODEMOD_TEXT_KEY_REPLACE, "")),
             flags=flags,
             capture_equals=captures,
             expected=expected,
+            **scopes,
         )
         if not rule.rule_id:
             return r[m.Infra.ModTextRule].fail(

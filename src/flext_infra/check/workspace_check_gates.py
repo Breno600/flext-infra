@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import cli
 
-from flext_infra import c, m, p, r, t, u
+from flext_infra import c, config, m, p, r, t, u
 
 if TYPE_CHECKING:
     from flext_infra.check.gate_registry import FlextInfraGateRegistry
@@ -222,17 +222,13 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 elapsed=execution.result.duration,
             )
             if execution.issues or not execution.result.passed:
-                for finding in execution.result.errors:
-                    u.Cli.info(finding)
-                # Missing or malformed findings must retain the producer's failure.
-                if execution.raw_output.strip() and (
-                    not execution.result.errors
-                    or any(
-                        issue.code == c.Infra.ToolOutcome.ERROR
-                        for issue in execution.issues
+                for issue in execution.issues:
+                    u.Cli.info(issue.formatted)
+                if execution.raw_receipt is not None:
+                    u.Cli.info(
+                        f"{stage.stage_id}: {execution.outcome.value}; "
+                        f"Native output receipt: {execution.raw_receipt}",
                     )
-                ):
-                    u.Cli.info(execution.raw_output)
                 if not execution.result.passed and (ctx.fail_fast or mutating):
                     break
         return result
@@ -281,6 +277,14 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 selected_files=ctx.selected_files,
             )
             execution = self._execute_gate(gate_instance, project_dir, gate_ctx)
+            raw_receipt = gate_ctx.reports_dir / (
+                f"{gate_id}{config.Infra.tooling.raw_check_receipt_suffix}"
+            )
+            u.Cli.atomic_write_text_file(
+                raw_receipt,
+                execution.raw_output,
+            ).unwrap()
+            execution = execution.model_copy(update={"raw_receipt": raw_receipt})
             gates_sink[gate_id] = execution
             self._gate_logger.info(
                 "gate_executed",

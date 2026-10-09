@@ -15,7 +15,11 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesPrivateImportAncestry as ImportAncestry,
     FlextInfraUtilitiesPrivateImportFacades,
     FlextInfraUtilitiesPrivateImportValidation,
+)
+from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.private_import_cst import (
     FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
 )
 

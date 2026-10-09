@@ -11,10 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t, u
-from flext_infra.codegen._mise_artifacts_files import (
-    FlextInfraMiseArtifactsFiles as files,
-)
+from flext_infra import m, t, u
+from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
 from flext_infra.codegen._mise_artifacts_verification_manifest import (
     FlextInfraMiseArtifactsVerificationManifest,
 )
@@ -70,7 +68,7 @@ class FlextInfraMiseArtifactsVerification(
                 rebound_expected = rebound.value
             else:
                 rebound_expected = expected
-            observed = files.read_state(
+            observed = FlextInfraMiseArtifactsFiles.read_state(
                 rebound_expected.path,
                 required=rebound_expected.content is not None,
             )
@@ -117,15 +115,15 @@ class FlextInfraMiseArtifactsVerification(
         if ancestry.failure:
             return result.from_failure(ancestry)
         observed = current.value
-        if observed.directories or observed.anchor_ancestry != tuple(ancestry):
+        if observed.directories or observed.anchor_ancestry != ancestry.value:
             return result.fail(
                 f"generation source parent identity changed: {expected.path}",
             )
         return result.ok(
             expected.model_copy(
                 update={
-                    "parent_device": ancestry[-1][0],
-                    "parent_inode": ancestry[-1][1],
+                    "parent_device": ancestry.value[-1][0],
+                    "parent_inode": ancestry.value[-1][1],
                 },
             ),
         )
@@ -134,7 +132,7 @@ class FlextInfraMiseArtifactsVerification(
     def _verified_parent_ancestry(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        witness: m.Cli.AtomicDirectoryState,
+        witness: m.Cli.AtomicDirectoryChainPlan,
     ) -> p.Result[t.VariadicTuple[t.Pair[int, int]]]:
         """Rebuild the parent ancestry chain from journal-created directories.
 
@@ -194,7 +192,7 @@ class FlextInfraMiseArtifactsVerification(
             before = u.Infra.codegen_file_before_state(plan)
             if before.failure:
                 return r[bool].from_failure(before)
-            observed = files.read_state(
+            observed = FlextInfraMiseArtifactsFiles.read_state(
                 plan.path,
                 required=plan.desired_content is not None,
             )
@@ -266,7 +264,10 @@ class FlextInfraMiseArtifactsVerification(
 
         """
         for publication in publications:
-            observed = files.read_state(publication.before.path, required=False)
+            observed = FlextInfraMiseArtifactsFiles.read_state(
+                publication.before.path,
+                required=False,
+            )
             if observed.failure:
                 return r[bool].from_failure(observed)
             current = observed.value
@@ -398,18 +399,23 @@ class FlextInfraMiseArtifactsVerification(
     def _artifact_snapshot(
         cls,
         plan: m.Infra.MiseToolchainWorkspacePlan,
-        replacements: MutableMapping[Path, t.Pair[bytes, int | None]],
+        replacements: t.MappingKV[Path, t.Pair[bytes, int | None]],
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         states: list[m.Cli.AtomicFileState] = []
         for project in plan.projects:
             artifacts = (project.config.before,)
             for expected, required_mode in zip(
                 artifacts,
-                (c.Infra.CONFIG_SPEC[1],),
+                (project.config.replacement_mode,),
                 strict=True,
             ):
-                current = files.read_state(expected.path, required=False)
-                if current.failure or current.value.content is None:
+                current = FlextInfraMiseArtifactsFiles.read_state(
+                    expected.path,
+                    required=False,
+                )
+                if current.failure:
+                    return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(current)
+                if current.value.content is None:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
                         f"published Mise artifact is absent: {expected.path}; "
                         "run make gen",

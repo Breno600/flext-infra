@@ -67,28 +67,21 @@ if TYPE_CHECKING:
     from flext_infra.codegen.mise_artifacts_workspace import (
         FlextInfraMiseWorkspacePlanner,
     )
-    from flext_infra.codegen.pipeline import (
-        FlextInfraCodegenLazyInitGenerationMixin,
-        FlextInfraCodegenPipeline,
-        FlextInfraCodegenPipelineStagesMixin,
-        FlextInfraMiseArtifactsFiles,
-        FlextInfraMisePublication,
+    from flext_infra.codegen.mise_toolchain_proof import (
+        FlextInfraCodegenMiseToolchainProof,
     )
+    from flext_infra.codegen.pipeline import FlextInfraCodegenPipeline
     from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
     from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
     from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
     from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
+    from flext_infra.codegen.staged_package import FlextInfraStagedPackage
     from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
     from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
     from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
     from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
     from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
     from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
-    from flext_infra.codemod.loop_phases import (
-        FlextInfraAccessorRenamePhase,
-        FlextInfraImportNormalizationPhase,
-        FlextInfraNamespaceRelocationPhase,
-    )
     from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
     from flext_infra.codemod.snapshot_reconciler import (
         FlextInfraCodemodSnapshotReconciler,
@@ -151,6 +144,7 @@ if TYPE_CHECKING:
     from flext_infra.gates.scanner_gate import FlextInfraScannerGateMixin
     from flext_infra.gates.smells import FlextInfraSmellsGate
     from flext_infra.git import FlextInfraGitService
+    from flext_infra.git_lanes import FlextInfraGitLanes
     from flext_infra.maintenance.clean import FlextInfraCleanService
     from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
     from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
@@ -217,6 +211,7 @@ if TYPE_CHECKING:
     )
     from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
     from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+    from flext_infra.workspace.lifecycle import FlextInfraWorkspaceLifecycle
     from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
     from flext_infra.workspace.rope import FlextInfraRopeWorkspace
     from flext_infra.worktree import FlextInfraWorktreeService
@@ -225,7 +220,6 @@ if TYPE_CHECKING:
 __all__: tuple[str, ...] = (
     "FlextInfra",
     "FlextInfraAccessorMigrationOrchestrator",
-    "FlextInfraAccessorRenamePhase",
     "FlextInfraApplyRenames",
     "FlextInfraBanditGate",
     "FlextInfraCProfileReport",
@@ -245,12 +239,11 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenGeneration",
     "FlextInfraCodegenLayout",
     "FlextInfraCodegenLazyInit",
-    "FlextInfraCodegenLazyInitGenerationMixin",
     "FlextInfraCodegenLazyInitPlanner",
     "FlextInfraCodegenMakeBootstrap",
     "FlextInfraCodegenMiseArtifacts",
+    "FlextInfraCodegenMiseToolchainProof",
     "FlextInfraCodegenPipeline",
-    "FlextInfraCodegenPipelineStagesMixin",
     "FlextInfraCodegenProjectNew",
     "FlextInfraCodegenProtocolModels",
     "FlextInfraCodegenPyTyped",
@@ -292,8 +285,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraFreshImportGate",
     "FlextInfraGate",
     "FlextInfraGateRegistry",
+    "FlextInfraGitLanes",
     "FlextInfraGitService",
-    "FlextInfraImportNormalizationPhase",
     "FlextInfraIndexDeclarationsGate",
     "FlextInfraInjectCommentsPhase",
     "FlextInfraInventoryService",
@@ -307,8 +300,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraMarkdownFormatGate",
     "FlextInfraMarkdownGate",
     "FlextInfraMarkdownGateBase",
-    "FlextInfraMiseArtifactsFiles",
-    "FlextInfraMisePublication",
     "FlextInfraMiseWorkspacePlanner",
     "FlextInfraModGateEngine",
     "FlextInfraModReplacements",
@@ -317,7 +308,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraMypyGate",
     "FlextInfraNamespaceEnforcer",
     "FlextInfraNamespaceRelocationCascade",
-    "FlextInfraNamespaceRelocationPhase",
     "FlextInfraNamespaceValidator",
     "FlextInfraProjectClassifier",
     "FlextInfraProjectSelectionServiceBase",
@@ -349,6 +339,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraSonarcloudClient",
     "FlextInfraSonarcloudIssues",
     "FlextInfraSonarcloudSettingsSync",
+    "FlextInfraStagedPackage",
     "FlextInfraStubSupplyChain",
     "FlextInfraTestmonDbInspector",
     "FlextInfraTextPatternScanner",
@@ -366,6 +357,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspaceEnvironmentMixin",
     "FlextInfraWorkspaceEnvironmentProvenance",
     "FlextInfraWorkspaceFleetGaps",
+    "FlextInfraWorkspaceLifecycle",
     "FlextInfraWorkspacePropagation",
     "FlextInfraWorkspaceRoutes",
     "FlextInfraWorktreeService",
@@ -414,7 +406,6 @@ install_lazy_exports(
     MappingProxyType({
         "FlextInfra": ".api",
         "FlextInfraAccessorMigrationOrchestrator": ".refactor.accessor_migration",
-        "FlextInfraAccessorRenamePhase": ".codemod.loop_phases",
         "FlextInfraApplyRenames": ".codemod.apply_renames",
         "FlextInfraBanditGate": ".gates.bandit",
         "FlextInfraCProfileReport": ".validate.cprofile_report",
@@ -434,12 +425,11 @@ install_lazy_exports(
         "FlextInfraCodegenGeneration": ".codegen.codegen_generation",
         "FlextInfraCodegenLayout": ".codegen.layout",
         "FlextInfraCodegenLazyInit": ".codegen.lazy_init",
-        "FlextInfraCodegenLazyInitGenerationMixin": ".codegen.pipeline",
         "FlextInfraCodegenLazyInitPlanner": ".codegen.lazy_init_planner",
         "FlextInfraCodegenMakeBootstrap": ".codegen.make_bootstrap",
         "FlextInfraCodegenMiseArtifacts": ".codegen.mise_artifacts",
+        "FlextInfraCodegenMiseToolchainProof": ".codegen.mise_toolchain_proof",
         "FlextInfraCodegenPipeline": ".codegen.pipeline",
-        "FlextInfraCodegenPipelineStagesMixin": ".codegen.pipeline",
         "FlextInfraCodegenProjectNew": ".codegen.project_new",
         "FlextInfraCodegenProtocolModels": ".codegen.protocol_models",
         "FlextInfraCodegenPyTyped": ".codegen.py_typed",
@@ -481,8 +471,8 @@ install_lazy_exports(
         "FlextInfraFreshImportGate": ".gates.fresh_import",
         "FlextInfraGate": ".gates.base_gate",
         "FlextInfraGateRegistry": ".check.gate_registry",
+        "FlextInfraGitLanes": ".git_lanes",
         "FlextInfraGitService": ".git",
-        "FlextInfraImportNormalizationPhase": ".codemod.loop_phases",
         "FlextInfraIndexDeclarationsGate": ".gates.index_declarations",
         "FlextInfraInjectCommentsPhase": ".deps.phases.inject_comments",
         "FlextInfraInventoryService": ".validate.inventory",
@@ -496,8 +486,6 @@ install_lazy_exports(
         "FlextInfraMarkdownFormatGate": ".gates.markdown_format",
         "FlextInfraMarkdownGate": ".gates.markdown",
         "FlextInfraMarkdownGateBase": ".gates.markdown_support",
-        "FlextInfraMiseArtifactsFiles": ".codegen.pipeline",
-        "FlextInfraMisePublication": ".codegen.pipeline",
         "FlextInfraMiseWorkspacePlanner": ".codegen.mise_artifacts_workspace",
         "FlextInfraModGateEngine": ".codemod.batch_gates",
         "FlextInfraModReplacements": ".codemod.batch_replacements",
@@ -506,7 +494,6 @@ install_lazy_exports(
         "FlextInfraMypyGate": ".gates.mypy",
         "FlextInfraNamespaceEnforcer": ".refactor.namespace_enforcer",
         "FlextInfraNamespaceRelocationCascade": ".refactor.namespace_relocations",
-        "FlextInfraNamespaceRelocationPhase": ".codemod.loop_phases",
         "FlextInfraNamespaceValidator": ".validate.namespace_validator",
         "FlextInfraProjectClassifier": ".refactor.project_classifier",
         "FlextInfraProjectSelectionServiceBase": ".base_selection",
@@ -538,6 +525,7 @@ install_lazy_exports(
         "FlextInfraSonarcloudClient": ".maintenance.sonarcloud_client",
         "FlextInfraSonarcloudIssues": ".maintenance.sonarcloud_issues",
         "FlextInfraSonarcloudSettingsSync": ".maintenance.sonarcloud",
+        "FlextInfraStagedPackage": ".codegen.staged_package",
         "FlextInfraStubSupplyChain": ".validate.stub_chain",
         "FlextInfraTestmonDbInspector": ".validate.testmon_db",
         "FlextInfraTextPatternScanner": ".validate.scanner",
@@ -555,6 +543,7 @@ install_lazy_exports(
         "FlextInfraWorkspaceEnvironmentMixin": ".workspace.environment",
         "FlextInfraWorkspaceEnvironmentProvenance": ".workspace.environment_provenance",
         "FlextInfraWorkspaceFleetGaps": ".workspace.fleet_gaps",
+        "FlextInfraWorkspaceLifecycle": ".workspace.lifecycle",
         "FlextInfraWorkspacePropagation": ".workspace.propagation",
         "FlextInfraWorkspaceRoutes": ".services.cli_routes_workspace",
         "FlextInfraWorktreeService": ".worktree",

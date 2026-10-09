@@ -33,7 +33,7 @@ dependencies = [
   "Markdown>=3.11",
   "mkdocs>=1.6.1",
   "packaging>=26.3",
-  "pydantic>=2.13.5,<3",
+  "pydantic>=2.14.0,<3",
   "pydantic-settings>=2.15.0",
   "pymdown-extensions>=11.0.1",
   "pytest>=9.1.1",
@@ -89,6 +89,7 @@ dev = [
   "mkdocs-section-index>=0.3.12",
   "mkdocstrings>=1.0.6",
   "mkdocstrings-python>=2.0.8",
+  "msgpack-types",
   "mypy>=2.3.1",
   "platformdirs>=4.12.0",
   "pymdown-extensions",
@@ -112,6 +113,7 @@ dev = [
   "types-defusedxml>=0.7.0.20260504",
   "types-docker>=7.2.0.20260827",
   "types-flask>=1.1.6",
+  "types-grpcio",
   "types-jsonschema>=4.26.0.20260518",
   "types-ldap3>=2.9.13.20260827",
   "types-Markdown",
@@ -224,7 +226,7 @@ project-excludes = [
   "typings/**",
   "vendor/**",
 ]
-project-includes = ["scripts/**/*.py*", "src/**/*.py*", "tests/**/*.py*"]
+project-includes = ["src/**/*.py*", "tests/**/*.py*"]
 python-version = "3.13"
 search-path = ["src", "."]
 use-ignore-files = false
@@ -418,7 +420,7 @@ namespace-packages = ["tests", "examples", "scripts"]
 preview = true
 respect-gitignore = true
 show-fixes = true
-src = ["scripts", "src", "tests"]
+src = ["src", "tests"]
 target-version = "py313"
 
 [tool.ruff.format]
@@ -469,6 +471,7 @@ runtime-evaluated-base-classes = [
   "flext_cli.m.BaseSettings",
   "flext_cli.m.ContractModel",
   "flext_cli.m.FlexibleModel",
+  "flext_cli.m.RootModel",
   "flext_cli.m.Value",
   "flext_core.FlextService",
   "flext_core.FlextSettings",
@@ -477,18 +480,37 @@ runtime-evaluated-base-classes = [
   "flext_core.m.FlexibleModel",
   "flext_core.m.RootModel",
   "flext_core.m.StrictBoundaryModel",
-  "flext_infra._models.FlextInfraConfigModelsContract.ConfigContract",
-  "flext_infra._models.FlextInfraExternalCacheDirectorySpec",
+  "flext_infra._models.FlextInfraModelsMixins.ProjectNameMixin",
+  "flext_infra._models.FlextInfraModelsMixins.WriteMixin",
   "flext_infra._models._codegen.fix.BulkFixItem",
   "flext_infra._models._codegen.pipeline.CodegenCommand",
   "flext_infra._models._config.contexts.MakeCommandContext",
   "flext_infra._models._config.contexts.MakeRenderContext",
   "flext_infra._models._config.contract.ConfigContract",
   "flext_infra._models._config.contract.DocsAuditOverridesSpec",
+  "flext_infra._models._config.contract.FlextInfraConfigModelsContract.ConfigContract",
+  "flext_infra._models._config.external_cache.FlextInfraExternalCacheDirectorySpec",
   "flext_infra._models.codegen_render.MkdocsRenderContext",
   "flext_infra._models.git.GitRemoteRequest",
+  "flext_infra._models.git.GitRepoRequest",
   "flext_infra._models.layout._LayoutContract",
   "flext_infra._models.mise_toolchain._ConfigContract",
+  "flext_infra._models.mixins.FilePathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.AbsoluteFilePathTextMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ErrorDetailMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.FilePathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.NestedClassPathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.NonNegativeLineMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.PositiveLineMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ProjectEntryNameMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ProjectNameMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.ProjectNamesListMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.RepositoryRootPathMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.RequiredNonNegativeLineMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.VersionTagMixin",
+  "flext_infra._models.mixins.FlextInfraModelsMixins.WriteMixin",
+  "flext_infra._models.mixins.PositiveLineMixin",
+  "flext_infra._models.mixins.ScopeMixin",
   "flext_infra.base.FlextInfraServiceBase",
   "flext_infra.base.s",
   "flext_infra.base_selection.FlextInfraProjectSelectionServiceBase",
@@ -499,6 +521,7 @@ runtime-evaluated-base-classes = [
   "flext_infra.codegen._conform.bootstrap.FlextInfraCodegenConformBootstrap",
   "flext_infra.codegen._conform.context_render.FlextInfraCodegenConformContextRender",
   "flext_infra.codegen._conform.docs_ownership.FlextInfraCodegenConformDocsOwnership",
+  "flext_infra.codegen._conform.execute_directed.FlextInfraCodegenConformExecuteDirected",
   "flext_infra.codegen._conform.execute_scaffold.FlextInfraCodegenConformExecuteScaffold",
   "flext_infra.codegen._conform.existing_plan.FlextInfraCodegenConformExistingPlan",
   "flext_infra.codegen._conform.file_plans.FlextInfraCodegenConformFilePlans",
@@ -511,6 +534,7 @@ runtime-evaluated-base-classes = [
   "flext_infra.docs.base.FlextInfraDocServiceBase",
   "flext_infra.m.ArbitraryTypesModel",
   "flext_infra.m.FrozenModel",
+  "flext_infra.m.ImmutableValueModel",
   "flext_infra.maintenance.sonarcloud_client.FlextInfraSonarcloudClient",
   "flext_infra.release._release_artifact.FlextInfraReleaseArtifactMixin",
   "flext_infra.release._release_boundary.FlextInfraReleaseBoundaryMixin",
@@ -556,12 +580,12 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"**/__init__.py" = ["line-too-long", "non-empty-init-module", "unused-import"]
-"**/_config.py" = ["invalid-function-name"]
-"**/_utilities/credential.py" = [
+"**/.agents/skills/webapp-testing/scripts/with_server.py" = [
   "subprocess-without-shell-equals-true",
   "suspicious-subprocess-import",
 ]
+"**/__init__.py" = ["line-too-long", "non-empty-init-module", "unused-import"]
+"**/_config.py" = ["invalid-function-name"]
 "**/bin/**" = [
   "docstring-missing-exception",
   "docstring-missing-returns",
@@ -570,16 +594,9 @@ split-on-trailing-comma = false
   "magic-value-comparison",
   "missing-copyright-notice",
   "print",
-  "start-process-with-partial-path",
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
   "type-check-without-type-error",
   "undocumented-public-method",
   "unused-class-method-argument",
-]
-"**/bootstrap.py" = [
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
 ]
 "**/docx.py" = ["import-outside-top-level"]
 "**/file_test_helpers.py" = ["line-too-long"]
@@ -603,12 +620,7 @@ split-on-trailing-comma = false
   "pytest-fixture-autouse",
   "too-many-public-methods",
 ]
-"**/tests/python/**" = [
-  "raise-vanilla-args",
-  "start-process-with-partial-path",
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
-]
+"**/tests/python/**" = ["raise-vanilla-args"]
 "**/xlsx.py" = ["import-outside-top-level"]
 "scripts/**" = [
   "any-type",
@@ -648,9 +660,6 @@ split-on-trailing-comma = false
   "repeated-append",
   "runtime-cast-value",
   "shebang-not-executable",
-  "start-process-with-partial-path",
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
   "undocumented-public-class",
   "undocumented-public-function",
   "undocumented-public-init",
@@ -668,6 +677,14 @@ split-on-trailing-comma = false
   "commented-out-code",
   "line-too-long",
   "typing-only-first-party-import",
+]
+"src/flext_cli/_utilities/processes.py" = [
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
+]
+"src/flext_cli/_utilities/runtime.py" = [
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
 ]
 "tests/**/*.py" = ["assert"]
 "tests/test_snapshot_drill.py" = ["import-private-name"]

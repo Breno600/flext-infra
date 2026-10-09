@@ -720,6 +720,8 @@ class FlextInfraUtilitiesRepository:
         manifest = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
             repository_root,
         )
+        if manifest.failure:
+            return r[str].from_failure(manifest)
         if manifest.success and manifest.value:
             integration = manifest.value[0].integration
             if integration is not None:

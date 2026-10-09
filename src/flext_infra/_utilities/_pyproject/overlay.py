@@ -74,8 +74,10 @@ class FlextInfraUtilitiesPyprojectOverlay:
         owned_names = {
             FlextInfraUtilitiesDependencies.dep_name(item) for item in required
         }
-        return list[t.JsonValue](
-            sorted(
+        # The list display widens the sorted ``str`` items to the JSON value
+        # list the caller stores, in the single pass that materializes them.
+        return [
+            *sorted(
                 dict.fromkeys((
                     *required,
                     *(
@@ -87,7 +89,7 @@ class FlextInfraUtilitiesPyprojectOverlay:
                 )),
                 key=FlextInfraUtilitiesPyprojectRequirements.dependency_order_key,
             ),
-        )
+        ]
 
     @classmethod
     def _overlay_project_surface(
@@ -178,25 +180,37 @@ class FlextInfraUtilitiesPyprojectOverlay:
             if managed_tool_tables is None
             else managed_tool_tables
         )
-        rendered_payload = u.Cli.toml_mapping_from_text(rendered)
+        rendered_payload = u.Cli.toml_mapping_from_text_result(rendered)
         # An absent live file takes the same canonicalization path as a present
         # one: the projection is the parse-merge-dump form, so first publication
         # and every later conform produce byte-identical output (fixed point).
         empty_payload: t.JsonMapping = {}
         live_payload = (
-            u.Cli.toml_mapping_from_text(live) if live is not None else empty_payload
+            u.Cli.toml_mapping_from_text_result(live)
+            if live is not None
+            else r[t.JsonMapping].ok(empty_payload)
         )
-        if rendered_payload is None:
-            return r[str].fail("rendered pyproject is not valid TOML")
-        if live_payload is None:
-            return r[str].fail("live pyproject is not valid TOML")
-        merged = dict(rendered_payload)
-        project = cls._overlay_project_surface(merged, live_payload, project_keys)
+        if rendered_payload.failure:
+            return r[str].fail(
+                f"rendered pyproject is not valid TOML: {rendered_payload.error}",
+                error_code=rendered_payload.error_code,
+                error_data=rendered_payload.error_data,
+                exception=rendered_payload.exception,
+            )
+        if live_payload.failure:
+            return r[str].fail(
+                f"live pyproject is not valid TOML: {live_payload.error}",
+                error_code=live_payload.error_code,
+                error_data=live_payload.error_data,
+                exception=live_payload.exception,
+            )
+        merged = dict(rendered_payload.value)
+        project = cls._overlay_project_surface(merged, live_payload.value, project_keys)
         if project.failure:
             return r[str].from_failure(project)
         merged[c.Infra.PROJECT] = project.value
-        cls._overlay_dev_group(merged, live_payload)
-        cls._overlay_tool_tables(merged, live_payload, tool_tables)
+        cls._overlay_dev_group(merged, live_payload.value)
+        cls._overlay_tool_tables(merged, live_payload.value, tool_tables)
         return r[str].ok(u.Cli.toml_dumps(u.Cli.toml_document_from_mapping(merged)))
 
 

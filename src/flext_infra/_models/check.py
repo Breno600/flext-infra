@@ -18,6 +18,44 @@ from flext_infra._models import FlextInfraModelsMixins
 class FlextInfraModelsCheck:
     """Quality-gate check domain models."""
 
+    class BanditFinding(m.ContractModel):
+        """Required fields consumed from one native Bandit finding."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
+
+        filename: Annotated[t.NonEmptyStr, m.Field(description="Audited source path")]
+        line_number: Annotated[
+            t.NonNegativeInt,
+            m.Field(description="Native finding line"),
+        ]
+        test_id: Annotated[t.NonEmptyStr, m.Field(description="Bandit test identifier")]
+        issue_text: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Native security diagnostic"),
+        ]
+
+    class BanditScanError(m.ContractModel):
+        """A source file Bandit could not audit."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
+
+        filename: Annotated[t.NonEmptyStr, m.Field(description="Unaudited source path")]
+        reason: Annotated[t.NonEmptyStr, m.Field(description="Native scan failure")]
+
+    class BanditReport(m.ContractModel):
+        """Required Bandit JSON arrays, including a clean pair of empty arrays."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
+
+        results: Annotated[
+            t.SequenceOf[FlextInfraModelsCheck.BanditFinding],
+            m.Field(description="Native security findings"),
+        ]
+        errors: Annotated[
+            t.SequenceOf[FlextInfraModelsCheck.BanditScanError],
+            m.Field(description="Source files that were not audited"),
+        ]
+
     class RunCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check run``.
 
@@ -212,6 +250,18 @@ class FlextInfraModelsCheck:
                 },
             }
 
+    class LineWrapLiteral(m.ContractModel):
+        """One single-line string literal the line-length repair may split."""
+
+        start: Annotated[int, m.Field(ge=0, description="Start column of the literal")]
+        end: Annotated[int, m.Field(ge=0, description="End column of the literal")]
+        prefix: Annotated[str, m.Field(description="String prefix such as f or r")]
+        quote: Annotated[str, m.Field(description="Single-character quote")]
+        bracketed: Annotated[
+            bool,
+            m.Field(description="Whether the literal already sits inside brackets"),
+        ]
+
     class Issue(m.ContractModel):
         """Single issue reported by a quality gate tool."""
 
@@ -279,6 +329,11 @@ class FlextInfraModelsCheck:
         raw_output: str = m.Field(
             "",
             description="Raw tool output",
+            validate_default=True,
+        )
+        raw_receipt: Path | None = m.Field(
+            None,
+            description="Durable verbatim native output published by the checker",
             validate_default=True,
         )
         outcome: c.Infra.ToolOutcome = m.Field(

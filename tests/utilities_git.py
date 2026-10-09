@@ -71,7 +71,7 @@ class TestsFlextInfraUtilitiesGitMixin:
 
     @staticmethod
     def merge_pull_request(repo_root: Path, subject: str) -> None:
-        """Land one pull request as GitHub does: a merge titled ``subject``."""
+        """Land one pull request the way GitHub does: a merge commit titled ``subject``."""
         branch = f"pr/{abs(hash(subject))}"
         current = tm.ok(
             u.Infra.git_current_branch(m.Infra.GitRepoRequest(repo_root=repo_root)),
@@ -205,10 +205,8 @@ class TestsFlextInfraUtilitiesGitMixin:
             cli_facade.run_checked(
                 [c.Infra.GIT, *command],
                 cwd=repo_root,
-                options=u.Cli.ProcessOptions(
-                    env=overrides,
-                    remove_env_keys=TestsFlextInfraUtilitiesGitMixin.isolated_git_keys(),
-                ),
+                env=overrides,
+                remove_env_keys=TestsFlextInfraUtilitiesGitMixin.isolated_git_keys(),
             ),
         )
 
@@ -273,25 +271,6 @@ class TestsFlextInfraUtilitiesGitMixin:
         root.mkdir(parents=True)
         TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
         return root
-
-    @staticmethod
-    def git_linked_lane(parent: Path, repository: Path, branch: str) -> Path:
-        """Create ``branch`` and check it out as a linked worktree under ``parent``.
-
-        Returns:
-            The resulting ``Path``.
-
-        """
-        lane = parent / branch
-        _ = TestsFlextInfraUtilitiesGitMixin.git_run(repository, "branch", branch)
-        _ = TestsFlextInfraUtilitiesGitMixin.git_run(
-            repository,
-            "worktree",
-            "add",
-            str(lane),
-            branch,
-        )
-        return lane
 
     @staticmethod
     def provision_runtime_environment(runtime_root: Path) -> Path:

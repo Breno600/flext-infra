@@ -12,7 +12,7 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m
 
-from flext_infra import c, t
+from flext_infra import t
 
 
 class FlextInfraModelsCodegenJournalModels:
@@ -24,7 +24,7 @@ class FlextInfraModelsCodegenJournalModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         phase: Annotated[
-            c.Infra.CodegenStagedFilePhase,
+            t.NonEmptyStr,
             m.Field(description="Generation phase that owns this publication"),
         ]
         project: Annotated[
@@ -102,7 +102,7 @@ class FlextInfraModelsCodegenJournalModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         phase: Annotated[
-            c.Infra.CodegenStagedFilePhase,
+            t.NonEmptyStr,
             m.Field(description="Generation phase that owns the directory"),
         ]
         project: Annotated[
@@ -358,6 +358,83 @@ class FlextInfraModelsCodegenJournalModels:
                 self.file_attributes is not None and bool(self.file_attributes & marker)
             ):
                 msg = f"generation source is a reparse point: {self.path}"
+                raise ValueError(msg)
+            return self
+
+    class CodegenStagingIntent(m.ArbitraryTypesModel):
+        """Write-ahead authority, distinct from a finalized publication identity."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
+
+        before: Annotated[
+            m.Cli.AtomicFileState,
+            m.Field(
+                description="Authenticated absent staging leaf and physical parent",
+            ),
+        ]
+        sha256: Annotated[
+            str,
+            m.Field(
+                pattern=r"^[0-9a-f]{64}$",
+                description="Intended staging content hash",
+            ),
+        ]
+        mode: Annotated[
+            int,
+            m.Field(ge=0, le=0o7777, strict=True, description="Intended staging mode"),
+        ]
+        created: Annotated[
+            m.Cli.AtomicPhysicalTreeEntry | None,
+            m.Field(description="Finalized physical receipt after guarded creation"),
+        ] = None
+
+        @m.model_validator(mode="after")
+        def _validate_intent(self) -> Self:
+            """Require an authenticated absent staging leaf before its creation.
+
+            Returns:
+                The validated staging intention.
+
+            Raises:
+                ValueError: If the leaf is present or its parent is unauthenticated.
+
+            """
+            if (
+                self.before.content is not None
+                or self.before.parent_device is None
+                or self.before.parent_inode is None
+            ):
+                msg = "staging intention requires an absent leaf with a physical parent"
+                raise ValueError(msg)
+            return self
+
+        @m.model_validator(mode="after")
+        def _validate_created_intent(self) -> Self:
+            """Bind any finalized receipt to the previously authorized intention.
+
+            Returns:
+                The staging intention with its finalized receipt authenticated.
+
+            Raises:
+                ValueError: If the receipt differs from its intended leaf.
+
+            """
+            created = self.created
+            if created is None:
+                return self
+            msg = "finalized staging receipt differs from its intended leaf"
+            if (
+                created.path != self.before.path
+                or created.kind != "file"
+                or created.sha256 != self.sha256
+                or created.mode != self.mode
+            ):
+                raise ValueError(msg)
+            if (
+                created.parent_device != self.before.parent_device
+                or created.parent_inode != self.before.parent_inode
+                or created.link_count != 1
+            ):
                 raise ValueError(msg)
             return self
 

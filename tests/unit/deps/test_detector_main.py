@@ -61,44 +61,6 @@ class TestsFlextInfraDepsDetectorMain:
     # The governed mypy policy decides whether those stubs are findings: when
     # untyped imports are followed, applying typings adds nothing.
     @staticmethod
-    def _install_typings_and_declare_ignores(root: Path, added: set[str]) -> bytes:
-        """Install the typed stubs and declare their deptry ignore.
-
-        Why: a stub-only `types-*` package is never itself importable, so
-        deptry's own usage scan (current deptry ships no PEP 561 stub
-        awareness) flags every package this run just installed as unused
-        on the very next scan. A project that carries a `typings` extra
-        declares this exact deptry ignore for it; replicate that real
-        configuration here instead of asserting a scan deptry cannot pass.
-
-        Returns:
-            The pyproject snapshot taken after the ignore was appended.
-
-        """
-        installed = tm.ok(
-            u.Cli.capture(
-                [
-                    str(root / ".venv/bin/python"),
-                    "-c",
-                    (
-                        "import importlib.metadata,sys; "
-                        "[print(importlib.metadata.version(name))"
-                        " for name in sys.argv[1:]]"
-                    ),
-                    *sorted(added),
-                ],
-                cwd=root,
-            ),
-        )
-        tm.that(len(installed.splitlines()), eq=len(added))
-        with (root / "pyproject.toml").open("a", encoding="utf-8") as stream:
-            stream.write(
-                "\n[tool.deptry.per_rule_ignores]\n"
-                f"DEP002 = {sorted(added)!r}\n".replace("'", '"'),
-            )
-        return (root / "pyproject.toml").read_bytes()
-
-    @staticmethod
     @pytest.mark.parametrize(
         "real_detector_project",
         [("requests", "pytz"), ("requests", "pytz", "six")],
@@ -171,10 +133,34 @@ class TestsFlextInfraDepsDetectorMain:
             )["feature"],
             eq=["requests"],
         )
-        snapshot = TestsFlextInfraDepsDetectorMain._install_typings_and_declare_ignores(
-            root,
-            added,
+        installed = tm.ok(
+            u.Cli.capture(
+                [
+                    str(root / ".venv/bin/python"),
+                    "-c",
+                    (
+                        "import importlib.metadata,sys; "
+                        "[print(importlib.metadata.version(name)) for name in sys.argv[1:]]"
+                    ),
+                    *sorted(added),
+                ],
+                cwd=root,
+            ),
         )
+        tm.that(len(installed.splitlines()), eq=len(added))
+        # Why: a stub-only `types-*` package is never itself importable, so
+        # deptry's own usage scan (current deptry ships no PEP 561 stub
+        # awareness) flags every package this run just installed as unused
+        # on the very next scan. A project that carries a `typings` extra
+        # declares this exact deptry ignore for it; replicate that real
+        # configuration here instead of asserting a scan deptry cannot pass.
+        installed_names = sorted(added)
+        with (root / "pyproject.toml").open("a", encoding="utf-8") as stream:
+            stream.write(
+                "\n[tool.deptry.per_rule_ignores]\n"
+                f"DEP002 = {installed_names!r}\n".replace("'", '"'),
+            )
+        snapshot = (root / "pyproject.toml").read_bytes()
         repeated = tm.ok(
             u.Tests.run_real_detector(
                 root,
@@ -241,14 +227,13 @@ class TestsFlextInfraDepsDetectorMain:
     ) -> None:
         """Test member without own venv fails closed not parent environment."""
         root = real_detector_project
-        python_required = config.Infra.codegen.toolchain.python_required_version
         member = u.Tests.mk_project(
             root,
             "member",
             with_src=True,
             pyproject=(
                 '[project]\nname = "member"\nversion = "0.1.0"\n'
-                f'requires-python = "{python_required}"\n'
+                f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
                 'dependencies = ["pyyaml"]\n'
                 "[tool.mypy]\n"
             ),

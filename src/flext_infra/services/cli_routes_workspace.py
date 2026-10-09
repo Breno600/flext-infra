@@ -22,6 +22,7 @@ from flext_infra.workspace.environment_provenance import (
 )
 from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
 from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+from flext_infra.workspace.lifecycle import FlextInfraWorkspaceLifecycle
 from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 
 
@@ -76,6 +77,24 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
         ),
         c.Infra.CLI_GROUP_WORKSPACE: (
             m.Cli.ResultCommandRoute(
+                name="validate-lifecycle",
+                help_text="Validate the root and governed member lifecycles serially",
+                model_cls=m.Infra.WorkspaceEnvironmentRequest,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraWorkspaceLifecycle.execute_request,
+                ),
+                success_message="workspace serial lifecycle validated",
+            ),
+            m.Cli.ResultCommandRoute(
+                name="verify-lanes",
+                help_text="Read-only lane inventory and fresh integration admission",
+                model_cls=m.Infra.GitLaneVerificationRequest,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraGitService.verify_lane,
+                ),
+                success_message="lane stash and live integration ancestry verified",
+            ),
+            m.Cli.ResultCommandRoute(
                 name="identity",
                 help_text="Report canonical Git checkout identity",
                 model_cls=m.Infra.GitRepoRequest,
@@ -94,17 +113,6 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                 success_message=(
                     "workspace Git worktree is clean and has no stash entries"
                 ),
-            ),
-            m.Cli.ResultCommandRoute(
-                name="verify-lanes",
-                help_text=(
-                    "Fail on stashes, merged-but-alive branches and orphan worktrees"
-                ),
-                model_cls=m.Infra.GitStatusRequest,
-                handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraGitService.verify_lanes,
-                ),
-                success_message="workspace lanes are clean",
             ),
             m.Cli.ResultCommandRoute(
                 name="verify-environment",

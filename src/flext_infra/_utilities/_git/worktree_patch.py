@@ -11,9 +11,9 @@ from pathlib import Path
 from git import GitCommandError
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities import (
+from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+from flext_infra._utilities._git.worktree_checkpoint import (
     FlextInfraUtilitiesGitWorktreeCheckpointMixin,
-    FlextInfraUtilitiesGitWorktreeIO,
 )
 
 

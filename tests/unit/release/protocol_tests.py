@@ -18,7 +18,7 @@ import pytest
 from flext_cli import cli
 from flext_tests import tm
 
-from tests import c, m, t, u
+from tests import TestsFlextInfraUtilities as u, c, m, t
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -201,7 +201,7 @@ class TestsFlextInfraReleaseProtocol:
         self,
         tmp_path: Path,
     ) -> None:
-        """A pre-release was decided when it was cut; later history is not parsed."""
+        """A pre-release was decided when it was cut; history since then is not parsed."""
         workspace = u.Tests.create_release_workspace(
             tmp_path,
             version=c.Tests.RELEASE_VERSION_PRERELEASE,

@@ -243,6 +243,12 @@ if TYPE_CHECKING:
     from flext_infra._utilities._semantic_cutover.class_scope import (
         FlextInfraUtilitiesSemanticCutoverClassScope,
     )
+    from flext_infra._utilities._semantic_cutover.declaration_payload import (
+        FlextInfraUtilitiesDeclarationPayload,
+    )
+    from flext_infra._utilities._semantic_cutover.declaration_relocation import (
+        FlextInfraUtilitiesSemanticDeclarationRelocation,
+    )
     from flext_infra._utilities._semantic_cutover.dynamic_environment import (
         FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
     )
@@ -325,6 +331,9 @@ if TYPE_CHECKING:
         FlextInfraUtilitiesDeferredSelfReferenceRewrite,
     )
     from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+    from flext_infra._utilities.dependency_requirements import (
+        FlextInfraUtilitiesDependencyRequirements,
+    )
     from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
     from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
     from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
@@ -482,8 +491,10 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesCodemodProject",
     "FlextInfraUtilitiesCodemodRules",
     "FlextInfraUtilitiesCompatibilityAliasValidation",
+    "FlextInfraUtilitiesDeclarationPayload",
     "FlextInfraUtilitiesDeferredSelfReferenceRewrite",
     "FlextInfraUtilitiesDependencies",
+    "FlextInfraUtilitiesDependencyRequirements",
     "FlextInfraUtilitiesDiscovery",
     "FlextInfraUtilitiesDocs",
     "FlextInfraUtilitiesDocsApi",
@@ -644,6 +655,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverPrivateImportCst",
     "FlextInfraUtilitiesSemanticCutoverPrivateImports",
     "FlextInfraUtilitiesSemanticCutoverSelfFacade",
+    "FlextInfraUtilitiesSemanticDeclarationRelocation",
     "FlextInfraUtilitiesSemanticFamilyFlatten",
     "FlextInfraUtilitiesSemanticFamilyReferences",
     "FlextInfraUtilitiesSemanticFamilyTypeReferences",
@@ -682,10 +694,14 @@ install_lazy_exports(
         "FlextInfraUtilitiesCompatibilityAliasValidation": (
             ".compatibility_alias_validation"
         ),
+        "FlextInfraUtilitiesDeclarationPayload": (
+            "._semantic_cutover.declaration_payload"
+        ),
         "FlextInfraUtilitiesDeferredSelfReferenceRewrite": (
             ".deferred_self_reference_rewrite"
         ),
         "FlextInfraUtilitiesDependencies": ".dependencies",
+        "FlextInfraUtilitiesDependencyRequirements": ".dependency_requirements",
         "FlextInfraUtilitiesDiscovery": ".discovery",
         "FlextInfraUtilitiesDocs": ".docs",
         "FlextInfraUtilitiesDocsApi": ".docs_api",
@@ -881,6 +897,9 @@ install_lazy_exports(
         ),
         "FlextInfraUtilitiesSemanticCutoverSelfFacade": (
             "._semantic_cutover.self_facade"
+        ),
+        "FlextInfraUtilitiesSemanticDeclarationRelocation": (
+            "._semantic_cutover.declaration_relocation"
         ),
         "FlextInfraUtilitiesSemanticFamilyFlatten": "._semantic_cutover.family_flatten",
         "FlextInfraUtilitiesSemanticFamilyReferences": (

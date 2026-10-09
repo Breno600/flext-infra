@@ -26,7 +26,7 @@ class FlextInfraAccessorRenamePhase(FlextInfraAccessorMigrationRewriteMixin):
     def apply(
         self,
         root: Path,
-        _preflight: m.Infra.ModScanReport,
+        preflight: m.Infra.ModScanReport,
         rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> p.Result[bool]:
         """Apply the rename catalog over the governed files of the repository.
@@ -35,6 +35,7 @@ class FlextInfraAccessorRenamePhase(FlextInfraAccessorMigrationRewriteMixin):
             The resulting ``p.Result[bool]`` — ``True`` marks changed sources.
 
         """
+        del preflight
         iter_result = u.Infra.iter_python_files(
             m.Infra.SourceScanRequest(
                 project_roots=tuple(u.Infra.governed_project_roots(root)),
@@ -68,3 +69,6 @@ class FlextInfraAccessorRenamePhase(FlextInfraAccessorMigrationRewriteMixin):
                 )
             changed = True
         return r[bool].ok(value=changed)
+
+
+__all__: list[str] = ["FlextInfraAccessorRenamePhase"]

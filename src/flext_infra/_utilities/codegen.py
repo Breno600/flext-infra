@@ -12,11 +12,9 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 
 from flext_infra import c, config, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesCodegenFacades,
-    FlextInfraUtilitiesCodegenFilePlan,
-    FlextInfraUtilitiesGitignore,
-)
+from flext_infra._utilities.codegen_facades import FlextInfraUtilitiesCodegenFacades
+from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
+from flext_infra._utilities.gitignore import FlextInfraUtilitiesGitignore
 
 
 class FlextInfraUtilitiesCodegen(
@@ -39,10 +37,10 @@ class FlextInfraUtilitiesCodegen(
             The sole typed context every generated ``.envrc`` renders from.
 
         """
-        toolchain = config.Infra.codegen.toolchain
         return m.Infra.EnvrcRenderSpec(
-            worktree_environment_directory=toolchain.worktree_environment_directory,
-            environment_path_prepends=toolchain.environment_path_prepends,
+            environment_path_prepends=(
+                config.Infra.codegen.toolchain.environment_path_prepends
+            ),
         )
 
     @staticmethod

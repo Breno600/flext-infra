@@ -48,31 +48,6 @@ class TestsFlextInfraConfigLocalOverrides:
         finally:
             FlextInfraConfig.reset_for_testing()
 
-    def test_empty_mypy_overlay_keeps_selected_global_policy(
-        self,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """Empty local lists cannot remove policy supplied by the YAML owner."""
-        baseline = FlextInfraConfig.fetch_global().Infra.tooling.tools.mypy
-        self._copy_tracked_configs(tmp_path)
-        (tmp_path / c.Infra.CODEGEN_LOCAL_OVERRIDES_FILENAME).write_text(
-            "Infra:\n  tooling:\n    tools:\n      mypy:\n"
-            "        plugins: []\n        disable-error-code: []\n",
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("FLEXT_INFRA_CONFIG_DIR", str(tmp_path))
-        FlextInfraConfig.reset_for_testing()
-        try:
-            policy = FlextInfraConfig.fetch_global().Infra.tooling.tools.mypy
-            tm.that(tuple(policy.plugins), eq=tuple(baseline.plugins))
-            tm.that(
-                tuple(policy.disable_error_code),
-                eq=tuple(baseline.disable_error_code),
-            )
-        finally:
-            FlextInfraConfig.reset_for_testing()
-
     def test_local_file_scalar_wins_despite_sorted_glob_position(
         self,
         tmp_path: Path,

@@ -261,6 +261,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         """
         if FlextInfraUtilitiesRopeSourceBindingCollector._provider_metadata_rebind(
             spec,
+            node,
             targets,
             bindings,
         ):
@@ -301,15 +302,29 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
     @staticmethod
     def _provider_metadata_rebind(
         spec: m.Infra.SourceBindingCollectorSpec,
+        node: ast.Assign | ast.AnnAssign,
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
     ) -> bool:
-        """Return whether every target only annotates provider metadata."""
+        """Return whether every target only annotates provider metadata.
+
+        A literal written to a dunder of a bound class (the stdlib
+        ``ABCMeta.__module__ = 'abc'``) relabels metadata: it binds no class
+        and changes no base.
+        """
+        literal = isinstance(node.value, ast.Constant)
         return spec.allow_conditional and all(
             isinstance(target, ast.Attribute)
             and isinstance(target.value, ast.Name)
             and target.value.id in bindings
-            and bindings[target.value.id] is None
+            and (
+                bindings[target.value.id] is None
+                or (
+                    literal
+                    and target.attr.startswith("__")
+                    and target.attr.endswith("__")
+                )
+            )
             for target in targets
         )
 
@@ -358,21 +373,36 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         of the enclosing conditionality (flext-2klp8).
 
         """
-        collector = FlextInfraUtilitiesRopeSourceBindingCollector
         return all(
             isinstance(target, ast.Subscript)
-            and (
-                rebind := collector.subscript_rebind_target(
-                    target,
-                )
-            )
-            is not None
-            and (
-                rebind.is_module_table_mutation
-                or bindings is None
-                or bindings.get(rebind.root_name) is None
+            and FlextInfraUtilitiesRopeSourceBindingCollector._is_module_table_target(
+                target,
+                bindings,
             )
             for target in targets
+        )
+
+    @staticmethod
+    def _is_module_table_target(
+        target: ast.Subscript,
+        bindings: t.MappingKV[str, m.Infra.SourceClassReference | None] | None,
+    ) -> bool:
+        """Return whether one subscript target only writes a runtime table.
+
+        Returns:
+            True when the typed rule classifies the rebind as a module-table
+            write or the store runs through a non-class table binding.
+
+        """
+        rebind = FlextInfraUtilitiesRopeSourceBindingCollector.subscript_rebind_target(
+            target,
+        )
+        if rebind is None:
+            return False
+        return (
+            rebind.is_module_table_mutation
+            or bindings is None
+            or bindings.get(rebind.root_name) is None
         )
 
     @staticmethod

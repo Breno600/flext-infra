@@ -61,59 +61,35 @@ class FlextInfraConstantsRefactor:
         "Help: Scan succeeded and found error level diagnostics in the codebase."
     )
     "Exact second stderr line emitted for error-severity JSONL findings."
-    IMPORT_NORMALIZATION_LETTER_ORDER: ClassVar[t.MappingKV[str, int]] = (
-        MappingProxyType({
-            "c": 2,
-            "t": 3,
-            "p": 4,
-            "m": 5,
-            "u": 6,
-        })
-    )
-    "Facade-letter ordering ranks for import normalization."
-    IMPORT_NORMALIZATION_LETTER_RENDER_ORDER: ClassVar[t.StrSequence] = (
-        "c",
-        "m",
-        "p",
-        "t",
-        "u",
-    )
-    "Facade-letter render order for import normalization."
-    IMPORT_NORMALIZATION_FAMILY_LETTER: ClassVar[t.MappingKV[str, str]] = (
-        MappingProxyType({
-            "constants": "c",
-            "typings": "t",
-            "protocols": "p",
-            "models": "m",
-            "utilities": "u",
-        })
-    )
-    "Family-name to facade-letter mapping for import normalization."
-    IMPORT_NORMALIZATION_FAMILY_RANK: ClassVar[t.MappingKV[str, int]] = (
-        MappingProxyType({
-            "constants": 2,
-            "typings": 3,
-            "protocols": 4,
-            "models": 5,
-            "utilities": 6,
-        })
-    )
-    "Family-name to layer rank mapping for import normalization."
-    IMPORT_NORMALIZATION_FACADE_RANK: ClassVar[t.MappingKV[str, int]] = (
-        MappingProxyType({
-            "api": 10,
-            "cli": 11,
-        })
-    )
-    "Facade-module rank for import normalization."
     IMPORT_NORMALIZATION_MAX_PASSES: ClassVar[int] = 24
     "Fixed-point pass ceiling for import normalization."
-    IMPORT_NORMALIZATION_FAMILY_PATH_DEPTH: ClassVar[int] = 2
-    "Module-path depth of one family root (``<package>.<family>``)."
-    IMPORT_NORMALIZATION_LEAF_PATH_DEPTH: ClassVar[int] = 3
-    "Module-path depth of one family leaf (``<package>.<family>.<leaf>``)."
-    IMPORT_NORMALIZATION_DEFAULT_LAYER_RANK: ClassVar[int] = 7
-    "Layer rank of a module outside every declared layer."
+    IMPORT_LAW_OTHER_LAYER: ClassVar[str] = "other"
+    "Import-layer slot of a module whose path names no declared layer."
+    IMPORT_LAW_ROOT_SINGLETONS: ClassVar[frozenset[str]] = frozenset({
+        "config",
+        "settings",
+    })
+    "Root singletons and import layers of the config/settings law (ADR-005)."
+    IMPORT_LAW_GUARD_ERRORS: ClassVar[frozenset[str]] = frozenset({
+        "ImportError",
+        "ModuleNotFoundError",
+    })
+    "Exceptions whose handlers make a ``try`` around imports an import guard."
+    IMPORT_LAW_FAMILY_BASE_FILE: ClassVar[str] = "base.py"
+    "File name of a private family's leaf base module."
+
+    @unique
+    class ImportPlacement(StrEnum):
+        """Where the import law places one imported binding."""
+
+        RUNTIME = "runtime"
+        "The module import block."
+        TYPING = "typing"
+        "The module ``if TYPE_CHECKING:`` block (typing-only reverse edge)."
+        BOUND = "bound"
+        "Nowhere new: an equal module-level import already binds it."
+        STAY = "stay"
+        "Its current place: a reverse runtime use or a foreign binding."
 
     @unique
     class ModScanCommand(StrEnum):
@@ -232,6 +208,11 @@ class FlextInfraConstantsRefactor:
         PACKAGE_LAYERS = "package-layers"
         PACKAGE_ROOT_INIT = "package-root-init"
         FAMILY_BASE = "family-base"
+        PAYLOAD_DECLARATION = "payload-declaration"
+        RESOLVED_SYMBOL = "resolved-symbol"
+        SAME_BINDING = "same-binding"
+        EXECUTABLE_OCCURRENCE = "executable-occurrence"
+        UNREFERENCED_IMPORT = "unreferenced-import"
 
     CODEMOD_RUNTIME_CLOSURE_PREDICATES: ClassVar[frozenset[CodemodContextPredicate]] = (
         frozenset({
@@ -245,6 +226,7 @@ class FlextInfraConstantsRefactor:
     class SemanticCutoverPhase(StrEnum):
         """Semantic ``make mod`` cutovers planned by ``u.Infra``."""
 
+        DECLARATION_RELOCATION = "declaration-relocation"
         CLASS_NESTING = "class-nesting"
         COMPAT_ALIAS = "compat-alias"
         PRIVATE_IMPORT = "private-import"
@@ -256,6 +238,9 @@ class FlextInfraConstantsRefactor:
         NOTICE_LAST = "notice-last"
 
     SEMANTIC_CUTOVER_RULE_IDS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
+        SemanticCutoverPhase.DECLARATION_RELOCATION: (
+            "ban-nested-payload-outside-models"
+        ),
         SemanticCutoverPhase.COMPAT_ALIAS: "ban-compat-alias",
         SemanticCutoverPhase.PRIVATE_IMPORT: "ban-private-import",
         SemanticCutoverPhase.FACADE_BASE: "facade-base-by-class-name",

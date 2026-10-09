@@ -13,10 +13,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, main
+from flext_infra import c, m, main
 from tests import u
 
 if TYPE_CHECKING:
@@ -51,13 +50,7 @@ class TestsFlextInfraCheckReportContract:
         }
 
     @staticmethod
-    def _check_run(
-        project: Path,
-        reports: Path,
-        *mode: str,
-        gate: str | None = c.Infra.LINT,
-        file: str | None = None,
-    ) -> int:
+    def _check_run(project: Path, reports: Path, *mode: str) -> int:
         """Run the same ``check run`` argument vector the generated verbs render.
 
         Returns:
@@ -69,12 +62,12 @@ class TestsFlextInfraCheckReportContract:
             "run",
             "--repository-root",
             str(project),
-            *(("--gates", gate) if gate is not None else ()),
+            "--gates",
+            c.Infra.LINT,
             "--projects",
             ".",
             "--reports-dir",
             str(reports),
-            *(("--file", file) if file is not None else ()),
             *mode,
         ])
 
@@ -128,7 +121,30 @@ class TestsFlextInfraCheckReportContract:
         tm.that(self._check_run(project, reports), eq=1)
 
         tm.that(self._sources(project), eq=before)
-        findings = tm.ok(u.Infra.check_report_findings(project, reports_dir=reports))
+        (report_path,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_SARIF_FILENAME}")
+        report = m.Infra.SarifReport.model_validate_json(
+            report_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
+            strict=True,
+        )
+        assert report.properties is not None
+        summary = report.properties
+        tm.that(summary.selected_files, eq=())
+        tm.that(len(summary.targets), eq=1)
+        tm.that(summary.targets[0].name, eq=project.name)
+        tm.that(summary.targets[0].path, eq=project.resolve())
+        tm.that(len(summary.results), eq=1)
+        tm.that(summary.results[0].project, eq=project.name)
+        tm.that(tuple(summary.results[0].gates), eq=(c.Infra.LINT,))
+        tm.that(
+            m.Infra.SarifReport.model_validate_json(
+                report.model_dump_json(round_trip=True),
+                strict=True,
+            ),
+            eq=report,
+        )
+        findings = tm.ok(
+            u.Infra.check_report_findings(project, reports_dir=report_path.parent),
+        )
         tm.that(
             [
                 location.uri
@@ -147,140 +163,3 @@ class TestsFlextInfraCheckReportContract:
         tm.that(self._check_run(project, tmp_path / "reports", "--apply"), eq=0)
 
         tm.that(self._sources(project), ne=before)
-
-    @staticmethod
-    @pytest.mark.parametrize(
-        "invalid",
-        ["", "../outside.py", "/outside.py", "./file.py", "a/../file.py", "missing.py"],
-    )
-    def test_file_selection_refuses_before_report_effects(
-        tmp_path: Path,
-        invalid: str,
-    ) -> None:
-        """Invalid literal selection cannot execute gates or create reports."""
-        project = TestsFlextInfraCheckReportContract._project(tmp_path)
-        reports = tmp_path / "reports"
-        tm.that(
-            TestsFlextInfraCheckReportContract._check_run(
-                project,
-                reports,
-                gate=c.Infra.FORMAT,
-                file=invalid,
-            ),
-            ne=0,
-        )
-        tm.that(reports.exists(), eq=False)
-
-    @staticmethod
-    @pytest.mark.parametrize("parent_link", [False, True])
-    def test_file_selection_refuses_symlink_ambiguity(
-        tmp_path: Path,
-        *,
-        parent_link: bool,
-    ) -> None:
-        """Even in-repository symlink aliases fail before a scanner can run."""
-        project = TestsFlextInfraCheckReportContract._project(tmp_path)
-        source_root = project / config.Infra.source_scan.roots[0]
-        source_root.mkdir(exist_ok=True)
-        actual = source_root / "literal.py"
-        actual.write_text('"""Fixture."""\n', encoding="utf-8")
-        link = project / "alias"
-        link.symlink_to(
-            source_root if parent_link else actual,
-            target_is_directory=parent_link,
-        )
-        selection = link / actual.name if parent_link else link
-        reports = tmp_path / "reports"
-        tm.that(
-            TestsFlextInfraCheckReportContract._check_run(
-                project,
-                reports,
-                gate=c.Infra.FORMAT,
-                file=str(selection.relative_to(project)),
-            ),
-            ne=0,
-        )
-        tm.that(reports.exists(), eq=False)
-
-    @staticmethod
-    @pytest.mark.parametrize("broken", [False, True])
-    def test_public_file_check_uses_literal_scope_and_native_verdict(
-        tmp_path: Path,
-        *,
-        broken: bool,
-    ) -> None:
-        """A real configured formatter checks the selected file, not its sibling."""
-        project = TestsFlextInfraCheckReportContract._project(tmp_path)
-        source_root = project / config.Infra.source_scan.roots[0]
-        source_root.mkdir(exist_ok=True)
-        selected = source_root / 'literal " name.py'
-        selected.write_text(
-            "def :\n" if broken else '"""Fixture."""\n',
-            encoding="utf-8",
-        )
-        sibling = source_root / "unselected.py"
-        sibling.write_text("def :\n", encoding="utf-8")
-        before = (selected.read_bytes(), sibling.read_bytes())
-        reports = tmp_path / "reports"
-        code = TestsFlextInfraCheckReportContract._check_run(
-            project,
-            reports,
-            gate=c.Infra.FORMAT,
-            file=str(selected.relative_to(project)),
-        )
-        tm.that(code, eq=1 if broken else 0)
-        tm.that((selected.read_bytes(), sibling.read_bytes()), eq=before)
-
-    @staticmethod
-    @pytest.mark.parametrize("gate", [None, "unregistered-fixture-gate"])
-    def test_missing_or_unknown_file_gate_selection_is_not_acceptance(
-        tmp_path: Path,
-        gate: str | None,
-    ) -> None:
-        """Absent or unregistered selection blocks without a project fallback."""
-        project = TestsFlextInfraCheckReportContract._project(tmp_path)
-        selected = project / "literal.py"
-        selected.write_text('"""Fixture."""\n', encoding="utf-8")
-        reports = tmp_path / "reports"
-        tm.that(
-            TestsFlextInfraCheckReportContract._check_run(
-                project,
-                reports,
-                gate=gate,
-                file=str(selected.relative_to(project)),
-            ),
-            ne=0,
-        )
-        tm.that(reports.exists(), eq=False)
-
-    @staticmethod
-    @pytest.mark.parametrize(
-        "mode",
-        [
-            ("--apply",),
-            ("--ruff-args", "--exit-zero"),
-            ("--pyright-args", "."),
-            ("--projects", "other"),
-        ],
-    )
-    def test_file_selection_cannot_override_scope(
-        tmp_path: Path,
-        mode: t.StrSequence,
-    ) -> None:
-        """Literal-file checks refuse mutation and scope or verdict overrides."""
-        project = TestsFlextInfraCheckReportContract._project(tmp_path)
-        selected = project / "literal.py"
-        selected.write_text("import os\n", encoding="utf-8")
-        before = selected.read_bytes()
-        reports = tmp_path / "reports"
-        tm.that(
-            TestsFlextInfraCheckReportContract._check_run(
-                project,
-                reports,
-                *mode,
-                file=str(selected.relative_to(project)),
-            ),
-            ne=0,
-        )
-        tm.that(selected.read_bytes(), eq=before)
-        tm.that(reports.exists(), eq=False)

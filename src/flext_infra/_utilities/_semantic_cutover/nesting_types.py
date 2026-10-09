@@ -15,6 +15,8 @@ from flext_infra import m, p, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesRopeRuntimeModules,
     FlextInfraUtilitiesRopeRuntimeRefactors,
+)
+from flext_infra._utilities._semantic_cutover.family_type_references import (
     FlextInfraUtilitiesSemanticFamilyTypeReferences,
 )
 
@@ -78,6 +80,30 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         *,
         protected: t.Pair[int, int] | None = None,
     ) -> str:
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
+
+        return FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
+            resource,
+            source,
+            cls._quoted_type_rewrites(
+                project,
+                resource,
+                source,
+                replacement,
+                protected=protected,
+            ),
+        ).new_contents
+
+    @classmethod
+    def _quoted_type_rewrites(
+        cls,
+        project: p.Infra.RopeProject,
+        resource: p.Infra.RopeResource,
+        source: str,
+        replacement: Callable[[p.Infra.RopeScope, ast.expr], str | None],
+        *,
+        protected: t.Pair[int, int] | None = None,
+    ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
 
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         module = project.get_pymodule(resource)
@@ -108,11 +134,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
                     edits.append(
                         m.Infra.SourceRewrite(start=start, end=end, text=repr(updated)),
                     )
-        return FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
-            resource,
-            source,
-            edits,
-        ).new_contents
+        return tuple(edits)
 
     @classmethod
     def _quoted_replacement(
@@ -225,7 +247,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
     def _module_source(module: p.Infra.RopePyModule) -> str:
         resource = getattr(module, "resource", None)
         if resource is not None:
-            return Path(resource.real_path).read_text(encoding="utf-8")
+            return resource.read()
         return module.source_code
 
     @staticmethod

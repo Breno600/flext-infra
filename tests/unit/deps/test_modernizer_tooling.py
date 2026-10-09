@@ -90,6 +90,7 @@ class TestsFlextInfraDepsModernizerTooling:
             tool_config_document,
             project_dir,
             '[lint]\nselect = ["E501"]\n'
+            '[tool.ruff.lint.pylint]\nallow-dunder-method-names = ["__basse__"]\n'
             f'[tool.ruff.lint.per-file-ignores]\n"{stale_pattern}" = ["E402"]\n',
         )
 
@@ -115,6 +116,14 @@ class TestsFlextInfraDepsModernizerTooling:
             eq=ruff_policy.format.docstring_code_format,
         )
         lint = u.Tests.toml_mapping(ruff["lint"])
+        tm.that(
+            list(
+                u.Tests.toml_strings(
+                    u.Tests.toml_mapping(lint["pylint"])["allow-dunder-method-names"],
+                ),
+            ),
+            eq=sorted(ruff_policy.lint.pylint.allow_dunder_method_names),
+        )
         tm.that(
             list(u.Tests.toml_strings(lint["unfixable"])),
             eq=sorted(ruff_policy.lint.unfixable),

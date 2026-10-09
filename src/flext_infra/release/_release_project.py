@@ -144,7 +144,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
                 project=name,
                 version=version,
                 license_sha256=staged[1],
-                allowed_roots=boundary,
+                allowed_roots=tuple(boundary),
                 versions=versions,
             ),
         )

@@ -172,3 +172,40 @@ class TestsFlextInfraCodegenMakeAuthentication:
             msg=process.stdout + process.stderr,
         )
         tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=True)
+
+    @staticmethod
+    @pytest.mark.remote
+    def test_invalid_explicit_token_fails_at_the_native_mise_backend(
+        tmp_path: Path,
+    ) -> None:
+        """A selected invalid credential fails at the backend without a retry."""
+        project_root, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        # The credential proves itself only where mise actually consults it:
+        # the GitHub artifact-attestation verification of a cold install. A
+        # warm storage skips installation entirely and would never reach the
+        # rejection, so the bootstrap runs on this fixture's own isolated
+        # Mise storage.
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "upg"],
+                cwd=project_root,
+                env={
+                    "GITHUB_TOKEN": "invalid-test-credential",
+                    u.Infra.mise_bootstrap_environment().storage_root_variable: str(
+                        u.Tests.isolated_mise_bootstrap_storage(project_root),
+                    ),
+                },
+            ),
+        )
+
+        tm.that(process.outcome.raw_return_code, ne=0)
+        # The loud failure must come from the mise backend stage itself. The
+        # exact GitHub response body is external evidence, not the contract:
+        # an invalid token measures `401 Unauthorized: Bad credentials`, and
+        # fleet-load rate limiting measures `403` with a rate-limit body — the
+        # run still dies loudly at the backend in both shapes.
+        tm.that(process.stdout + process.stderr, has="mise ERROR")
+        tm.that(process.stderr, lacks="GitHub credential is absent")

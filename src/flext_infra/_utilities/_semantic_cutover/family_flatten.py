@@ -18,6 +18,8 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesRopeRuntimeModules,
     FlextInfraUtilitiesRopeRuntimeRefactors,
     FlextInfraUtilitiesRopeStructure,
+)
+from flext_infra._utilities._semantic_cutover.family_references import (
     FlextInfraUtilitiesSemanticFamilyReferences,
 )
 

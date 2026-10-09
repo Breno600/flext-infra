@@ -28,6 +28,8 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
         cls,
         request: m.Infra.SourceBindingInventoryRequest,
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition],
+        *,
+        provider: t.Infra.RopePyModule | None = None,
     ) -> t.MappingKV[str, m.Infra.SourceClassReference | None]:
         """Index lexical bindings without installing a cross-module Rope overlay.
 
@@ -39,26 +41,10 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
             The module's explicit lexical bindings, including value shadowing.
 
         Raises:
-            TypeError: If Rope does not return a module AST.
             ValueError: If a required binding has unsupported source semantics.
 
         """
-        resource = (
-            FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                request.project,
-                request.path,
-            )
-            if request.path.is_file()
-            else None
-        )
-        parsed = FlextInfraUtilitiesRopeRuntime.build_string_module(
-            request.project,
-            request.source,
-            resource=resource,
-        ).get_ast()
-        if not isinstance(parsed, ast.Module):
-            message = f"Rope returned a non-module AST for {request.path}"
-            raise TypeError(message)
+        parsed = cls._parsed_module(request, provider)
         package = (
             request.module
             if request.path.name == "__init__.py"
@@ -84,7 +70,9 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
                 request.source,
             )
         )
-        if references and not request.module.startswith(("tests.", "tests.")):
+        if references and not (
+            request.module == "tests" or request.module.startswith("tests.")
+        ):
             # Test and benchmark modules build installer maps at runtime from
             # the constants they exercise; the declared-mapping invariant
             # gates the production lazy-init modules only.
@@ -104,3 +92,50 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
                     qualified_base=f"{request.module}.{name}",
                 )
         return globals_
+
+    @staticmethod
+    def _parsed_module(
+        request: m.Infra.SourceBindingInventoryRequest,
+        provider: t.Infra.RopePyModule | None,
+    ) -> ast.Module:
+        """Parse the captured source through its proven Rope provider.
+
+        Returns:
+            The captured module AST.
+
+        Raises:
+            TypeError: If Rope does not return a module AST.
+            ValueError: If the provider does not match the captured source.
+
+        """
+        if provider is not None:
+            resource = provider.get_resource()
+            if (
+                resource is None
+                or resource.real_path != str(request.path)
+                or provider.source_code != request.source
+            ):
+                message = f"Provider does not match captured source: {request.path}"
+                raise ValueError(message)
+            parsed = provider.get_ast()
+        else:
+            resource = (
+                FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
+                    request.project,
+                    request.path,
+                )
+                if request.path.is_file()
+                else None
+            )
+            parsed = FlextInfraUtilitiesRopeRuntime.build_string_module(
+                request.project,
+                request.source,
+                resource=resource,
+            ).get_ast()
+        if not isinstance(parsed, ast.Module):
+            message = f"Rope returned a non-module AST for {request.path}"
+            raise TypeError(message)
+        return parsed
+
+
+__all__: list[str] = ["FlextInfraUtilitiesRopeSourceBasesInventory"]

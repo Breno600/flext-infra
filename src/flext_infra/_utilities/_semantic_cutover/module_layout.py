@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING
 from flext_infra._utilities import (
     FlextInfraUtilitiesLintRecipes,
     FlextInfraUtilitiesRopeSource,
+)
+from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
 

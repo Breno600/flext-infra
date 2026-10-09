@@ -1,0 +1,31 @@
+id: pydantic-annotated-field-sole-default-assignment
+snapshots:
+  ? |
+    class Spec:
+        flags: Annotated[
+            t.StrSequence,
+            m.Field(default=()),
+        ]
+  : fixed: |
+      class Spec:
+          flags: t.StrSequence = ()
+    labels:
+    - source: |-
+        flags: Annotated[
+                t.StrSequence,
+                m.Field(default=()),
+            ]
+      style: primary
+      start: 16
+      end: 91
+  ? |
+    class Spec:
+        project_id: Annotated[t.NonEmptyStr | None, m.Field(default=None)]
+  : fixed: |
+      class Spec:
+          project_id: t.NonEmptyStr | None = None
+    labels:
+    - source: 'project_id: Annotated[t.NonEmptyStr | None, m.Field(default=None)]'
+      style: primary
+      start: 16
+      end: 82

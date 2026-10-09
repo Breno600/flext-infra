@@ -1,0 +1,119 @@
+# A pydantic field declares its default by assignment, never inside the
+# ``Annotated`` metadata. Pydantic accepts both forms at runtime, but type
+# checkers built on ``dataclass_transform`` (pyright) read a field's default
+# only from the assignment: a default carried by ``Annotated[..., m.Field(
+# default=...)]`` leaves the field required in the synthesized ``__init__``,
+# so every construction that omits it is reported as a missing argument.
+# Observed: ``make upg`` on flext-infra ended red with "Argument missing for
+# parameter" findings for ``docs_audit``, ``runtime_root``, ``text_globs`` and
+# about a hundred other defaulted fields.
+#
+# The metadata keeps every other ``m.Field`` argument (description, aliases,
+# constraints); only the default moves to the assignment. A declaration that
+# already assigns a value is left to the reviewer: it carries two defaults.
+id: pydantic-annotated-field-default-assignment
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  pattern: "$NAME: Annotated[$TYPE, m.Field(default=$DEFAULT, $$$REST)]"
+  not:
+    has:
+      field: right
+      regex: "."
+fix: "$NAME: Annotated[$TYPE, m.Field($$$REST)] = $DEFAULT"
+message: >-
+  Declare a pydantic field default by assignment
+  (`name: Annotated[T, m.Field(...)] = default`), never inside the Annotated
+  metadata, so type checkers see the field as optional.
+---
+# The same law when the default is the only ``m.Field`` argument: the
+# metadata then carries nothing, so the declaration collapses to a plain
+# annotated assignment.
+id: pydantic-annotated-field-sole-default-assignment
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  pattern: "$NAME: Annotated[$TYPE, m.Field(default=$DEFAULT)]"
+  not:
+    has:
+      field: right
+      regex: "."
+fix: "$NAME: $TYPE = $DEFAULT"
+message: >-
+  Declare a pydantic field default by assignment (`name: T = default`), never
+  inside the Annotated metadata, so type checkers see the field as optional.
+---
+# The ``default_factory`` form of the same law: the factory moves to an
+# assigned ``m.Field(default_factory=...)``, which pydantic merges with the
+# ``Annotated`` metadata and type checkers read as the field default.
+id: pydantic-annotated-field-default-factory-assignment
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  pattern: "$NAME: Annotated[$TYPE, m.Field(default_factory=$FACTORY, $$$REST)]"
+  not:
+    has:
+      field: right
+      regex: "."
+fix: "$NAME: Annotated[$TYPE, m.Field($$$REST)] = m.Field(default_factory=$FACTORY)"
+message: >-
+  Declare a pydantic field default factory by assignment
+  (`name: Annotated[T, m.Field(...)] = m.Field(default_factory=...)`), never
+  inside the Annotated metadata, so type checkers see the field as optional.
+---
+# The ``default_factory`` form when the factory is the only ``m.Field``
+# argument: the declaration collapses to an assigned factory.
+id: pydantic-annotated-field-sole-default-factory-assignment
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  pattern: "$NAME: Annotated[$TYPE, m.Field(default_factory=$FACTORY)]"
+  not:
+    has:
+      field: right
+      regex: "."
+fix: "$NAME: $TYPE = m.Field(default_factory=$FACTORY)"
+message: >-
+  Declare a pydantic field default factory by assignment
+  (`name: T = m.Field(default_factory=...)`), never inside the Annotated
+  metadata, so type checkers see the field as optional.
