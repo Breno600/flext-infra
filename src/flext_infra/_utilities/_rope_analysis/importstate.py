@@ -238,12 +238,10 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
 
     @staticmethod
     def superclass_name(superclass: t.Infra.RopePyObject) -> str:
-        """Return a class name from Rope classes or inferred class instances.
-
-        Invalid semantic kinds and cyclic or unnamed types fail at the boundary.
+        """Return a superclass name from Rope objects with uneven public APIs.
 
         Returns:
-            The SDK class name, resolving inferred instances through their type.
+            A superclass name from Rope objects with uneven public APIs.
 
         """
         return FlextInfraUtilitiesRopeAnalysisImportState._superclass_name(superclass)
@@ -254,34 +252,37 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         *,
         visited: frozenset[int] | None = None,
     ) -> str:
-        """Resolve a named SDK class through the typed semantic object boundary.
+        """Return a superclass name from Rope objects with uneven public APIs.
 
         Returns:
-            The source-defined or builtin class name.
-
-        Raises:
-            TypeError: If the semantic object is neither a class nor an instance.
-            ValueError: If its type chain is cyclic or its class has no name.
+            A superclass name from Rope objects with uneven public APIs.
 
         """
         visited_ids = visited or frozenset()
         superclass_id = id(superclass)
         if superclass_id in visited_ids:
-            msg = "cyclic Rope superclass type"
-            raise ValueError(msg)
-        if FlextInfraUtilitiesRopeRuntime.instance_object(superclass):
-            return FlextInfraUtilitiesRopeAnalysisImportState._superclass_name(
-                superclass.get_type(),
-                visited=visited_ids | {superclass_id},
-            )
-        if not FlextInfraUtilitiesRopeRuntime.abstract_class(superclass):
-            msg = "Rope superclass is not a class or inferred instance"
-            raise TypeError(msg)
-        name = superclass.get_name()
-        if not name:
-            msg = "Rope superclass has no class name"
-            raise ValueError(msg)
-        return name
+            return ""
+        next_visited = visited_ids | {superclass_id}
+        get_name = getattr(superclass, "get_name", None)
+        if callable(get_name):
+            name = get_name()
+            if isinstance(name, str) and name:
+                return name
+        get_type = getattr(superclass, "get_type", None)
+        if callable(get_type):
+            superclass_type = get_type()
+            if superclass_type is not None:
+                type_name = FlextInfraUtilitiesRopeAnalysisImportState._superclass_name(
+                    superclass_type,
+                    visited=next_visited,
+                )
+                if type_name:
+                    return type_name
+        for attr_name in ("name", "_name"):
+            name = getattr(superclass, attr_name, "")
+            if isinstance(name, str) and name:
+                return name
+        return ""
 
     @staticmethod
     def _module_import_maps(
@@ -630,9 +631,6 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         class_name: str,
     ) -> t.StrSequence:
         """Prove nested namespace inheritance by Rope scope and attribute identity.
-
-        Only source-defined ``PyClass`` bases declare lexical nested scopes.
-        Rope's builtin ``AbstractClass`` objects have attributes, not scopes.
 
         Returns:
             The resulting ``t.StrSequence``.

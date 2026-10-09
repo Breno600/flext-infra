@@ -7,11 +7,12 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from pathlib import Path
 
 from flext_infra import c, config, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesRopeRuntimeBase,
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities.rope_runtime_types import (
     FlextInfraUtilitiesRopeRuntimeTypes,
 )
 
@@ -116,6 +117,8 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             ValueError: If Rope proposed source is outside its input inventory.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeTypes
+
         inventory = (
             {
                 Path(resource.real_path).resolve(): resource.read()
@@ -523,16 +526,14 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             resources=resources,
             in_hierarchy=in_hierarchy,
         )
-        if not isinstance(raw_locations, p.Infra.RopeRuntimeSequence):
-            msg = "rope find_occurrences returned non-sequence locations"
+        if not isinstance(raw_locations, Iterable):
+            msg = "rope find_occurrences returned non-iterable locations"
             raise TypeError(msg)
-        locations: t.MutableSequenceOf[t.Infra.RopeLocation] = []
-        for location in raw_locations:
-            if not isinstance(location, p.Infra.RopeLocation):
-                msg = "rope find_occurrences returned an invalid location"
-                raise TypeError(msg)
-            locations.append(location)
-        return tuple(locations)
+        return tuple(
+            location
+            for location in raw_locations
+            if isinstance(location, p.Infra.RopeLocation)
+        )
 
     @classmethod
     def from_import(

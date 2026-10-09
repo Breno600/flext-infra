@@ -118,7 +118,7 @@ class FlextInfraMiseArtifactsState:
         )
         temporary = cls.plan_directories(
             layout,
-            phase=c.Infra.CodegenStagedFilePhase.TRANSACTION,
+            phase="transaction",
             requested=tuple(roots),
             disposition="temporary",
         )
@@ -144,7 +144,7 @@ class FlextInfraMiseArtifactsState:
         )
         generated = cls.plan_directories(
             layout,
-            phase=c.Infra.CodegenStagedFilePhase.MISE,
+            phase="mise",
             requested=parents,
             disposition="generated",
         )

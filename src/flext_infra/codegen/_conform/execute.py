@@ -649,7 +649,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteDirected):
                 inputs[state.path] = state
         return r[m.Infra.CodegenPhaseAnalysis].ok(
             m.Infra.CodegenPhaseAnalysis(
-                phase=c.Infra.CodegenStagedFilePhase.LAZY_INIT,
+                phase="lazy-init",
                 files=tuple(files),
                 inputs=tuple(inputs[path] for path in sorted(inputs)),
                 publications=tuple(publications),
@@ -965,7 +965,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteDirected):
             return result_type.from_failure(docs_plans)
         owned_docs_files = self.owned_docs_files(request, docs_plans.value)
         docs_analysis = m.Infra.CodegenPhaseAnalysis(
-            phase=c.Infra.CodegenStagedFilePhase.DOCS,
+            phase="docs",
             files=owned_docs_files,
             inputs=docs_bundle.value.source_states,
         )

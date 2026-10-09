@@ -381,13 +381,20 @@ class FlextInfraCodegenMiseToolchainProof(FlextInfraCodegenExecutionBase[bool]):
             lock, runtime_entries[1], mise_binary.value, platform_name.value
         )
 
-    def _prove_uv_consumer(self) -> p.Result[bool]:
+    def _prove_uv_consumer(self, mise_binary: Path) -> p.Result[bool]:
         """Compare the actual consumer to the one locked producer.
+
+        The canonical activation puts the Mise shims directory on PATH, so
+        Make's UV is a shim: a link to the Mise binary that executes what
+        ``mise which uv`` names. A shim is identified by carrying the
+        qualified Mise bytes and is followed through that same query; any
+        other executable is compared physically, so a foreign UV on PATH
+        still fails.
 
         Returns:
             Success only for the authenticated physical UV executable.
         """
-        uv = u.Infra.managed_mise_binary("uv", self.repository_root)
+        uv = u.Infra.managed_mise_binary(c.Infra.UV, self.repository_root)
         if uv.failure:
             return r[bool].from_failure(uv)
         if not self.uv_executable.is_absolute() or not self.uv_executable.is_file():
@@ -395,6 +402,11 @@ class FlextInfraCodegenMiseToolchainProof(FlextInfraCodegenExecutionBase[bool]):
                 f"Make UV is not an absolute executable file: {self.uv_executable}"
             )
         actual_uv = self.uv_executable.resolve(strict=True)
+        if actual_uv.read_bytes() == mise_binary.read_bytes():
+            dispatched = self._mise_line(mise_binary, "which", c.Infra.UV)
+            if dispatched.failure:
+                return r[bool].from_failure(dispatched)
+            actual_uv = Path(dispatched.value).resolve(strict=True)
         if actual_uv != uv.value:
             return r[bool].fail(
                 f"Make UV differs from the locked producer: actual={actual_uv} "
@@ -416,7 +428,7 @@ class FlextInfraCodegenMiseToolchainProof(FlextInfraCodegenExecutionBase[bool]):
         Returns:
             Success only for the locked UV and Python-backed project venv.
         """
-        uv = self._prove_uv_consumer()
+        uv = self._prove_uv_consumer(mise_binary)
         if uv.failure:
             return uv
         python_version = self.lock_identity(python_entry, lock, platform_name)

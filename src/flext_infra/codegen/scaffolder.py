@@ -247,7 +247,7 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
             )
             written = FlextInfraMisePublication.publish_file_plan(
                 planned,
-                phase=c.Infra.CodegenStagedFilePhase.SCAFFOLD,
+                phase="scaffold",
             )
             if written.failure:
                 message = f"writing scaffold {filepath}: {written.error}"

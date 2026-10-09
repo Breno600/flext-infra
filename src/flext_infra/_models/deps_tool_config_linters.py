@@ -115,16 +115,18 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ]
 
-    class RuffPylintConfig(m.ArbitraryTypesModel):
-        """Ruff Pylint policy for operator-approved native type descriptors."""
+    class RuffTypeCheckingConfig(m.ArbitraryTypesModel):
+        """Ruff flake8-type-checking settings loaded from YAML."""
 
-        allow_dunder_method_names: Annotated[
-            t.SequenceOf[Literal["__base__", "__bases__"]],
+        runtime_evaluated_roots: Annotated[
+            t.SequenceOf[t.NonEmptyStr],
             m.Field(
-                alias="allow-dunder-method-names",
+                alias="runtime-evaluated-roots",
+                min_length=1,
                 description=(
-                    "Only Python type.__base__ and type.__bases__ read-only "
-                    "protocol properties are authorized by the operator."
+                    "Qualified base classes whose subclasses evaluate their "
+                    "annotations at runtime; codegen derives every project "
+                    "base inheriting one into runtime-evaluated-base-classes."
                 ),
             ),
         ]
@@ -302,9 +304,6 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         )
         pydocstyle: FlextInfraModelsDepsToolConfigLinters.RuffPydocstyleConfig = (
             m.Field(description="Ruff pydocstyle configuration")
-        )
-        pylint: FlextInfraModelsDepsToolConfigLinters.RuffPylintConfig = m.Field(
-            description="Ruff Pylint native type descriptor policy",
         )
         flake8_type_checking: Annotated[
             FlextInfraModelsDepsToolConfigLinters.RuffTypeCheckingConfig,

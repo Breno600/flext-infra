@@ -44,14 +44,6 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
             t.NonEmptyStr,
             m.Field(description="Runtime-root-local development environment"),
         ] = FlextInfraConstantsWorkspace.ENVIRONMENT_DIRECTORY
-        worktree_environment_directory: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Declared sibling directory for linked worktree environments"
-                ),
-            ),
-        ]
         contract_env_values: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="OPTIONS or HELP values that display a verb contract"),

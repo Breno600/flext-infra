@@ -256,14 +256,6 @@ class FlextInfraConfigModelsRender:
             t.NonEmptyStr,
             m.Field(description="Runtime-root-local development environment"),
         ] = FlextInfraConstantsWorkspace.ENVIRONMENT_DIRECTORY
-        worktree_environment_directory: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Declared sibling directory for linked worktree environments"
-                ),
-            ),
-        ]
 
     class SonarcloudIssueExclusionSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One SonarCloud issue exclusion applied as a server-side project setting.
