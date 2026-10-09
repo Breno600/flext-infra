@@ -679,10 +679,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             if id(base) in ancestors:
                 message = f"cyclic facade namespace inheritance at {class_name}"
                 raise ValueError(message)
-            if (
-                not FlextInfraUtilitiesRopeRuntime.abstract_class(base)
-                or base.get_module() is None
-            ):
+            if not FlextInfraUtilitiesRopeRuntime.py_class(base):
                 continue
             scope = base.get_scope()
             if scope is not None:
