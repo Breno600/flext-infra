@@ -268,8 +268,11 @@ MYPY_PATHS := $(strip $(foreach d,src tests examples,$(if $(wildcard $(PROJECT_R
 # Source: the repository's declared Mise toolchain, provisioned by make setup.
 # Every tool resolves from the mise-managed PATH (direnv activation shims, or
 # the CI provisioned PATH); _builtin_require_mise guards the running mise
-# against the committed mise.lock pin.
-override UV := uv
+# against the committed mise.lock pin. uv is resolved through mise itself when
+# a recipe runs: a workspace environment carries a PyPI `uv` executable (a
+# transitive dependency) ahead of the shims, and only the mise.lock release is
+# the producer the toolchain proof accepts.
+override UV := "$$(mise -C "$(RUNTIME_ROOT)" which uv)"
 CALLER_PATH := $(PATH)
 CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 # End SECTION: project tool owner
@@ -291,10 +294,13 @@ unexport MISE_SYSTEM_CONFIG_FILE
 # the pinned mise release is the [tools] entry the committed mise.lock pins.
 # End SECTION: profile routing
 
-# Git identity distinguishes a linked worktree from a primary submodule:
-# both can have a .git file, but only a linked worktree has distinct Git
-# directory and common directory. The environment path cannot be overridden.
-RUNTIME_LINKED_WORKTREE :=
+# Every runtime owns one exclusive physical environment and never resolves to
+# its primary's or a sibling's (shared-venv-guard; tracker key
+# operator-ruling-2026-10-09-worktree-own-venv). A primary keeps it in its own
+# checkout; a linked worktree (Git directory differs from the common
+# directory) keeps it beside itself at <parent>/<environment>/<lane>.
+# The path cannot be overridden.
+override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
 ifneq ($(wildcard $(RUNTIME_ROOT)/.git),)
 RUNTIME_GIT_DIR := $(shell git -C "$(RUNTIME_ROOT)" rev-parse --path-format=absolute --git-dir)
 ifneq ($(.SHELLSTATUS),0)
@@ -305,24 +311,8 @@ ifneq ($(.SHELLSTATUS),0)
 $(error Cannot resolve Git common directory for $(RUNTIME_ROOT))
 endif
 ifneq ($(RUNTIME_GIT_DIR),$(RUNTIME_GIT_COMMON_DIR))
-RUNTIME_LINKED_WORKTREE := Y
+override RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../.venv/$(notdir $(RUNTIME_ROOT)))
 endif
-endif
-# A linked worktree uses the environment its primary worktree uses: Git lists
-# the primary first wherever the lane lives, and the primary's runtime is its
-# superproject when attached, else the primary itself.
-ifeq ($(RUNTIME_LINKED_WORKTREE),Y)
-RUNTIME_PRIMARY_WORKTREE := $(word 2,$(shell git -C "$(RUNTIME_ROOT)" worktree list --porcelain))
-ifneq ($(.SHELLSTATUS),0)
-$(error Cannot resolve the primary worktree of $(RUNTIME_ROOT))
-endif
-RUNTIME_PRIMARY_RUNTIME := $(shell cd "$(RUNTIME_PRIMARY_WORKTREE)" && root=$$(git rev-parse --show-superproject-working-tree) && cd "$${root:-.}" && pwd -P)
-ifneq ($(.SHELLSTATUS),0)
-$(error Cannot resolve the runtime of the primary worktree $(RUNTIME_PRIMARY_WORKTREE))
-endif
-override RUNTIME_VENV := $(RUNTIME_PRIMARY_RUNTIME)/.venv
-else
-override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
 endif
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
@@ -1235,7 +1225,7 @@ _setup_lifecycle:
 # mise.lock release, self-contained in its install root, reporting the locked
 # version (codegen mise-proof). The first defect fails setup; no fallback.
 _setup_activated:
-	@$(PROJECT_FLEXT_INFRA) codegen mise-proof --repository-root "$(PROJECT_ROOT)" --uv-executable "$$(command -v $(UV))"
+	@$(PROJECT_FLEXT_INFRA) codegen mise-proof --repository-root "$(PROJECT_ROOT)" --uv-executable "$$(mise which uv)"
 	@set -eu; \
 	case "$(strip $(CI)): $(CUSTOM_DECLARED_TARGETS) " in \
 		Y:*) ;; \
