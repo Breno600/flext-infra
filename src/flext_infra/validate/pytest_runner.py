@@ -1,10 +1,19 @@
-"""Public facade for the canonical persistent-testmon pytest runner."""
+"""Public facade for the canonical persistent-testmon pytest runner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-from flext_infra import t
+from typing import TYPE_CHECKING
 
-from ._pytest_runner.execution import FlextInfraPytestRunnerExecution
+from flext_infra.validate._pytest_runner.execution import (
+    FlextInfraPytestRunnerExecution,
+)
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraPytestRunner(FlextInfraPytestRunnerExecution):

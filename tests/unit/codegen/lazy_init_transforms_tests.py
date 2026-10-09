@@ -1,4 +1,8 @@
-"""Tests for lazy-init transformation behavior."""
+"""Tests for lazy-init transformation behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,15 +21,19 @@ if TYPE_CHECKING:
 class TestsFlextInfraLazyInitTransforms:
     """Behavior tests for generated lazy-init transform output."""
 
-    def test_private_subpackage_initializer_is_lazy(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_private_subpackage_initializer_is_lazy(tmp_path: Path) -> None:
         """Private implementation packages retain a lazy FLEXT facade."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         utilities_dir = package_root / "_utilities"
         utilities_dir.mkdir()
         (utilities_dir / c.Infra.INIT_PY).write_text(
-            "", encoding=c.Cli.ENCODING_DEFAULT
+            "",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         (utilities_dir / "mapper.py").write_text(
             "from __future__ import annotations\n\n"
@@ -37,19 +45,28 @@ class TestsFlextInfraLazyInitTransforms:
         result = u.Tests.run_lazy_init(repository_root)
 
         init_content = (utilities_dir / c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(result, eq=0)
-        tm.that(init_content, has="from .mapper import FlextDemoUtilitiesMapper")
+        tm.that(
+            init_content,
+            has=(
+                f"from {package_root.name}._utilities.mapper "
+                "import FlextDemoUtilitiesMapper"
+            ),
+        )
         tm.that(init_content, has="FlextDemoUtilitiesMapper")
         tm.that(init_content, has="__all__: tuple[str, ...]")
         tm.that(init_content, has="install_lazy_exports(")
         tm.that(init_content, lacks="__unit__")
 
-    def test_source_packages_exclude_test_named_modules(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_source_packages_exclude_test_named_modules(tmp_path: Path) -> None:
         """Never publish test artifacts from an installable source package."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         models_dir = package_root / "_models"
         models_dir.mkdir()
@@ -73,24 +90,28 @@ class TestsFlextInfraLazyInitTransforms:
 
         result = u.Tests.run_lazy_init(repository_root)
         init_content = (models_dir / c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
         tm.that(result, eq=0)
         tm.that(init_content, has='"FlextDemoModel"')
-        tm.that(init_content, has='".model": ("FlextDemoModel",)')
+        entries, _refs = u.Infra.lazy_import_mapping_source(init_content)
+        tm.that(dict(entries).get(".model", ()), has="FlextDemoModel")
         for _filename, class_name in test_modules:
             tm.that(init_content, lacks=class_name)
         tm.that(init_content, lacks="_test_tmp")
         tm.that(init_content, lacks="test_fixture")
         tm.that(init_content, lacks="model_tests")
 
+    @staticmethod
     def test_version_exports_are_explicit_runtime_reexports(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Publish version declarations explicitly from the package root."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         (package_root / "__version__.py").write_text(
             "from __future__ import annotations\n\n"
@@ -102,7 +123,7 @@ class TestsFlextInfraLazyInitTransforms:
         result = u.Tests.run_lazy_init(repository_root)
 
         content = (package_root / c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(result, eq=0)
         source_root = repository_root / c.Infra.DEFAULT_SRC_DIR
@@ -118,7 +139,7 @@ class TestsFlextInfraLazyInitTransforms:
                     ),
                 ],
                 cwd=source_root,
-            )
+            ),
         )
         tm.that(u.Cli.process_succeeded(imported.outcome), eq=True)
         tm.that(imported.stdout.strip(), eq="1.0.0|(1, 0, 0)")

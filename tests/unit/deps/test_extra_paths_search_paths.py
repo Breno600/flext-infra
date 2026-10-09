@@ -1,4 +1,8 @@
-"""Search-path contract tests for the dependency modernizer."""
+"""Search-path contract tests for the dependency modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,18 +11,23 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-from tests.unit.deps.extra_paths_support import ExtraPathsTestSupport
+from tests.unit.deps.extra_paths_support import TestsFlextInfraExtraPathsSupport
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
 class TestsFlextInfraExtraPathsSearchPaths:
+    """Tests for ``FlextInfraExtraPathsSearchPaths``."""
+
+    @staticmethod
     def test_pyrefly_search_paths_include_declared_generated_roots(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test pyrefly search paths include declared generated roots."""
         manager = FlextInfraExtraPathsManager(
-            repository_root=tmp_path, generated_python_roots=("src", "tests")
+            repository_root=tmp_path,
+            generated_python_roots=("src", "tests"),
         )
 
         result = manager.pyrefly_search_paths(project_dir=tmp_path, is_root=True)
@@ -27,8 +36,9 @@ class TestsFlextInfraExtraPathsSearchPaths:
 
     """Verify productive, existing Pyrefly search roots."""
 
+    @staticmethod
     def test_pyrefly_search_paths_only_use_local_project_dirs(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Keep project-local roots when dependencies are development-only."""
         consumer = tmp_path / "flext-core"
@@ -56,17 +66,19 @@ class TestsFlextInfraExtraPathsSearchPaths:
             dep_src = dep_root / "src" / package_name
             dep_src.mkdir(parents=True)
             (dep_root / "pyproject.toml").write_text(
-                f"[project]\nname = '{dep_name}'\n", encoding="utf-8"
+                f"[project]\nname = '{dep_name}'\n",
+                encoding="utf-8",
             )
             (dep_src / "__init__.py").write_text("", encoding="utf-8")
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         result = manager.pyrefly_search_paths(project_dir=consumer, is_root=False)
 
         tm.that(result, eq=("src", "."))
 
+    @staticmethod
     def test_pyrefly_search_paths_include_project_root_for_tests_package(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Include the project root when the tests package is importable."""
         consumer = tmp_path / "flext-infra"
@@ -76,30 +88,34 @@ class TestsFlextInfraExtraPathsSearchPaths:
         (consumer / "tests").mkdir()
         (consumer / "Makefile").write_text("", encoding="utf-8")
         (consumer / "pyproject.toml").write_text(
-            "[project]\nname = 'flext-infra'\n", encoding="utf-8"
+            "[project]\nname = 'flext-infra'\n",
+            encoding="utf-8",
         )
         (consumer / "tests" / "__init__.py").write_text("", encoding="utf-8")
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         result = manager.pyrefly_search_paths(project_dir=consumer, is_root=False)
 
         tm.that(result, eq=("src", "."))
 
+    @staticmethod
     def test_pyrefly_search_paths_ignore_non_path_dependencies_at_root(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Ignore undeclared local roots for ordinary dependencies."""
-        _ = ExtraPathsTestSupport.workspace_with_dependency(
-            tmp_path, uv_workspace=False
+        _ = TestsFlextInfraExtraPathsSupport.workspace_with_dependency(
+            tmp_path,
+            uv_workspace=False,
         )
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         result = manager.pyrefly_search_paths(project_dir=tmp_path, is_root=True)
 
         tm.that(result, eq=("src", "."))
 
+    @staticmethod
     def test_pyrefly_search_paths_omit_workspace_dependency_src_dirs_at_root(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Keep declared workspace projects out of the root's search path."""
         (tmp_path / ".git").mkdir()
@@ -125,27 +141,31 @@ class TestsFlextInfraExtraPathsSearchPaths:
             (dep_root / ".git").mkdir()
             (dep_root / "Makefile").write_text("", encoding="utf-8")
             (dep_root / "pyproject.toml").write_text(
-                f"[project]\nname = '{dep_name}'\n", encoding="utf-8"
+                f"[project]\nname = '{dep_name}'\n",
+                encoding="utf-8",
             )
             dep_src = dep_root / "src" / package_name
             dep_src.mkdir(parents=True)
             (dep_src / "__init__.py").write_text("", encoding="utf-8")
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         result = manager.pyrefly_search_paths(project_dir=tmp_path, is_root=True)
 
         tm.that(result, eq=("src", "."))
 
+    @staticmethod
     def test_pyrefly_search_paths_exclude_dependency_dirs_at_root(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Exclude every dependency directory, environments included."""
-        _, dep_root = ExtraPathsTestSupport.workspace_with_dependency(tmp_path)
+        _, dep_root = TestsFlextInfraExtraPathsSupport.workspace_with_dependency(
+            tmp_path,
+        )
         dep_venv = dep_root / "venv" / "bin"
         dep_venv.mkdir(parents=True)
         (dep_venv / "python").write_text("", encoding="utf-8")
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         result = manager.pyrefly_search_paths(project_dir=tmp_path, is_root=True)
 
         tm.that(result, eq=("src", "."))

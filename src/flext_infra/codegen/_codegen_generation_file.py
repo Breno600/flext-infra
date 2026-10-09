@@ -1,12 +1,17 @@
-"""Canonical generated package artifact selection."""
+"""Canonical generated package artifact selection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import c, m, t
-
-from ._codegen_generation_standard import FlextInfraCodegenGenerationStandardMixin
+from flext_infra import c, config, m, t
+from flext_infra.codegen._codegen_generation_standard import (
+    FlextInfraCodegenGenerationStandardMixin,
+)
 
 
 class FlextInfraCodegenGenerationFileMixin(FlextInfraCodegenGenerationStandardMixin):
@@ -14,20 +19,50 @@ class FlextInfraCodegenGenerationFileMixin(FlextInfraCodegenGenerationStandardMi
 
     @staticmethod
     def _init_template_name(plan: m.Infra.LazyInitPlan) -> str:
-        """Select the sole template source for one resolved initializer."""
+        """Select the sole template source for one resolved initializer.
+
+        The bootstrap-cycle exception (side-effect-free static init) belongs
+        ONLY to the bootstrap-owning distribution (``flext_core``): its
+        ``_typings``/``_lazy_parts`` are imported while the lazy runtime is
+        still initializing. Every other distribution's private packages load
+        normally and receive the populated lazy facade (operator init law
+        2026-09-16: light init WITH exports — never an empty facade).
+
+        A generated source tree (codegen artifact ``generated_source``) holds
+        foreign-generator modules that declare no FLEXT export contract; its
+        initializer only makes the tree a regular package, so it is static.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        root_package = plan.context.current_pkg.split(".", maxsplit=1)[0]
         segments = frozenset(plan.context.current_pkg.split("."))
-        if segments & c.Infra.BOOTSTRAP_CYCLE_EXCEPTION_SEGMENTS:
+        if (
+            root_package == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+            and segments & c.Infra.BOOTSTRAP_CYCLE_EXCEPTION_SEGMENTS
+        ) or plan.context.pkg_dir.name in config.Infra.codegen.generated_sources:
             return c.Infra.TEMPLATE_STATIC_INIT
         return c.Infra.TEMPLATE_ROOT_INIT
 
     @classmethod
     def init_template_path(cls, plan: m.Infra.LazyInitPlan) -> Path:
-        """Return the exact template path consumed by one initializer plan."""
+        """Return the exact template path consumed by one initializer plan.
+
+        Returns:
+            The exact template path consumed by one initializer plan.
+
+        """
         return cls._template_path(cls._init_template_name(plan))
 
     @classmethod
     def init_template_paths(cls) -> t.Pair[Path, Path]:
-        """Return the closed lazy-init template input set."""
+        """Return the closed lazy-init template input set.
+
+        Returns:
+            The closed lazy-init template input set.
+
+        """
         return (
             cls._template_path(c.Infra.TEMPLATE_ROOT_INIT),
             cls._template_path(c.Infra.TEMPLATE_STATIC_INIT),
@@ -40,6 +75,10 @@ class FlextInfraCodegenGenerationFileMixin(FlextInfraCodegenGenerationStandardMi
         Real cycle exceptions (bootstrap packages imported during lazy-runtime
         initialization) keep side-effect-free empty inits. All other packages
         get PEP 562 lazy-loading facades.
+
+        Returns:
+            The resulting ``str``.
+
         """
         if cls._init_template_name(plan) == c.Infra.TEMPLATE_STATIC_INIT:
             return cls._render_static(plan)

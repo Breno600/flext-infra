@@ -19,62 +19,81 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.fixture
-def auditor() -> FlextInfraDocAuditor:
-    return FlextInfraDocAuditor()
+class TestsFlextInfraAuditor:
+    """Tests for the docs auditor and its static helpers."""
 
+    @staticmethod
+    @pytest.fixture
+    def auditor() -> FlextInfraDocAuditor:
+        """Provide ``auditor``.
 
-@pytest.fixture
-def normalize_link() -> Callable[[str], str]:
-    def _normalize(value: str) -> str:
-        normalized: str = u.Infra.docs_normalize_link(value)
-        return normalized
+        Returns:
+            The resulting ``FlextInfraDocAuditor``.
 
-    return _normalize
+        """
+        return FlextInfraDocAuditor()
 
+    @staticmethod
+    @pytest.fixture
+    def normalize_link() -> Callable[[str], str]:
+        """Provide ``normalize_link``.
 
-@pytest.fixture
-def should_skip_target() -> Callable[[str, str], bool]:
-    def _should_skip(link: str, target: str) -> bool:
-        should_skip: bool = u.Infra.docs_should_skip_target(link, target)
-        return should_skip
+        Returns:
+            The resulting ``Callable[[str], str]``.
 
-    return _should_skip
+        """
 
+        def _normalize(value: str) -> str:
+            normalized: str = u.Infra.docs_normalize_link(value)
+            return normalized
 
-@pytest.fixture
-def is_external() -> Callable[[str], bool]:
-    def _is_external(value: str) -> bool:
-        external: bool = u.Infra.docs_is_external(value)
-        return external
+        return _normalize
 
-    return _is_external
+    @staticmethod
+    @pytest.fixture
+    def should_skip_target() -> Callable[[str, str], bool]:
+        """Provide ``should_skip_target``.
 
+        Returns:
+            The resulting ``Callable[[str, str], bool]``.
 
-class TestAuditorCore:
-    """Tests for the docs auditor."""
+        """
 
-    def test_returns_flext_result(
-        self, auditor: FlextInfraDocAuditor, tmp_path: Path
-    ) -> None:
-        result = auditor.audit(tmp_path)
-        tm.that(result.success or result.failure, eq=True)
+        def _should_skip(link: str, target: str) -> bool:
+            should_skip: bool = u.Infra.docs_should_skip_target(link, target)
+            return should_skip
 
+        return _should_skip
+
+    @staticmethod
+    @pytest.fixture
+    def is_external() -> Callable[[str], bool]:
+        """Provide ``is_external``.
+
+        Returns:
+            The resulting ``Callable[[str], bool]``.
+
+        """
+
+        def _is_external(value: str) -> bool:
+            external: bool = u.Infra.docs_is_external(value)
+            return external
+
+        return _is_external
+
+    @staticmethod
     def test_valid_scope_returns_success(
-        self, auditor: FlextInfraDocAuditor, tmp_path: Path
+        auditor: FlextInfraDocAuditor,
+        tmp_path: Path,
     ) -> None:
+        """Test valid scope returns success."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
         result = auditor.audit(workspace)
         tm.ok(result)
 
-    def test_report_structure(
-        self, auditor: FlextInfraDocAuditor, tmp_path: Path
-    ) -> None:
-        result = auditor.audit(tmp_path)
-        if result.success and result.value:
-            result.value[0]
-
-    def test_issue_structure(self) -> None:
+    @staticmethod
+    def test_issue_structure() -> None:
+        """Test issue structure."""
         issue = m.Infra.AuditIssue(
             file="README.md",
             issue_type="broken_link",
@@ -85,6 +104,7 @@ class TestAuditorCore:
         tm.that(issue.issue_type, eq="broken_link")
         tm.that(issue.severity, eq="high")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("projects", "check", "output_dir"),
         [
@@ -97,7 +117,6 @@ class TestAuditorCore:
         ],
     )
     def test_audit_option_variants(
-        self,
         *,
         auditor: FlextInfraDocAuditor,
         tmp_path: Path,
@@ -106,29 +125,42 @@ class TestAuditorCore:
         output_dir: str,
     ) -> None:
         # The command-contract check loads the governed workspace spec, whose
-        # repository-local Beads configuration every real repository carries.
-        u.Tests.write_project_beads_config(tmp_path, "audit-fixture")
-        output_dir_value = (
-            str(tmp_path / output_dir) if output_dir == "custom_output" else output_dir
-        )
-        result = auditor.audit(
+        # repository-local Beads configuration every real repository carries,
+        # and it resolves a Git identity from the audited root. A selected
+        # ``projects`` entry only matches a scope the workspace actually
+        # declares, so the fixture is built by the canonical docs workspace
+        # owner with exactly the declared members rather than a bare temp
+        # directory that happens to carry a Beads file.
+        """Test audit option variants."""
+        workspace = u.Tests.create_docs_workspace(
             tmp_path,
+            project_names=tuple(projects or ()),
+        )
+        # The output directory is resolved relative to each project root, so a
+        # custom name is passed through as the relative name it is. Building an
+        # absolute path here is rejected by scope resolution.
+        result = auditor.audit(
+            workspace,
             projects=projects,
-            output_dir=output_dir_value,
+            output_dir=output_dir,
             params=m.Infra.AuditScopeParams(check=check),
         )
-        tm.that(result.success or result.failure, eq=True)
+        # Every variant here is a valid option combination, so the observable
+        # outcome is a successful audit. Asserting "success or failure" would
+        # hold whatever the runtime did and prove nothing.
+        tm.ok(result)
 
-    def test_report_frozen(self) -> None:
+    @staticmethod
+    def test_report_frozen() -> None:
+        """Test report frozen."""
         tm.that(m.Infra.DocsPhaseReport.model_config.get("frozen"), eq=True)
 
-    def test_issue_frozen(self) -> None:
+    @staticmethod
+    def test_issue_frozen() -> None:
+        """Test issue frozen."""
         tm.that(m.Infra.AuditIssue.model_config.get("frozen"), eq=True)
 
-
-class TestAuditorNormalize:
-    """Additional tests for the docs auditor."""
-
+    @staticmethod
     @pytest.mark.parametrize(
         ("raw", "expected"),
         [
@@ -140,10 +172,14 @@ class TestAuditorNormalize:
         ],
     )
     def test_normalize_link(
-        self, normalize_link: Callable[[str], str], raw: str, expected: str
+        normalize_link: Callable[[str], str],
+        raw: str,
+        expected: str,
     ) -> None:
+        """Test normalize link."""
         tm.that(normalize_link(raw), eq=expected)
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("text", "target", "expected"),
         [
@@ -155,19 +191,23 @@ class TestAuditorNormalize:
         ],
     )
     def test_should_skip_target(
-        self,
         *,
         should_skip_target: Callable[[str, str], bool],
         text: str,
         target: str,
         expected: bool,
     ) -> None:
+        """Test should skip target."""
         tm.that(should_skip_target(text, target), eq=expected)
 
+    @staticmethod
     @pytest.mark.parametrize("scheme", sorted(c.Infra.DOCS_EXTERNAL_SCHEMES))
     def test_permitted_external_schemes_are_preserved(
-        self, *, is_external: Callable[[str], bool], scheme: str
+        *,
+        is_external: Callable[[str], bool],
+        scheme: str,
     ) -> None:
+        """Test permitted external schemes are preserved."""
         target = (
             f"{scheme}://example.invalid"
             if scheme == c.Infra.DOCS_SECURE_WEB_SCHEME
@@ -176,6 +216,7 @@ class TestAuditorNormalize:
 
         tm.that(is_external(target), eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "target",
         [
@@ -185,12 +226,18 @@ class TestAuditorNormalize:
         ],
     )
     def test_insecure_documentation_urls_fail_fast(
-        self, *, is_external: Callable[[str], bool], target: str
+        *,
+        is_external: Callable[[str], bool],
+        target: str,
     ) -> None:
+        """Test insecure documentation urls fail fast."""
         with pytest.raises(ValueError, match="use HTTPS"):
             is_external(target)
 
+    @staticmethod
     def test_repository_paths_are_not_external(
-        self, *, is_external: Callable[[str], bool]
+        *,
+        is_external: Callable[[str], bool],
     ) -> None:
+        """Test repository paths are not external."""
         tm.that(is_external("path/to/file.md"), eq=False)

@@ -1,23 +1,36 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra. Models. Git package."""
+"""Flext Infra. Models. Git package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
-    from .identity import FlextInfraModelsGitIdentity
-__all__: tuple[str, ...] = ("FlextInfraModelsGitIdentity",)
+    from flext_infra._models._git.identity import FlextInfraModelsGitIdentity
+    from flext_infra._models._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
+    from flext_infra._models._git.worktree_state import FlextInfraModelsGitWorktreeState
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({".identity": ("FlextInfraModelsGitIdentity",)}),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    )
+
+__all__: tuple[str, ...] = (
+    "FlextInfraModelsGitIdentity",
+    "FlextInfraModelsGitWorktreeFacts",
+    "FlextInfraModelsGitWorktreeState",
 )
 
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraModelsGitIdentity": ".identity",
+        "FlextInfraModelsGitWorktreeFacts": ".worktree_facts",
+        "FlextInfraModelsGitWorktreeState": ".worktree_state",
+    }),
+    public_exports=__all__,
+)

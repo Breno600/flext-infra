@@ -5,13 +5,16 @@ subject that a merged pull request leaves on its merge commit, writes the
 version only through the protocol, and identifies a release by one tag shape.
 These are external contracts (Conventional Commits, PEP 440, Git), so they are
 constants rather than configuration.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
 
 import re
 from enum import StrEnum
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -20,7 +23,7 @@ if TYPE_CHECKING:
 class FlextInfraConstantsRelease:
     """Release infrastructure constants."""
 
-    VERSION_RELEASE_SEGMENTS: Final[int] = 3
+    VERSION_RELEASE_SEGMENTS: ClassVar[int] = 3
 
     class ReleasePhase(StrEnum):
         """Canonical release phases; each one is one Make ``WHAT`` selector."""
@@ -39,31 +42,83 @@ class FlextInfraConstantsRelease:
         MINOR = "minor"
         MAJOR = "major"
 
-    VERSION_RE: Final[t.RegexPattern] = re.compile(
-        r"^version\s*=\s*['\"](.+?)['\"]", re.MULTILINE
+    VERSION_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^version\s*=\s*['\"](.+?)['\"]",
+        re.MULTILINE,
     )
-    CONVENTIONAL_SUBJECT_RE: Final[t.RegexPattern] = re.compile(
-        r"^(?P<type>[a-z]+)(?:\([^)]+\))?(?P<breaking>!)?: \S"
+    CONVENTIONAL_SUBJECT_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^(?P<type>[a-z]+)(?:\([^)]+\))?(?P<breaking>!)?: \S",
     )
     "Conventional Commits subject: ``type(scope)!: description``."
-    PULL_REQUEST_MERGE_SUBJECT_RE: Final[t.RegexPattern] = re.compile(
-        r"^Merge pull request #\d+\b"
+    PULL_REQUEST_MERGE_SUBJECT_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^Merge pull request #\d+\b",
     )
     "GitHub's default merge subject, which carries no release information."
-    TAG_FORMAT: Final[str] = "v{version}"
-    RELEASE_BRANCH: Final[str] = "release/next"
+    TAG_FORMAT: ClassVar[str] = "v{version}"
+    RELEASE_BRANCH: ClassVar[str] = "release/next"
     "One bot-owned lane per repository; the open release pull request lives here."
-    RELEASE_COMMIT_SUBJECT: Final[str] = "chore(release): v{version}"
-    RELEASE_COMMIT_SUBJECT_RE: Final[t.RegexPattern] = re.compile(
-        r"^chore\(release\): v(?P<version>\S+?)(?: \(#\d+\))?$"
+    RELEASE_COMMIT_SUBJECT: ClassVar[str] = "chore(release): v{version}"
+    RELEASE_COMMIT_SUBJECT_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^chore\(release\): v(?P<version>\S+?)(?: \(#\d+\))?$",
     )
     "The release commit as Git carries it: GitHub appends ` (#N)` when merging."
-    RELEASE_PLAN_FILENAME: Final[str] = "plan.json"
-    RELEASE_NOTES_FILENAME: Final[str] = "RELEASE_NOTES.md"
-    RELEASE_REPORT_FILENAME: Final[str] = "build-report.json"
-    PYPI_UPLOAD_URL: Final[str] = "https://upload.pypi.org/legacy/"
+    RELEASE_PLAN_FILENAME: ClassVar[str] = "plan.json"
+    RELEASE_NOTES_FILENAME: ClassVar[str] = "RELEASE_NOTES.md"
+    RELEASE_NOTES_LINE_LENGTH: ClassVar[int] = 88
+    "Markdown line ceiling the notes satisfy (MD013 line_length)."
+    RELEASE_NOTES_CONTINUATION_INDENT: ClassVar[str] = "  "
+    "Continuation indent aligning a wrapped bullet's text under its marker."
+    MARKDOWN_INLINE_ESCAPE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"([\\`*_\[\]<>~|])",
+    )
+    "Inline markdown punctuation escaped so an untrusted subject renders literally."
+    RELEASE_REPORT_FILENAME: ClassVar[str] = "build-report.json"
+    PYPI_UPLOAD_URL: ClassVar[str] = "https://upload.pypi.org/legacy/"
     "Canonical verified-artifact upload endpoint."
-    GH: Final[str] = "gh"
+    GH: ClassVar[str] = "gh"
+    RELEASE_LICENSE_NAMES: ClassVar[frozenset[str]] = frozenset({
+        "copying",
+        "copying.md",
+        "copying.txt",
+        "license",
+        "license.md",
+        "license.txt",
+    })
+    "Casefolded basenames a release accepts as the project's single license."
+    RELEASE_OPERATIONAL_ROOTS: ClassVar[frozenset[str]] = frozenset({
+        ".git",
+        ".github",
+        ".reports",
+    })
+    "Repository-operational trees rejected at an archive's content root."
+    RELEASE_SENSITIVE_PARTS: ClassVar[frozenset[str]] = frozenset({
+        ".env",
+        ".secrets.baseline",
+        "__pycache__",
+    })
+    RELEASE_SENSITIVE_PREFIXES: ClassVar[tuple[str, ...]] = (".env.", ".gitleaks")
+    RELEASE_SENSITIVE_SUFFIXES: ClassVar[tuple[str, ...]] = (
+        ".jks",
+        ".key",
+        ".keystore",
+        ".p12",
+        ".pem",
+        ".pfx",
+    )
+    "Path parts that never ship, at any depth, unless codegen owns the file."
+    RELEASE_SDIST_ROOT_DIRS: ClassVar[frozenset[str]] = frozenset({"config", "src"})
+    RELEASE_SDIST_ROOT_FILES: ClassVar[frozenset[str]] = frozenset({
+        ".gitignore",
+        # A project may ship its governance agent manifests as declared
+        # runtime assets at the sdist root (a consumer may embed AGENTS.md
+        # and CLAUDE.md for the agents it deploys); the build hook
+        # force-includes them by name.
+        "agents.md",
+        "claude.md",
+        "pkg-info",
+        "pyproject.toml",
+    })
+    "The public sdist boundary besides the license and README files."
 
 
 __all__: list[str] = ["FlextInfraConstantsRelease"]

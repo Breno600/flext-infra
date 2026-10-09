@@ -1,32 +1,48 @@
-"""Validate-command CLI route ownership."""
+"""Validate-command CLI route ownership.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import ClassVar
 
-from flext_infra import m, t
-from flext_infra.services.cli_route_base import CliRouteBase
+from flext_infra import m, p, r, t
+from flext_infra.api import infra
+from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
-from flext_infra.validate.import_cycles import FlextInfraValidateImportCycles
 from flext_infra.validate.inventory import FlextInfraInventoryService
 from flext_infra.validate.lazy_map_freshness import FlextInfraValidateLazyMapFreshness
-from flext_infra.validate.manual_command import FlextInfraManualCommandValidator
-from flext_infra.validate.metadata_discipline import (
-    FlextInfraValidateMetadataDiscipline,
-)
-from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
 from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 from flext_infra.validate.scanner import FlextInfraTextPatternScanner
-from flext_infra.validate.silent_failure import FlextInfraSilentFailureValidator
 from flext_infra.validate.skill_validator import FlextInfraSkillValidator
 from flext_infra.validate.stub_chain import FlextInfraStubSupplyChain
-from flext_infra.validate.tier_whitelist import FlextInfraValidateTierWhitelist
 
 
-class ValidationCommandRoutes(CliRouteBase):
+class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
     """Own the complete validate command tuple."""
+
+    @staticmethod
+    def _validate_namespace_command(
+        request: m.Infra.NamespaceValidateCommand,
+    ) -> p.Result[m.Infra.ValidationReport]:
+        """Run namespace validation through the rule engine.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ValidationReport]``.
+
+        """
+        result = infra.validate_namespace(request)
+        if result.failure:
+            return r[m.Infra.ValidationReport].from_failure(result)
+        report = result.unwrap()
+        if report.passed:
+            return r[m.Infra.ValidationReport].ok(report)
+        details = "\n".join((report.summary, *report.violations))
+        return r[m.Infra.ValidationReport].fail(details)
 
     validate_command_routes: ClassVar[t.VariadicTuple[m.Cli.ResultCommandRoute]] = (
         tuple(
@@ -34,102 +50,90 @@ class ValidationCommandRoutes(CliRouteBase):
                 name=route_name,
                 help_text=help_text,
                 model_cls=model_cls,
-                handler=CliRouteBase.result_handler(handler),
+                handler=handler,
             )
             for route_name, help_text, model_cls, handler in (
                 (
                     "cprofile-report",
                     "Render a bounded cProfile report",
                     FlextInfraCProfileReport,
-                    FlextInfraCProfileReport.execute_command,
+                    FlextInfraCliRouteBase.result_handler(
+                        FlextInfraCProfileReport.execute,
+                    ),
                 ),
                 (
                     "inventory",
                     "Generate scripts inventory",
                     FlextInfraInventoryService,
-                    FlextInfraInventoryService.execute_command,
+                    FlextInfraCliRouteBase.result_handler(
+                        FlextInfraInventoryService.execute,
+                    ),
                 ),
                 (
                     "runtime-census",
                     "Post-import Beartype enforcement census for flext_* modules",
                     FlextInfraRuntimeCensusValidator,
-                    FlextInfraRuntimeCensusValidator.execute_command,
+                    FlextInfraCliRouteBase.result_handler(
+                        FlextInfraRuntimeCensusValidator.execute,
+                    ),
                 ),
                 (
                     "pytest-diag",
                     "Extract pytest diagnostics",
                     FlextInfraPytestDiagExtractor,
-                    FlextInfraPytestDiagExtractor.execute_command,
+                    FlextInfraCliRouteBase.result_handler(
+                        FlextInfraPytestDiagExtractor.execute,
+                    ),
                 ),
                 (
                     "scan",
                     "Scan text files for patterns",
                     FlextInfraTextPatternScanner,
-                    FlextInfraTextPatternScanner.execute_command,
+                    FlextInfraCliRouteBase.result_handler(
+                        FlextInfraTextPatternScanner.execute,
+                    ),
                 ),
                 (
                     "skill-validate",
                     "Validate a skill",
                     FlextInfraSkillValidator,
-                    FlextInfraSkillValidator.execute_command,
-                ),
-                (
-                    "silent-failure",
-                    "Validate silent failure sentinel returns",
-                    FlextInfraSilentFailureValidator,
-                    FlextInfraSilentFailureValidator.execute_command,
+                    FlextInfraCliRouteBase.result_handler(
+                        FlextInfraSkillValidator.execute,
+                    ),
                 ),
                 (
                     "stub-validate",
                     "Validate stub supply chain",
                     FlextInfraStubSupplyChain,
-                    FlextInfraStubSupplyChain.execute_command,
+                    FlextInfraCliRouteBase.result_handler(
+                        FlextInfraStubSupplyChain.execute,
+                    ),
                 ),
                 (
                     "fresh-import",
                     "Guard 7: fresh-process import smoke test",
                     FlextInfraValidateFreshImport,
-                    FlextInfraValidateFreshImport.execute_command,
-                ),
-                (
-                    "import-cycles",
-                    "Guard 1: ROPE-backed import cycle detector",
-                    FlextInfraValidateImportCycles,
-                    FlextInfraValidateImportCycles.execute_command,
+                    FlextInfraCliRouteBase.result_handler(
+                        FlextInfraValidateFreshImport.execute,
+                    ),
                 ),
                 (
                     "lazy-map-freshness",
                     "Guard 2/3: lazy-map freshness validator",
                     FlextInfraValidateLazyMapFreshness,
-                    FlextInfraValidateLazyMapFreshness.execute_command,
+                    FlextInfraCliRouteBase.result_handler(
+                        FlextInfraValidateLazyMapFreshness.execute,
+                    ),
                 ),
                 (
                     "namespace",
-                    "Guard: static namespace rules (NS-000..003) via rope",
-                    FlextInfraNamespaceValidator,
-                    FlextInfraNamespaceValidator.execute_command,
-                ),
-                (
-                    "tier-whitelist",
-                    "Guard 5: tier-whitelist/abstraction-boundary enforcer",
-                    FlextInfraValidateTierWhitelist,
-                    FlextInfraValidateTierWhitelist.execute_command,
-                ),
-                (
-                    "metadata-discipline",
-                    "Guard 8: centralized metadata parser discipline",
-                    FlextInfraValidateMetadataDiscipline,
-                    FlextInfraValidateMetadataDiscipline.execute_command,
-                ),
-                (
-                    "manual-cmd",
-                    "Manual-command blocker (§5): pre-commit config drift gate",
-                    FlextInfraManualCommandValidator,
-                    FlextInfraManualCommandValidator.execute_command,
+                    "Guard: namespace laws of the rule catalog",
+                    m.Infra.NamespaceValidateCommand,
+                    FlextInfraCliRouteBase.result_handler(_validate_namespace_command),
                 ),
             )
         )
     )
 
 
-__all__: list[str] = ["ValidationCommandRoutes"]
+__all__: list[str] = ["FlextInfraValidationCommandRoutes"]

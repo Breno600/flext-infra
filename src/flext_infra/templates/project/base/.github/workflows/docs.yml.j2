@@ -30,6 +30,13 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+    # Why: GitHub-hosted runners share egress IPs, so the unauthenticated
+    # 60 req/h REST budget is exhausted before mise resolves the moving
+    # @latest backends (observed 2026-09-23: 403, rate limit 0/60, on every
+    # backend in Sync workspace toolchain), and docs generation reads the
+    # governed sibling repos. The job token authenticates both, as in CI.
+    env:
+      GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
@@ -39,14 +46,32 @@ jobs:
 {%- include "_fragments/private_submodules_init.j2" %}
 {%- include "_fragments/private_dependency_auth.j2" %}
 
+      # Why: a cold runner re-downloaded every locked Mise tool
+      # (go included) on every Docs run, and a network blip failed setup. The
+      # cache is content-addressed by the committed locks, so a warm cache is
+      # always valid for the same lock and can never hide a finding; it only
+      # removes the cold download of the pinned tarballs.
+{%- include "_fragments/toolchain_cache_restore.j2" %}
+
+{%- include "_fragments/mise_install.j2" %}
       - name: Sync workspace toolchain
         run: make setup
 
+      # Why: save on every outcome — including a failing gate — so the next run
+      # starts warm. Only written when the restore missed.
+{%- include "_fragments/toolchain_cache_save.j2" %}
+
       - name: Generation drift (blocking)
-        run: make conform {{ make.apply_variable }}={{ make.apply_value }}
+        run: |
+          make gen
+          make verify-clean
 
       - name: Docs lifecycle (blocking)
-        run: make docs {{ make.apply_variable }}={{ make.apply_value }}
+        run: make docs
+
+      # The preceding generation check cannot see changes made by make docs.
+      - name: Verify docs byte-identical repository
+        run: make verify-clean
 
       # Failure diagnostics execute only after the original Make step has
       # already propagated its exact status to Actions.
@@ -57,8 +82,7 @@ jobs:
           for report_root in .reports apps; do
             if [ -d "$report_root" ]; then
               find "$report_root" \
-                \( -path '*/audit-summary.json' -o -path '*/audit-report.md' \
-                   -o -path '*/validate-summary.json' -o -path '*/validate-report.md' \) \
+                \( {% for name in docs_report_filenames %}{% if not loop.first %}-o {% endif %}-path '*/{{ name }}' {% endfor %}\) \
                 -type f -exec sh -eu -c '
                   for report_file do
                     printf "::group::%s\n" "$report_file"
@@ -76,16 +100,12 @@ jobs:
           name: docs-reports
           # Structured docs reports only — omit raw docs log trees that may carry
           # env-derived secrets from setup/docs phases.
-          path: |
-            .reports/**/audit-summary.json
-            .reports/**/audit-report.md
-            .reports/**/validate-summary.json
-            .reports/**/validate-report.md
-            apps/*/.reports/**/audit-summary.json
-            apps/*/.reports/**/audit-report.md
-            apps/*/.reports/**/validate-summary.json
-            apps/*/.reports/**/validate-report.md
+          path: |{% for prefix in (".reports/**", "apps/*/.reports/**") %}{% for name in docs_report_filenames %}
+            {{ prefix }}/{{ name }}{% endfor %}{% endfor %}
           if-no-files-found: error
+          # The allowlisted reports live under hidden .reports directories.
+          # upload-artifact excludes hidden paths unless this is explicit.
+          include-hidden-files: true
           retention-days: 7
 
   build:
@@ -95,6 +115,13 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
+      # The build job runs Configure Pages on main, and the Pages REST
+      # endpoint rejects a token without Pages write even for reads
+      # ("Resource not accessible by integration").
+      pages: write
+    # Why: same authenticated toolchain and docs-source resolution as docs-quality.
+    env:
+      GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
@@ -104,16 +131,20 @@ jobs:
 {%- include "_fragments/private_submodules_init.j2" %}
 {%- include "_fragments/private_dependency_auth.j2" %}
 
+      # Why: same cold-download protection as the docs-quality job.
+{%- include "_fragments/toolchain_cache_restore.j2" %}
+
+{%- include "_fragments/mise_install.j2" %}
       - name: Sync workspace toolchain
         run: make setup
 
+{%- include "_fragments/toolchain_cache_save.j2" %}
+
       - name: Build site
-        run: make docs {{ make.apply_variable }}={{ make.apply_value }}
+        run: make docs
 
       - name: Verify byte-identical repository
-        run: |
-          git diff --exit-code -- .
-          git diff --cached --exit-code -- .
+        run: make verify-clean
 
       # Pages configure/upload exist only to feed deploy on main. Running them on
       # every integration push fails closed when Pages is unset and is wasted
@@ -137,9 +168,6 @@ jobs:
     permissions:
       pages: write
       id-token: write
-    environment:
-      name: {% raw %}${{ 'github-pages' }}{% endraw %}
-      url: {% raw %}${{ steps.deployment.outputs.page_url }}{% endraw %}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

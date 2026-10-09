@@ -2,6 +2,6 @@
   "backend": "dolt",
   "database": "dolt",
   "dolt_database": {{ database | tojson }},
-  "dolt_mode": "server"{% if project_id %},
+  "dolt_mode": {{ dolt_mode | tojson }}{% if project_id %},
   "project_id": {{ project_id | tojson }}{% endif %}
 }

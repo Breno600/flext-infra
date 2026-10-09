@@ -1,41 +1,49 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Tests package."""
+"""Tests package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_tests import FlextTestsConstants, d, e, h, r, td, tf, tk, tm, tv, x
+    from flext_tests import api, d, e, h, r, td, tf, tk, tm, x
 
-    from . import integration, refactor, unit
-    from .base import TestsFlextInfraServiceBase, TestsFlextInfraServiceBase as s
-    from .constants import TestsFlextInfraConstants, TestsFlextInfraConstants as c
-    from .constants_scan import TestsFlextInfraConstantsScanMixin
-    from .models import TestsFlextInfraModels, TestsFlextInfraModels as m
-    from .protocols import TestsFlextInfraProtocols, TestsFlextInfraProtocols as p
-    from .typings import TestsFlextInfraTypes, TestsFlextInfraTypes as t
-    from .utilities import TestsFlextInfraUtilities, TestsFlextInfraUtilities as u
-    from .utilities_codegen import TestsFlextInfraUtilitiesCodegenMixin
-    from .utilities_deps import TestsFlextInfraUtilitiesDepsMixin
-    from .utilities_fixture_docs import TestsFlextInfraUtilitiesDocsFixtureMixin
-    from .utilities_fixture_project import TestsFlextInfraUtilitiesProjectFixtureMixin
-    from .utilities_fixture_tooling import TestsFlextInfraUtilitiesToolingFixtureMixin
-    from .utilities_fixture_workspace import (
+    from tests import fixtures, integration, refactor, unit
+    from tests.base import TestsFlextInfraServiceBase, s
+    from tests.constants import TestsFlextInfraConstants, c
+    from tests.constants_scan import TestsFlextInfraConstantsScanMixin
+    from tests.models import TestsFlextInfraModels, m
+    from tests.protocols import TestsFlextInfraProtocols, p
+    from tests.typings import TestsFlextInfraTypes, t
+    from tests.utilities import TestsFlextInfraUtilities, u
+    from tests.utilities_codegen import TestsFlextInfraUtilitiesCodegenMixin
+    from tests.utilities_deps import TestsFlextInfraUtilitiesDepsMixin
+    from tests.utilities_fixture_docs import TestsFlextInfraUtilitiesDocsFixtureMixin
+    from tests.utilities_fixture_project import (
+        TestsFlextInfraUtilitiesProjectFixtureMixin,
+    )
+    from tests.utilities_fixture_tooling import (
+        TestsFlextInfraUtilitiesToolingFixtureMixin,
+    )
+    from tests.utilities_fixture_workspace import (
         TestsFlextInfraUtilitiesWorkspaceFixtureMixin,
     )
-    from .utilities_gates import TestsFlextInfraUtilitiesGatesMixin
-    from .utilities_git import TestsFlextInfraUtilitiesGitMixin
-    from .utilities_release import TestsFlextInfraUtilitiesReleaseMixin
-    from .utilities_replay import TestsFlextInfraUtilitiesReplayRunnerMixin
-    from .utilities_replay_sequence import TestsFlextInfraUtilitiesReplaySequenceMixin
-    from .utilities_toml import TestsFlextInfraUtilitiesTomlMixin
-    from .utilities_workspace_env import TestsFlextInfraUtilitiesWorkspaceEnvMixin
+    from tests.utilities_gates import TestsFlextInfraUtilitiesGatesMixin
+    from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
+    from tests.utilities_promoted import TestsFlextInfraUtilitiesPromotedMixin
+    from tests.utilities_release import TestsFlextInfraUtilitiesReleaseMixin
+    from tests.utilities_toml import TestsFlextInfraUtilitiesTomlMixin
+    from tests.utilities_workspace_env import TestsFlextInfraUtilitiesWorkspaceEnvMixin
+
+
 __all__: tuple[str, ...] = (
-    "FlextTestsConstants",
     "TestsFlextInfraConstants",
     "TestsFlextInfraConstantsScanMixin",
     "TestsFlextInfraModels",
@@ -49,16 +57,17 @@ __all__: tuple[str, ...] = (
     "TestsFlextInfraUtilitiesGatesMixin",
     "TestsFlextInfraUtilitiesGitMixin",
     "TestsFlextInfraUtilitiesProjectFixtureMixin",
+    "TestsFlextInfraUtilitiesPromotedMixin",
     "TestsFlextInfraUtilitiesReleaseMixin",
-    "TestsFlextInfraUtilitiesReplayRunnerMixin",
-    "TestsFlextInfraUtilitiesReplaySequenceMixin",
     "TestsFlextInfraUtilitiesTomlMixin",
     "TestsFlextInfraUtilitiesToolingFixtureMixin",
     "TestsFlextInfraUtilitiesWorkspaceEnvMixin",
     "TestsFlextInfraUtilitiesWorkspaceFixtureMixin",
+    "api",
     "c",
     "d",
     "e",
+    "fixtures",
     "h",
     "integration",
     "m",
@@ -71,63 +80,54 @@ __all__: tuple[str, ...] = (
     "tf",
     "tk",
     "tm",
-    "tv",
     "u",
     "unit",
     "x",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            ".base": ("TestsFlextInfraServiceBase", "s"),
-            ".constants": ("TestsFlextInfraConstants", "c"),
-            ".constants_scan": ("TestsFlextInfraConstantsScanMixin",),
-            ".integration": ("integration",),
-            ".models": ("TestsFlextInfraModels", "m"),
-            ".protocols": ("TestsFlextInfraProtocols", "p"),
-            ".refactor": ("refactor",),
-            ".typings": ("TestsFlextInfraTypes", "t"),
-            ".unit": ("unit",),
-            ".utilities": ("TestsFlextInfraUtilities", "u"),
-            ".utilities_codegen": ("TestsFlextInfraUtilitiesCodegenMixin",),
-            ".utilities_deps": ("TestsFlextInfraUtilitiesDepsMixin",),
-            ".utilities_fixture_docs": ("TestsFlextInfraUtilitiesDocsFixtureMixin",),
-            ".utilities_fixture_project": (
-                "TestsFlextInfraUtilitiesProjectFixtureMixin",
-            ),
-            ".utilities_fixture_tooling": (
-                "TestsFlextInfraUtilitiesToolingFixtureMixin",
-            ),
-            ".utilities_fixture_workspace": (
-                "TestsFlextInfraUtilitiesWorkspaceFixtureMixin",
-            ),
-            ".utilities_gates": ("TestsFlextInfraUtilitiesGatesMixin",),
-            ".utilities_git": ("TestsFlextInfraUtilitiesGitMixin",),
-            ".utilities_release": ("TestsFlextInfraUtilitiesReleaseMixin",),
-            ".utilities_replay": ("TestsFlextInfraUtilitiesReplayRunnerMixin",),
-            ".utilities_replay_sequence": (
-                "TestsFlextInfraUtilitiesReplaySequenceMixin",
-            ),
-            ".utilities_toml": ("TestsFlextInfraUtilitiesTomlMixin",),
-            ".utilities_workspace_env": ("TestsFlextInfraUtilitiesWorkspaceEnvMixin",),
-            "flext_tests": (
-                "FlextTestsConstants",
-                "d",
-                "e",
-                "h",
-                "r",
-                "td",
-                "tf",
-                "tk",
-                "tm",
-                "tv",
-                "x",
-            ),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    )
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "TestsFlextInfraConstants": ".constants",
+        "TestsFlextInfraConstantsScanMixin": ".constants_scan",
+        "TestsFlextInfraModels": ".models",
+        "TestsFlextInfraProtocols": ".protocols",
+        "TestsFlextInfraServiceBase": ".base",
+        "TestsFlextInfraTypes": ".typings",
+        "TestsFlextInfraUtilities": ".utilities",
+        "TestsFlextInfraUtilitiesCodegenMixin": ".utilities_codegen",
+        "TestsFlextInfraUtilitiesDepsMixin": ".utilities_deps",
+        "TestsFlextInfraUtilitiesDocsFixtureMixin": ".utilities_fixture_docs",
+        "TestsFlextInfraUtilitiesGatesMixin": ".utilities_gates",
+        "TestsFlextInfraUtilitiesGitMixin": ".utilities_git",
+        "TestsFlextInfraUtilitiesProjectFixtureMixin": ".utilities_fixture_project",
+        "TestsFlextInfraUtilitiesPromotedMixin": ".utilities_promoted",
+        "TestsFlextInfraUtilitiesReleaseMixin": ".utilities_release",
+        "TestsFlextInfraUtilitiesTomlMixin": ".utilities_toml",
+        "TestsFlextInfraUtilitiesToolingFixtureMixin": ".utilities_fixture_tooling",
+        "TestsFlextInfraUtilitiesWorkspaceEnvMixin": ".utilities_workspace_env",
+        "TestsFlextInfraUtilitiesWorkspaceFixtureMixin": ".utilities_fixture_workspace",
+        "api": "flext_tests",
+        "c": ".constants",
+        "d": "flext_tests",
+        "e": "flext_tests",
+        "fixtures": ".fixtures",
+        "h": "flext_tests",
+        "integration": ".integration",
+        "m": ".models",
+        "p": ".protocols",
+        "r": "flext_tests",
+        "refactor": ".refactor",
+        "s": ".base",
+        "t": ".typings",
+        "td": "flext_tests",
+        "tf": "flext_tests",
+        "tk": "flext_tests",
+        "tm": "flext_tests",
+        "u": ".utilities",
+        "unit": ".unit",
+        "x": "flext_tests",
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

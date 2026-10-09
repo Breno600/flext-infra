@@ -1,0 +1,33 @@
+# Shape only: the engine admits a finding when the derived $FAMILY is not a
+# family of the finding's module. Nested payloads are covered separately by
+# ban-nested-payload-outside-models, with Rope role/ancestry admission.
+id: ban-class-wrong-facade-layer
+valid:
+  - |
+    class FlextFooService(s[bool]):
+        pass
+  - |
+    class FlextFooModels:
+        class Item(m.ContractModel):
+            pass
+  - |
+    def build():
+        class Item(m.ContractModel):
+            pass
+  - |
+    class FlextFooPlanner(
+        m.ArbitraryTypesModel,
+        FlextFooAliasesMixin,
+        FlextFooCacheMixin,
+    ):
+        pass
+invalid:
+  - |
+    class Item(m.ContractModel):
+        pass
+  - |
+    class Status(StrEnum):
+        A = "a"
+  - |
+    class FlextFooUtilities:
+        pass

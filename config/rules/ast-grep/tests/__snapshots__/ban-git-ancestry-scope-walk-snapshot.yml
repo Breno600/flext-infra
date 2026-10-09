@@ -1,0 +1,52 @@
+id: ban-git-ancestry-scope-walk
+snapshots:
+  ? |
+    while True:
+        if (current / ".git").exists():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+  : labels:
+    - source: |-
+        while True:
+            if (current / ".git").exists():
+                return current
+            parent = current.parent
+            if parent == current:
+                return None
+            current = parent
+      style: primary
+      start: 0
+      end: 165
+    - source: (current / ".git").exists()
+      style: secondary
+      start: 19
+      end: 46
+    - source: current.parent
+      style: secondary
+      start: 84
+      end: 98
+  ? |
+    while True:
+        if (current / ".git").is_dir():
+            return current
+        current = current.parent
+  : labels:
+    - source: |-
+        while True:
+            if (current / ".git").is_dir():
+                return current
+            current = current.parent
+      style: primary
+      start: 0
+      end: 99
+    - source: (current / ".git").is_dir()
+      style: secondary
+      start: 19
+      end: 46
+    - source: current.parent
+      style: secondary
+      start: 85
+      end: 99

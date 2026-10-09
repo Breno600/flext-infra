@@ -1,0 +1,62 @@
+id: namespace-constant-classvar-import
+snapshots:
+  ? |
+    from typing import Final
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            RETRIES: Final[int] = 30
+  : fixed: |
+      from typing import ClassVar, Final
+      from flext_tests import FlextTestsConstants
+      class C:
+          class Tests(FlextTestsConstants.Tests):
+              RETRIES: Final[int] = 30
+    labels:
+    - source: from typing import Final
+      style: primary
+      start: 0
+      end: 24
+    - source: 'RETRIES: Final[int] = 30'
+      style: secondary
+      start: 130
+      end: 154
+    - source: |
+        from typing import Final
+        from flext_tests import FlextTestsConstants
+        class C:
+            class Tests(FlextTestsConstants.Tests):
+                RETRIES: Final[int] = 30
+      style: secondary
+      start: 0
+      end: 155
+  ? |
+    from typing import TYPE_CHECKING, Final
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            HOST: Final[str] = "localhost"
+  : fixed: |
+      from typing import ClassVar, TYPE_CHECKING, Final
+      from flext_tests import FlextTestsConstants
+      class C:
+          class Tests(FlextTestsConstants.Tests):
+              HOST: Final[str] = "localhost"
+    labels:
+    - source: from typing import TYPE_CHECKING, Final
+      style: primary
+      start: 0
+      end: 39
+    - source: 'HOST: Final[str] = "localhost"'
+      style: secondary
+      start: 145
+      end: 175
+    - source: |
+        from typing import TYPE_CHECKING, Final
+        from flext_tests import FlextTestsConstants
+        class C:
+            class Tests(FlextTestsConstants.Tests):
+                HOST: Final[str] = "localhost"
+      style: secondary
+      start: 0
+      end: 176

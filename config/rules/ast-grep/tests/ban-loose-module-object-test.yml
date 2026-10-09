@@ -1,0 +1,62 @@
+# Shape only; the engine applies no context to this rule.
+id: ban-loose-module-object
+valid:
+  - |
+    class FlextFooConstants:
+        LIMIT = 3
+    c = FlextFooConstants
+    __all__ = ["FlextFooConstants", "c"]
+  - |
+    class FlextFooApi:
+        pass
+    api: FlextFooApi = FlextFooApi.fetch_global()
+    __all__ = ["FlextFooApi", "api"]
+  - |
+    class FlextFooConfig:
+        pass
+    config: FlextFooConfig = FlextFooConfig.fetch_global()
+    __all__ = ["FlextFooConfig", "config"]
+  - |
+    def main() -> None:
+        return None
+  - |
+    T = TypeVar("T")
+  - |
+    Alias: TypeAlias = int
+  - |
+    __version__ = "1"
+invalid:
+  - |
+    def helper() -> int:
+        return 1
+  - |
+    @cache
+    def helper() -> int:
+        return 1
+  - |
+    LIMIT = 3
+  - |
+    logger = u.fetch_logger(__name__)
+  - |
+    NAMES: frozenset[str] = frozenset({"a"})
+  - |
+    class First:
+        pass
+    class Second:
+        pass
+  - |
+    class FlextFooApi:
+        pass
+    api = FlextFooApi.fetch_global()
+  - |
+    class FlextFooApi:
+        pass
+    api: FlextFooOther = FlextFooApi.fetch_global()
+  - |
+    class FlextFooApi:
+        pass
+    api: FlextFooApi = FlextFooApi.fetch_logger()
+  - |
+    class FlextFooApi:
+        pass
+    api: FlextFooApi = FlextFooOther.fetch_global()

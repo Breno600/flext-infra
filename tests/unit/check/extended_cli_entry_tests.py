@@ -1,17 +1,20 @@
-"""Public CLI entry tests for workspace check commands."""
+"""Public CLI entry tests for workspace check commands.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from flext_tests import tm
 
 from flext_infra import main
-from tests import u
+from tests import c, u
 
 
-class TestWorkspaceCheckCLI:
+class TestsFlextInfraExtendedCliEntry:
     """Tests for the check CLI entry points."""
 
     @staticmethod
@@ -25,15 +28,19 @@ class TestWorkspaceCheckCLI:
             with_src=True,
         )
         (workspace / "p1/src/p1/__init__.py").write_text(
-            '"""Test package."""\n', encoding="utf-8"
+            '"""Test package."""\n',
+            encoding="utf-8",
         )
         u.Tests.declare_workspace_projects(workspace, ("p1",))
         return workspace
 
-    def test_empty_workspace_errors(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_empty_workspace_errors(tmp_path: Path) -> None:
+        """Test empty workspace errors."""
         tm.that(main(["check", "run", "--repository-root", str(tmp_path)]), eq=1)
 
     def test_run_accepts_explicit_scope(self, tmp_path: Path) -> None:
+        """Test run accepts explicit scope."""
         workspace = self._workspace(tmp_path)
         tm.that(
             main([
@@ -49,8 +56,27 @@ class TestWorkspaceCheckCLI:
             eq=0,
         )
 
-    def test_run_auto_discovers_workspace_projects(self, tmp_path: Path) -> None:
+    def test_run_without_projects_evaluates_only_the_repository(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """An omitted --projects is the repository itself, never its members.
+
+        The declared member carries a syntax error that a member scan would
+        report, so a green run proves the root evaluated only itself.
+        """
         workspace = self._workspace(tmp_path)
+        (workspace / "pyproject.toml").write_text(
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n',
+            encoding="utf-8",
+        )
+        package = workspace / "src" / "workspace"
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text('"""Root package."""\n', encoding="utf-8")
+        (workspace / "p1" / "src" / "broken.py").write_text(
+            "def broken(:\n",
+            encoding="utf-8",
+        )
         tm.that(
             main([
                 "check",
@@ -64,6 +90,7 @@ class TestWorkspaceCheckCLI:
         )
 
     def test_with_projects_success(self, tmp_path: Path) -> None:
+        """Test with projects success."""
         workspace = self._workspace(tmp_path)
         tm.that(
             main([
@@ -80,6 +107,7 @@ class TestWorkspaceCheckCLI:
         )
 
     def test_with_projects_failure(self, tmp_path: Path) -> None:
+        """Test with projects failure."""
         workspace = self._workspace(tmp_path)
         broken_file = workspace / "p1" / "src" / "broken.py"
         broken_file.write_text("def broken(:\n", encoding="utf-8")
@@ -97,19 +125,26 @@ class TestWorkspaceCheckCLI:
             eq=1,
         )
 
-    def test_check_main_routes_real_help(self) -> None:
+    @staticmethod
+    def test_check_main_routes_real_help() -> None:
+        """Test check main routes real help."""
         tm.that(main(["check", "run", "--help"]), eq=0)
 
-    def test_fix_pyrefly_config_routes_real_help(self) -> None:
+    @staticmethod
+    def test_fix_pyrefly_config_routes_real_help() -> None:
+        """Test fix pyrefly config routes real help."""
         tm.that(main(["check", "fix-pyrefly-settings", "--help"]), eq=0)
 
-    def test_run_cli_with_relative_reports_dir(self, tmp_path: Path) -> None:
+    def test_run_cli_anchors_relative_reports_dir_at_repository_root(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A relative ``--reports-dir`` never lands under the caller's cwd."""
         workspace = self._workspace(tmp_path)
-        current = Path.cwd()
-        runner_root = tmp_path / "runner"
-        runner_root.mkdir(parents=True, exist_ok=True)
-        try:
-            os.chdir(runner_root)
+        caller = tmp_path / "caller"
+        caller.mkdir(parents=True, exist_ok=True)
+        relative_reports = Path("reports/check")
+        with tm.scope(cwd=str(caller)):
             exit_code = main([
                 "check",
                 "run",
@@ -120,10 +155,14 @@ class TestWorkspaceCheckCLI:
                 "--projects",
                 "p1",
                 "--reports-dir",
-                "reports/check",
+                str(relative_reports),
             ])
-        finally:
-            os.chdir(current)
         tm.that(exit_code, eq=0)
-        tm.that((runner_root / "reports/check/check-report.md").exists(), eq=True)
-        tm.that((runner_root / "reports/check/check-report.sarif").exists(), eq=True)
+        tm.ok(u.Infra.check_report_findings(workspace, reports_dir=relative_reports))
+        tm.that(
+            (
+                workspace / relative_reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME
+            ).is_file(),
+            eq=True,
+        )
+        tm.that((caller / relative_reports).exists(), eq=False)

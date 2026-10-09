@@ -27,7 +27,7 @@ jobs:
         run: make setup
 
       - name: Check
-        run: make check {{ make.apply_variable }}={{ make.apply_value }}
+        run: make check
 
       - name: Test
-        run: make test {{ make.apply_variable }}={{ make.apply_value }}
+        run: make test

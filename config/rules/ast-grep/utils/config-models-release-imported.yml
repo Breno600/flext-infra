@@ -1,0 +1,18 @@
+# The release config namespace bound as the plain name
+# ``FlextInfraConfigModelsRelease`` in this module, by either the absolute or
+# the package-relative import form both used across _models/_config.
+id: config-models-release-imported
+language: python
+rule:
+  kind: import_from_statement
+  all:
+    - has:
+        pattern: FlextInfraConfigModelsRelease
+        stopBy: end
+    - not:
+        has:
+          kind: aliased_import
+          stopBy: end
+          has:
+            pattern: FlextInfraConfigModelsRelease
+            stopBy: end

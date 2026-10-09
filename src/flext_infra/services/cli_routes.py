@@ -1,106 +1,56 @@
-"""Canonical per-group lazy resolution for every flext-infra CLI route."""
+"""Canonical per-group lazy resolution for every flext-infra CLI route.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-import functools
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 from flext_infra import c
+from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
+from flext_infra.services.cli_routes_validate import FlextInfraValidationRoutes
+from flext_infra.services.cli_routes_workspace import FlextInfraWorkspaceRoutes
 
 if TYPE_CHECKING:
     from flext_infra import m, t
 
-# Why (ai-hub-xkux, fleet-wide fix): the previous CliRouteService composed
-# CodegenRoutes + ValidationRoutes + WorkspaceRoutes via multi-inheritance and
-# built every group's ClassVar route table (docs/refactor/release/check/...)
-# at CLASS-DEFINITION time, so importing this module -- which cli_dispatch.py
-# does unconditionally on every CLI invocation -- eagerly imported all three
-# owning modules and their entire transitive dependency graph (~5.9s measured
-# via python -X importtime), even though exactly one command group is ever
-# dispatched per invocation. Only the owning module for the RESOLVED group is
-# imported now, cutting startup to that one module's cost.
-_GROUP_OWNERS: Final[dict[str, tuple[str, str, str]]] = {
-    c.Infra.CLI_GROUP_CHECK: (
-        "flext_infra.services.cli_routes_codegen",
-        "CodegenRoutes",
-        "codegen_routes",
-    ),
-    c.Infra.CLI_GROUP_CODEGEN: (
-        "flext_infra.services.cli_routes_codegen",
-        "CodegenRoutes",
-        "codegen_routes",
-    ),
-    c.Infra.CLI_GROUP_DEPS: (
-        "flext_infra.services.cli_routes_codegen",
-        "CodegenRoutes",
-        "codegen_routes",
-    ),
-    c.Infra.CLI_GROUP_DOCS: (
-        "flext_infra.services.cli_routes_validate",
-        "ValidationRoutes",
-        "validation_routes",
-    ),
-    c.Infra.CLI_GROUP_MAINTENANCE: (
-        "flext_infra.services.cli_routes_validate",
-        "ValidationRoutes",
-        "validation_routes",
-    ),
-    c.Infra.CLI_GROUP_VALIDATE: (
-        "flext_infra.services.cli_routes_validate",
-        "ValidationRoutes",
-        "validation_routes",
-    ),
-    c.Infra.CLI_GROUP_REFACTOR: (
-        "flext_infra.services.cli_routes_workspace",
-        "WorkspaceRoutes",
-        "workspace_routes",
-    ),
-    c.Infra.CLI_GROUP_RELEASE: (
-        "flext_infra.services.cli_routes_workspace",
-        "WorkspaceRoutes",
-        "workspace_routes",
-    ),
-    c.Infra.CLI_GROUP_WORKSPACE: (
-        "flext_infra.services.cli_routes_workspace",
-        "WorkspaceRoutes",
-        "workspace_routes",
-    ),
-}
 
-
-class CliRouteService:
+class FlextInfraCliRouteService:
     """Resolve one group's CLI route table on demand, never all of them."""
 
     @classmethod
-    @functools.cache
     def route_table_for(cls, group: str) -> t.VariadicTuple[m.Cli.ResultCommandRoute]:
-        """Return the routes for one command group, importing only its owner."""
+        """Return the routes for one command group, importing only its owner.
+
+        Returns:
+            The routes for one command group, importing only its owner.
+
+        Raises:
+            ValueError: If CLI group has no route owner.
+
+        """
         if group in {
             c.Infra.CLI_GROUP_CHECK,
             c.Infra.CLI_GROUP_CODEGEN,
             c.Infra.CLI_GROUP_DEPS,
         }:
-            from flext_infra.services.cli_routes_codegen import CodegenRoutes
-
-            return CodegenRoutes.codegen_routes[group]
+            return FlextInfraCodegenRoutes.codegen_routes[group]
         if group in {
             c.Infra.CLI_GROUP_DOCS,
             c.Infra.CLI_GROUP_MAINTENANCE,
             c.Infra.CLI_GROUP_VALIDATE,
         }:
-            from flext_infra.services.cli_routes_validate import ValidationRoutes
-
-            return ValidationRoutes.validation_routes[group]
+            return FlextInfraValidationRoutes.validation_routes[group]
         if group in {
             c.Infra.CLI_GROUP_REFACTOR,
             c.Infra.CLI_GROUP_RELEASE,
             c.Infra.CLI_GROUP_WORKSPACE,
         }:
-            from flext_infra.services.cli_routes_workspace import WorkspaceRoutes
-
-            return WorkspaceRoutes.workspace_routes[group]
+            return FlextInfraWorkspaceRoutes.workspace_routes[group]
         msg = f"CLI group has no route owner: {group}"
         raise ValueError(msg)
 
 
-__all__: list[str] = ["CliRouteService"]
+__all__: list[str] = ["FlextInfraCliRouteService"]

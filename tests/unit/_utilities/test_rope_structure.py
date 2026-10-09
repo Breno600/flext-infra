@@ -1,36 +1,45 @@
-"""Tests for the rope-native syntactic structure boundary."""
+"""Tests for the rope-native syntactic structure boundary.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
 from flext_infra import c, m, u
 
-_SOURCE = (
-    "from typing import ClassVar, TYPE_CHECKING\n"
-    "import importlib\n"
-    "if TYPE_CHECKING:\n"
-    "    from foo import Bar\n"
-    "type MyAlias = int\n"
-    "class Widget:\n"
-    "    CONST: ClassVar[int] = 1\n"
-    "    plain = 2\n"
-    "    def method(self):\n"
-    "        import os\n"
-    "        return os\n"
-)
-_MULTILINE_IMPORT = (
-    "from package.private import (  # inline explanation\n    ExportedName,\n)\n"
-)
+if TYPE_CHECKING:
+    from tests import t
 
 
 class TestsFlextInfraRopeStructure:
     """Behavior contract for the LogicalLineFinder-backed structure boundary."""
 
+    _SOURCE = (
+        "from typing import ClassVar, TYPE_CHECKING\n"
+        "import importlib\n"
+        "if TYPE_CHECKING:\n"
+        "    from foo import Bar\n"
+        "type MyAlias = int\n"
+        "class Widget:\n"
+        "    CONST: ClassVar[int] = 1\n"
+        "    plain = 2\n"
+        "    def method(self):\n"
+        "        import os\n"
+        "        return os\n"
+    )
+    _MULTILINE_IMPORT = (
+        "from package.private import (  # inline explanation\n    ExportedName,\n)\n"
+    )
+
+    @staticmethod
     def test_first_party_namespaces_require_live_python_sources(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         src = tmp_path / c.Infra.DEFAULT_SRC_DIR
         for name in ("empty", "cache_only", "regular", "namespace", "stubs"):
@@ -52,9 +61,8 @@ class TestsFlextInfraRopeStructure:
             eq=["namespace", "regular", "stubs"],
         )
 
-    @staticmethod
-    def _by_line() -> dict[int, m.Infra.LogicalStatement]:
-        return {s.line: s for s in u.Infra.logical_statements(_SOURCE)}
+    def _by_line(self) -> t.MutableMappingKV[int, m.Infra.LogicalStatement]:
+        return {s.line: s for s in u.Infra.logical_statements(self._SOURCE)}
 
     def test_reports_real_statement_lines_not_target_module_lines(self) -> None:
         by_line = self._by_line()
@@ -68,6 +76,19 @@ class TestsFlextInfraRopeStructure:
         by_line = self._by_line()
 
         tm.that(by_line[5].category, eq=c.Infra.StatementCategory.TYPE_ALIAS)
+
+    @staticmethod
+    def test_categorizes_parenthesized_docstring_as_inert() -> None:
+        source = (
+            "class Wrapper:\n"
+            '    """Facade (with parentheses) in the prose."""\n'
+            "\n"
+            "    Member: ClassVar[int] = 1\n"
+        )
+        statements = {s.line: s for s in u.Infra.logical_statements(source)}
+
+        tm.that(statements[2].category, eq=c.Infra.StatementCategory.OTHER)
+        tm.that(statements[4].category, eq=c.Infra.StatementCategory.ANN_ASSIGN)
 
     def test_categorizes_type_checking_guard(self) -> None:
         by_line = self._by_line()
@@ -96,11 +117,12 @@ class TestsFlextInfraRopeStructure:
 
         tm.that(by_line[2].enclosing_kind, eq=c.Infra.RopeScopeKind.MODULE)
 
-    def test_empty_source_returns_no_statements(self) -> None:
+    @staticmethod
+    def test_empty_source_returns_no_statements() -> None:
         tm.that(u.Infra.logical_statements(""), eq=())
 
     def test_preserves_newlines_in_multiline_statement(self) -> None:
-        statements = u.Infra.logical_statements(_MULTILINE_IMPORT)
+        statements = u.Infra.logical_statements(self._MULTILINE_IMPORT)
 
-        tm.that(statements[0].text, eq=_MULTILINE_IMPORT.rstrip("\n"))
+        tm.that(statements[0].text, eq=self._MULTILINE_IMPORT.rstrip("\n"))
         tm.that(statements[0].category, eq=c.Infra.StatementCategory.FROM_IMPORT)

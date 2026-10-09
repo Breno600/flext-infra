@@ -1,0 +1,315 @@
+# Declarative sed-by-list rules for the make mod text phase.
+#
+# Each entry is one list-driven regex rewrite applied across the governed
+# scan surface and explicitly included paths. The engine proves an exact
+# expected-count receipt when declared, and reaches a rewrite fixed point
+# before the canonical validate gate runs.
+#
+# rules:
+#   - id: example-rule-id          # unique text-rule identifier
+#     description: rewrite intent  # optional
+#     distributions: [flext-infra] # optional [project].name selector
+#     include: ["**/tests/**"]     # optional fnmatch globs
+#     exclude: ["**/legado/**"]    # optional fnmatch globs
+#     find: "regex pattern"        # required
+#     replace: "expansion"         # optional, default empty
+#     flags: ["MULTILINE"]         # optional names from CODEMOD_TEXT_FLAG_NAMES
+#     expected: 3                  # optional exact finding count receipt
+
+rules:
+  - id: codegen-main-fixture-declare-infra-provenance
+    distributions: [flext-infra]
+    description: Derive the synthetic consumer's Infra Git source from the repository and branch policy.
+    include: [tests/unit/codegen/main_tests.py]
+    find: '        repository = u\.Tests\.repository_ref\(repo\.name\)\n        \(repo / "pyproject\.toml"\)\.write_text\('
+    replace: |2-
+              repository = u.Tests.repository_ref(repo.name)
+              infra = u.Tests.repository_ref("flext-infra")
+              integration = config.Infra.codegen.branch_policy.integration_branch_preference[0]
+              (repo / "pyproject.toml").write_text(
+  - id: codegen-main-fixture-add-infra-requirement
+    distributions: [flext-infra]
+    description: Give the synthetic consumer the direct Git dependency required by strict source detection.
+    include: [tests/unit/codegen/main_tests.py]
+    find: '''dependencies = \["flext-core>=0\.1\.0"\]\\n\\n'''
+    replace: 'f''dependencies = ["flext-core>=0.1.0", ''\n            f''"flext-infra @ git+{infra.url}@{integration}"]\\n\\n'''
+  - id: testmon-lease-test-tune-start-clock
+    distributions: [flext-infra]
+    description: Parameterize the real runner fixture clock for a deadline-exhaustion case.
+    include: [tests/unit/validate/pytest_runner_zero_test_tests.py]
+    find: '        slow_phase: bool = False,\n    \) -> FlextInfraPytestRunner:'
+    replace: '        slow_phase: bool = False,\n        elapsed_seconds: float = 0.0,\n    ) -> FlextInfraPytestRunner:'
+  - id: testmon-lease-test-use-fixture-clock
+    distributions: [flext-infra]
+    description: Apply the fixture clock to the public runner constructor.
+    include: [tests/unit/validate/pytest_runner_zero_test_tests.py]
+    find: 'started_at_monotonic=time\.monotonic\(\),'
+    replace: 'started_at_monotonic=time.monotonic() - elapsed_seconds,'
+  - id: testmon-lease-test-deadline-exhaustion
+    distributions: [flext-infra]
+    description: Keep the held-lease failure test bounded by the declared suite deadline.
+    include: [tests/unit/validate/pytest_runner_zero_test_tests.py]
+    find: '(?s)(def test_held_testmon_database_lease_refuses_a_concurrent_run\(\n        self,\n        tmp_path: Path,\n    \) -> None:\n        """A second run on one shared database fails loud before any effect\."""\n        project = self\._zero_test_project\(tmp_path\)\n)        runner = self\._runner\(project, tmp_path\)'
+    replace: '\g<1>        runner = self._runner(\n            project,\n            tmp_path,\n            elapsed_seconds=config.Infra.tooling.tools.pytest.run_timeout_seconds,\n        )'
+  - id: testmon-serialize-within-declared-suite-deadline
+    distributions: [flext-infra]
+    description: Wait for the shared testmon lease within the existing typed suite deadline.
+    include: [src/flext_infra/validate/_pytest_runner/execution.py]
+    find: '(?s)        # The digest, the run and the post-run integrity inspection read one\n        # shared database: a concurrent run on it would make the integrity\n        # verdict describe the other run.s writes\. One native lease serializes\n        # it; a held lease refuses at once instead of spending this deadline\.\n        with u\.Infra\.codegen_transaction_lease\(self\.testmon_db, wait_seconds=0\):'
+    replace: |2-
+              # Selection, execution, and integrity inspection share one database.
+              # Serialize competing worktrees within this invocation's typed deadline.
+              deadline = self._process_deadline()
+              wait_seconds = max(
+                  0.0,
+                  deadline.expires_at_monotonic
+                  - deadline.termination_grace_seconds
+                  - time.monotonic(),
+              )
+              with u.Infra.codegen_transaction_lease(
+                  self.testmon_db,
+                  wait_seconds=wait_seconds,
+              ):
+  - id: testmon-lease-monotonic-import
+    distributions: [flext-infra]
+    description: Import the monotonic clock used by the shared testmon lease budget.
+    include: [src/flext_infra/validate/_pytest_runner/execution.py]
+    find: '^import shlex\nimport sys\n(?!import time\n)'
+    replace: 'import shlex\nimport sys\nimport time\n'
+    flags: [MULTILINE]
+  - id: lazy-init-fixture-declare-author-isort
+    distributions: [flext-infra]
+    description: Keep synthetic project metadata complete for strict lazy-init copyright rendering.
+    include: [tests/unit/codegen/lazy_init_generation_tests.py]
+    find: 'version = "1\.0\.0"\\n\{isort_table\}'
+    replace: 'version = "1.0.0"\\nauthors = [{{ name = "Fixture Author" }}]\\n{isort_table}'
+  - id: lazy-init-fixture-declare-author-empty-policy
+    distributions: [flext-infra]
+    description: Keep synthetic project metadata complete for strict lazy-init copyright rendering.
+    include: [tests/unit/codegen/lazy_init_generation_tests.py]
+    find: 'version = "1\.0\.0"\\n\{table\}'
+    replace: 'version = "1.0.0"\\nauthors = [{{ name = "Fixture Author" }}]\\n{table}'
+  - id: mise-lock-merge-test-signature-format
+    distributions: [flext-infra]
+    description: Render the merge-conflict regression test signature in the Qlty layout.
+    include: [tests/unit/codegen/test_mise_lock_transaction.py]
+    find: 'def test_publish_regenerates_an_unmerged_generated_lock\(\n        self, tmp_path: Path\n    \) -> None:'
+    replace: 'def test_publish_regenerates_an_unmerged_generated_lock(\n        self,\n        tmp_path: Path,\n    ) -> None:'
+  - id: config-retire-shadowed-sed-model-pair
+    distributions: [flext-infra]
+    description: Remove the earlier SedPatternSpec and SedPatternsSpec declarations shadowed by the strict canonical pair.
+    include: [src/flext_infra/_models/_config/artifact.py]
+    find: '(?s)^    class SedPatternSpec\(FlextInfraConfigModelsContract\.ConfigContract\):\n.*?(?=^    class RefactorCsvCampaignsSpec\()'
+    replace: ''
+    flags: [MULTILINE]
+  - id: codegen-test-ci-branches-from-config
+    distributions: [flext-infra]
+    description: Derive CI trigger branches from the same branch policy as the renderer.
+    include: [tests/utilities.py]
+    find: |-
+      (?s)            # Why: ci_trigger_branches is no longer config-owned.*?            @staticmethod
+                  def synthetic_private_submodules
+    replace: |2-
+                  @staticmethod
+                  def ci_trigger_branches(repository_branch: str) -> t.VariadicTuple[str]:
+                      """Derive the repository trigger set from the configured policy."""
+                      return tuple(dict.fromkeys((
+                          *config.Infra.codegen.branch_policy.ci_trigger_branches,
+                          repository_branch,
+                      )))
+
+                  @staticmethod
+                  def synthetic_private_submodules
+  - id: codegen-test-retire-unused-classvar-import
+    distributions: [flext-infra]
+    description: Remove the import made obsolete by the configured CI branch policy.
+    include: [tests/utilities.py]
+    find: '^from typing import ClassVar\n'
+    replace: ''
+    flags: [MULTILINE]
+  - id: codegen-test-ci-branch-consumers
+    distributions: [flext-infra]
+    description: Pass each fixture repository branch to the canonical configured derivation.
+    include:
+      - tests/unit/codegen/ci_custom_steps_tests.py
+      - tests/unit/codegen/test_template_formatter_fixed_point.py
+    find: '(?P<prefix>repository_branch="(?P<branch>[^"]+)",\n[ \t]+ci_trigger_branches=)(?P<owner>(?:tests\.)?utilities\.TestsFlextInfraUtilities\.CodegenTestSupport\.Ci)\.CI_TRIGGER_BASELINE_BRANCHES'
+    replace: '\g<prefix>\g<owner>.ci_trigger_branches("\g<branch>")'
+  - id: codegen-test-retire-shadowed-facade-imports
+    distributions: [flext-infra]
+    description: Keep the test c/m/t facades after Rope moves their shared helper.
+    include: [tests/utilities.py]
+    find: '^from flext_infra import FlextInfraUtilities, c, config, m, t$'
+    replace: 'from flext_infra import FlextInfraUtilities, config'
+    flags: [MULTILINE]
+  - id: codegen-test-retire-shadowed-utility-import
+    distributions: [flext-infra]
+    description: Let the test u facade supply inherited production utilities.
+    include:
+      - tests/unit/codegen/test_release_checkout_credentials.py
+      - tests/unit/codegen/test_ci_declared_secrets_contract.py
+      - tests/unit/codegen/test_ci_integration_branch_triggers.py
+      - tests/unit/codegen/test_ci_package_registry_read.py
+      - tests/unit/codegen/test_ci_system_packages.py
+    find: '^from flext_infra import ((?:\w+, )*\w+), u$'
+    replace: 'from flext_infra import \g<1>'
+    flags: [MULTILINE]
+  - id: docs-strict-python-fence-ruff-ignores
+    distributions: [flext-infra]
+    description: Retain only syntax-context docstring and package exceptions for isolated executable fences.
+    include: [src/flext_infra/_constants/docs.py]
+    find: '^        "(?:D101|D102|D103|D106|PLR2004|S101|T201|T203|ANN001|ANN002|ANN003|ANN201|ANN202|ANN204|ANN205|PLC0415|B018|F821|F811|SLF001|S106|PT004|E402|PLW0127|PLC0414)",\n'
+    replace: ''
+    flags: [MULTILINE]
+  - id: docs-strict-python-fence-rationale
+    distributions: [flext-infra]
+    description: Explain the bounded exceptions kept for standalone Markdown fence files.
+    include: [src/flext_infra/_constants/docs.py]
+    find: '(?s)    """Rules ignored for executable docs snippets.*?lazy-export pattern itself teaches\)\."""'
+    replace: |2-
+          """Only module-docstring and package rules are inapplicable to a
+          standalone Markdown fence. All names, behavior, types, and security
+          rules remain active and require correction in the authored source."""
+  - id: checked-command-output-receipts
+    distributions: [flext-infra]
+    description: Preserve checked execution while retaining command output in assigned test receipts.
+    include:
+      - tests/unit/codegen/test_upg_lock_atomic_publication.py
+      - tests/unit/codemod/test_apply_renames.py
+      - tests/unit/codemod/test_rename_campaign_mod.py
+      - tests/unit/codemod/test_rename_preflight.py
+    find: '(^[ \t]+(?:observed|output|namespace|consumer)[ \t]*=[ \t]*tm\.ok\(\s*u\.Cli\.)run_checked(?=\()'
+    replace: '\g<1>run'
+    flags: [MULTILINE]
+  - id: docgen-dependency-sequence-prose-wrap
+    distributions: [cosmos-docgen]
+    description: Wrap the authored consumer dependency sequence without changing its meaning.
+    include:
+      - docs/superpowers/specs/2026-07-09-config-tipado-template-so-formatacao-design.md
+    find: '^(?P<sequence>`C1` → \{ `C2a`→`C2b`, `C2c` \} → `C3`\.) (?P<detail>.+)$'
+    capture_equals:
+      detail: 'C1 é o cutover atômico da planilha; C2a é a ingestão e bloqueia o deck C2b; C2c (documentos) pode avançar em paralelo; C3 remove Python dos consumidores.'
+    replace: |-
+      \g<sequence>
+
+      \g<detail>
+    flags: [MULTILINE]
+  - id: docs-pytest-single-suite-deadline
+    distributions: [flext-infra]
+    description: Replace removed per-project timeout override guidance with the typed suite policy.
+    include: [docs/guides/testing.md]
+    find: |-
+      ^The fleet default test wall and any measured per-project `run-timeout-overrides`
+      live in `config/tooling\.yaml`, keyed by the declared `\[project\]\.name`\. The runner
+      and generated Make process bound derive their deadlines from that same policy\.
+      Use the profile and complete run receipts to size a project override; an
+      interrupted selection or suite remains a failed invocation\.$
+    replace: |-
+      The suite deadline is declared once as `Infra.tooling.tools.pytest.run-timeout-seconds`
+      in `config/tooling.yaml`. The typed runner and generated Make process bound
+      derive from that policy. Use the profile and complete run receipts to repair
+      a slow owner; an interrupted selection or suite remains a failed invocation.
+    flags: [MULTILINE]
+  - id: pytest-interrupt-never-normalized
+    distributions: [flext-infra]
+    description: Preserve pytest interruption as a red suite receipt even after the last selected test.
+    include: [src/flext_infra/validate/_pytest_runner/execution.py]
+    find: '(?s)        # The suite stop instant can land on the last selected test.*?        # A graceful stop at the suite stop instant publishes the executed'
+    replace: |2-
+              final_exit = (
+                  0 if (accepted_cache_hit or accepted_zero_tests) else raw_return_code or int(rejected)
+              )
+              # A graceful stop at the suite stop instant publishes the executed
+  - id: standalone-fixture-author-projection
+    distributions: [flext-infra]
+    description: Render conform-required author metadata from the typed fixture project specification.
+    include: [tests/utilities_fixture_workspace.py]
+    find: '(?m)^(?P<indent>            )f''name = "\{name\}"\\n''$(?!\n            f''authors = )'
+    replace: |-
+      \g<indent>f'name = "{name}"\\n'
+      \g<indent>f'authors = [{{name = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_name}", email = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_email}"}}]\\n'
+  - id: standalone-fixture-author-owner
+    distributions: [flext-infra]
+    description: Route the fixture author through the imported typed project fixture owner.
+    include: [tests/utilities_fixture_workspace.py]
+    find: 'fixture\.project_spec\(name\)'
+    replace: 'TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name)'
+  - id: standalone-fixture-upstream-dependency
+    distributions: [flext-infra]
+    description: Derive the fixture runtime dependency from the typed scaffold upstream declaration.
+    include: [tests/utilities_fixture_workspace.py]
+    find: '"dependencies = \[\]\\n"'
+    replace: |-
+      f'dependencies = ["{TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).upstream)}"]\\n'
+  - id: root-artifact-fixture-project-owner
+    distributions: [flext-infra]
+    description: Resolve conform test metadata through the typed fixture project owner.
+    include: [tests/unit/codegen/test_root_artifact_ownership.py]
+    find: '(?m)^(        root = infra_git_repo)\n(        u\.Tests\.write_project_beads_config\(root, "flext-demo"\))$'
+    replace: '\g<1>\n        project = u.Tests.project_spec("flext-demo")\n\g<2>'
+  - id: root-artifact-fixture-author
+    distributions: [flext-infra]
+    description: Declare conform-required author metadata from the fixture project model.
+    include: [tests/unit/codegen/test_root_artifact_ownership.py]
+    find: '(?m)^(                    ''version = "0\.1\.0"\\n'')$(?!\n                    f''authors = )'
+    replace: |-
+      \g<1>
+                          f'authors = [{{name = "{project.author_name}", email = "{project.author_email}"}}]\\n'
+  - id: root-artifact-fixture-upstream
+    distributions: [flext-infra]
+    description: Preserve the fixture scaffold upstream as a direct Git runtime dependency.
+    include: [tests/unit/codegen/test_root_artifact_ownership.py]
+    find: '"dependencies = \[\]\\n"'
+    replace: |-
+      f'dependencies = ["{u.Tests.flext_source(project.upstream)}"]\\n'
+  - id: bootstrap-source-document-declared-surface
+    distributions: [flext-infra]
+    description: Describe the declared multi-file Make bootstrap instead of a retired single-file contract.
+    include: [src/flext_infra/codegen/make_bootstrap.py]
+    find: 'Makefile-only bootstrap|one Makefile projection|Makefile projection'
+    replace: 'declared Make bootstrap surface'
+  - id: candidate-bootstrap-destination-error
+    distributions: [flext-infra]
+    description: Report a missing declared bootstrap surface without asserting a single Makefile destination.
+    include: [src/flext_infra/services/candidate_bootstrap.py]
+    find: 'candidate bootstrap must plan exactly one Makefile:'
+    replace: 'candidate bootstrap has no declared destinations:'
+  - id: cli-process-options-model-owner
+    description: >-
+      flext-cli declares the process launch options as the model
+      m.Cli.ProcessOptions (and the protocol p.Cli.ProcessOptions); no
+      u.Cli.ProcessOptions exists, so every construction names the model.
+    find: '\bu\.Cli\.ProcessOptions\('
+    replace: 'm.Cli.ProcessOptions('
+  - id: process-options-tests-import-models-c-u
+    distributions: [flext-infra]
+    description: Tests that build m.Cli.ProcessOptions import the models facade from the tests namespace.
+    include:
+      - tests/unit/codegen/test_codegen_make_verb_contract.py
+      - tests/unit/test_git_fixture_isolation.py
+    find: '(?m)^from tests import c, u$'
+    replace: 'from tests import c, m, u'
+  - id: process-options-tests-import-models-c-t-u
+    distributions: [flext-infra]
+    description: Tests that build m.Cli.ProcessOptions import the models facade from the tests namespace.
+    include: [tests/unit/codegen/test_codegen_make_member_runtime.py]
+    find: '(?m)^from tests import c, t, u$'
+    replace: 'from tests import c, m, t, u'
+  - id: process-options-tests-import-models-c-p-t-u
+    distributions: [flext-infra]
+    description: Tests that build m.Cli.ProcessOptions import the models facade from the tests namespace.
+    include: [tests/unit/codegen/test_workspace_root_setup_submodules.py]
+    find: '(?m)^from tests import c, p, t, u$'
+    replace: 'from tests import c, m, p, t, u'
+  - id: process-options-tests-import-models-u
+    distributions: [flext-infra]
+    description: Tests that build m.Cli.ProcessOptions import the models facade from the tests namespace.
+    include: [tests/unit/workspace/test_binding_install.py]
+    find: '(?m)^from tests import u$'
+    replace: 'from tests import m, u'
+  - id: process-options-tests-import-models-t-u
+    distributions: [flext-infra]
+    description: Tests that build m.Cli.ProcessOptions import the models facade from the tests namespace.
+    include: [tests/unit/workspace/test_flext_worktree_binding.py]
+    find: '(?m)^from tests import t, u$'
+    replace: 'from tests import m, t, u'

@@ -1,0 +1,11 @@
+id: codegen-templates-root-owner
+valid:
+  - |
+    from flext_infra import u
+    templates_root = u.Infra.codegen_templates_root(codegen)
+invalid:
+  - |
+    from flext_infra import u
+    templates_root = (
+        self._package_root() / "templates" / codegen.templates.root
+    ).resolve()

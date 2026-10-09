@@ -1,52 +1,30 @@
 # Config overrides layer (hierarchical config architecture, ADR-005).
 #
-# Layer 1: config/codegen.yaml    — immutable fleet-wide business rules
-# Layer 2: config/codegen-overrides.yaml — project-specific parameter overrides
+# Layer 1: config/codegen.yaml             — immutable fleet-wide business rules
+# Layer 2: config/codegen-overrides.yaml   — committed project-specific overrides
+# Layer 3: config/codegen-overrides.local.yaml — gitignored per-clone overrides
 #
 # This file contains ONLY per-distribution/per-project overrides that cannot be
-# expressed as immutable fleet-wide rules. Every entry here is projected
-# through the same typed SSOT as codegen.yaml; no raw injection.
+# expressed as immutable fleet-wide rules AND carry no operator-private data:
+# anything naming private organizations, remotes, credentials or machine paths
+# belongs in the gitignored Layer 3 file, which merges after this one through
+# the same typed SSOT (scalars win, dict keys add, lists concatenate). No raw
+# injection at any layer.
 #
 # The FlextConfig base auto-discovers all *.yaml files in config/ and deep-merges
 # them. This file's entries merge on top of codegen.yaml's empty defaults.
 
 Infra:
   codegen:
-    toolchain:
-      dependency_cooldown_overrides: {}
-
-    checkout_submodules_overrides: {}
-
-    # Per-distribution private submodule deploy-key contracts.
-    # The default GITHUB_TOKEN cannot clone sibling private repos; these
-    # projects declare read-only deploy-key secrets here, which the generated
-    # CI workflow materializes before `make setup`.
-    ci_private_submodules:
-      cosmos-main:
-        known_hosts:
-          - github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
-        paths:
-          - apps/cosmos-charts
-          - apps/cosmos-gitops
-        deploy_keys:
-          - secret: CHARTS_DEPLOY_KEY
-            submodule: cosmos-charts
-            path: apps/cosmos-charts
-            remote: git@github.com:datacosmos-br/cosmos-charts.git
-          - secret: GITOPS_DEPLOY_KEY
-            submodule: cosmos-gitops
-            path: apps/cosmos-gitops
-            remote: git@github.com:datacosmos-br/cosmos-gitops.git
-      invest:
-        known_hosts:
-          - github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
-        paths:
-          - neptor
-        deploy_keys:
-          - secret: NEPTOR_DEPLOY_KEY
-            submodule: neptor
-            path: neptor
-            remote: git@github.com:marlonsc/neptor.git
+    checkout_submodules_overrides:
+      # The flext workspace gates render member-derived surfaces (uv-workspace
+      # members, per-member docs sections) from DISK STATE: with the submodules
+      # absent, the generator's render diverges from any submodule-initialized
+      # commit and the conform drift gate can never pass (merge-admin
+      # 2026-10-07, root CI evidence; the root CI cure 40a06e4dbe #459). The
+      # CI checkout materializes the members so the render matches the
+      # canonical committed state.
+      flext: recursive
 
     make:
       # Per-profile overrides of the custom handler policy.
@@ -58,16 +36,30 @@ Infra:
           allow_toolchain_declarations: true
 
     layout:
-      # Consumer ecosystem root keep-lists (plan B).
+      # Consumer ecosystem root keep-lists.
       project_overrides:
+        # ai-hub provider discovery requires the workspace root sgconfig.yml.
+        flext:
+          keep_root_files:
+            - sgconfig.yml
+          archive_names:
+            - CHANGELOG.md
         flext-cli:
           archive_names:
             - settings.json
+            - CHANGELOG.md
           gitignore_additions:
             - settings.json
         flext-core:
           archive_names:
             - config.json
+            - CHANGELOG.md
+        flext-infra:
+          archive_names:
+            - CHANGELOG.md
+        flext-tests:
+          archive_names:
+            - CHANGELOG.md
         flext-tap-oracle-wms:
           archive_names:
             - config.json
@@ -93,117 +85,3 @@ Infra:
             - { source: models/reference.md, target: docs/reference.md }
           archive_empty_dirs:
             - models
-        ai-hub:
-          keep_root_files:
-            - UNIVERSAL_CORE.md
-            - ECOSYSTEM.md
-            - CATALOG.md
-            - config.yaml
-            - schema.json
-            - version.json
-            - surface-catalog.json
-            - env.example
-            - bootstrap.ps1
-          ignore_globs:
-            - skills
-            - rules
-            - bin
-            - templates
-            - tools
-            - evals
-            - mcp
-            - openclaw
-            - opencode
-            - run
-            - ast-grep-rule-tests
-        cosmos-docgen:
-          keep_root_files:
-            - ECOSYSTEM.md
-            - Taskfile.yml
-            - dcdoc.config.yaml
-            - coverage.json
-          ignore_globs:
-            - skills
-            - templates
-            - layouts
-            - assets
-        cosmos-main:
-          keep_root_files:
-            - ECOSYSTEM.md
-            - SECURITY.md
-            - ONBOARDING.md
-            - LICENSE-3RD-PARTY.md
-            - LICENSE.quick-reference.md
-            - QODER.md
-            - mkdocs.yaml
-            - Makefile.check
-            - config.yaml
-            - cloud-init.sh
-            - pycodestyle.cfg
-            - pylintrc
-            - patch.diff
-          ignore_globs:
-            - cosmos
-            - apps
-            - package.json
-            - package-lock.json
-            - node_modules
-            - pnpm-lock.yaml
-            - yarn.lock
-            - tsconfig.json
-            - turbo.json
-            - bin
-            - build
-            - coordination
-            - cosmos_main.egg-info
-            - evals
-            - json
-            - mro
-            - platform-namespaces
-            - policy
-            - scratchpad
-            - site
-            - skills
-            - templates
-            - work
-        cosmos-charts:
-          keep_root_files:
-            - cosmos-release.lock
-            - release.lock.json
-            - pycodestyle.cfg
-          ignore_globs:
-            - build
-            - charts
-            - images
-        cosmos-gitops:
-          ignore_globs:
-            - build
-            - repo
-            - tenants
-        neptor:
-          keep_root_files:
-            - Taskfile.yml
-            - workspace_custom.mk
-          ignore_globs:
-            - typings
-        vectorbt.pro:
-          ignore_globs:
-            - "*"
-        invest:
-          keep_root_files:
-            - BEADS_WORKFLOW.md
-            - GEMINI.md
-            - activate_workspace.sh
-            - poetry.toml
-            - workspace_config.py
-            - workspace_custom.mk
-          ignore_globs:
-            - neptor
-            - mt5linux
-            - mt5docker
-            - vectorbt.pro
-            - ansible
-            - docker
-            - scripts
-            - typings
-            - external-docs

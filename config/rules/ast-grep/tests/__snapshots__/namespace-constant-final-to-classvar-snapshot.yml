@@ -1,0 +1,36 @@
+id: namespace-constant-final-to-classvar
+snapshots:
+  ? |
+    from typing import Final
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            POSTGRES_READY_MAX_RETRIES: Final[int] = 30
+  : fixed: |
+      from typing import Final
+      from flext_tests import FlextTestsConstants
+      class C:
+          class Tests(FlextTestsConstants.Tests):
+              POSTGRES_READY_MAX_RETRIES: ClassVar[int] = 30
+    labels:
+    - source: 'POSTGRES_READY_MAX_RETRIES: Final[int] = 30'
+      style: primary
+      start: 130
+      end: 173
+  ? |
+    from typing import Final
+    from flext_tests import FlextTestsConstants
+    class TestsFlextWebConstants:
+        class Tests(FlextTestsConstants.Tests):
+            DEFAULT_HOST: Final[str] = "localhost"
+  : fixed: |
+      from typing import Final
+      from flext_tests import FlextTestsConstants
+      class TestsFlextWebConstants:
+          class Tests(FlextTestsConstants.Tests):
+              DEFAULT_HOST: ClassVar[str] = "localhost"
+    labels:
+    - source: 'DEFAULT_HOST: Final[str] = "localhost"'
+      style: primary
+      start: 151
+      end: 189

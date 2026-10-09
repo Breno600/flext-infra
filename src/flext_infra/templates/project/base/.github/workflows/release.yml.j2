@@ -6,10 +6,11 @@
 #
 # - A push to the integration branch whose head is NOT the protocol's release
 #   commit opens or updates the release pull request (`make release-version
-#   APPLY=Y`); when nothing is releasable the run is a no-op.
+#   `); when nothing is releasable the run is a no-op.
 # - A push whose head IS the release commit (the merged release pull request)
 #   tags it, builds the receipt and publishes exactly what the receipt attests.
 # - `workflow_dispatch` re-runs build and publication for an existing tag.
+{% set persist_private_checkout_credentials = true -%}
 name: Release
 
 "on":
@@ -73,8 +74,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
-      contents: write # Push the release/next lane.
-      pull-requests: write # Open or update the release pull request.
+      contents: write  # Push the release/next lane.
+      pull-requests: write  # Open or update the release pull request.
     env:
       {{ make.ci.variable }}: {{ make.ci.value }}
       # GitHub standard: the built-in GITHUB_TOKEN with the declared job
@@ -95,10 +96,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+{%- include "_fragments/mise_install.j2" %}
       - name: Boot
         run: make setup
       - name: Release pull request
-        run: make release-version {{ make.apply_variable }}={{ make.apply_value }}
+        run: make release-version
 
   publish:
     name: Tag, build and publish the release commit
@@ -109,10 +111,11 @@ jobs:
     permissions:
       contents: write # Push the release tag and create the GitHub release.
       id-token: write # Trusted publishing to the package index.
-    environment: pypi
+    # Why: trusted publishing uses this job's OIDC token; a GitHub Environment
+    # is repository-specific and must not be projected unless declared by its owner.
     env:
       {{ make.ci.variable }}: {{ make.ci.value }}
-      GH_TOKEN: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
+      GH_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout release commit
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
@@ -126,11 +129,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+{%- include "_fragments/mise_install.j2" %}
       - name: Boot
         run: make setup
       - name: Tag
-        run: make release-tag {{ make.apply_variable }}={{ make.apply_value }}
+        run: make release-tag
       - name: Build receipt
-        run: make release-build {{ make.apply_variable }}={{ make.apply_value }}
+        run: make release-build
       - name: Publish
-        run: make publication {{ make.apply_variable }}={{ make.apply_value }} INDEX=Y
+        run: make publication  INDEX=Y

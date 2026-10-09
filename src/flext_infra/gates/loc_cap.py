@@ -3,19 +3,21 @@
 Enforces the per-module logical-LOC ceiling using scc's code-line count.
 Per-class / per-method / per-function caps require AST and are out of scope
 for this tool-driven gate (scc reports at file granularity only).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import re
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, config, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from flext_infra import p, t
 
 
@@ -28,18 +30,48 @@ class FlextInfraLocCapGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Run scc over the project's Python directories, emitting per-file JSON."""
+        """Run scc over the project's Python directories, emitting per-file JSON.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = project_dir, ctx
-        return [c.Infra.SCC_BINARY, "--format", "json", "--by-file", *check_dirs]
+        # Generated source trees are tracked, so Git ignore rules no longer
+        # hide them; scc drops them by exact directory name instead.
+        generated = tuple(
+            argument
+            for name in config.Infra.codegen.generated_sources
+            for argument in ("--not-match", f"^{re.escape(name)}$")
+        )
+        return [
+            c.Infra.SCC_BINARY,
+            "--format",
+            "json",
+            "--by-file",
+            *generated,
+            *check_dirs,
+        ]
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse scc JSON into one Issue per over-cap module."""
-        _ = project_dir, ctx
+        """Parse scc JSON into one Issue per over-cap module.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
+        _ = ctx
         if not u.Cli.process_succeeded(result.outcome):
             return (
                 False,
@@ -55,52 +87,20 @@ class FlextInfraLocCapGate(FlextInfraGate):
                 ),
             )
         issues = self._files_over_cap(
-            result.stdout or "[]", config.Infra.codegen.loc_cap.max_lines
+            result.stdout,
+            config.Infra.codegen.loc_cap.max_lines,
+            project_dir,
         )
         return len(issues) == 0, issues
 
     @staticmethod
-    def _file_code_line(file_entry: t.JsonValue) -> t.Pair[str, int] | None:
-        """Return one scc by-file entry's ``(path, code)`` pair, or ``None``."""
-        if not isinstance(file_entry, Mapping):
-            return None
-        code = u.Cli.json_pick_int(file_entry, "Code")
-        name = u.Cli.json_pick_str(file_entry, "Location", "?")
-        return name, code
-
-    @classmethod
-    def _python_language_files(
-        cls, language_entry: t.JsonValue
-    ) -> t.SequenceOf[t.Pair[str, int]]:
-        """Return every ``(path, code)`` pair from one scc language entry.
-
-        Yields nothing for a non-Python entry or one carrying no file list.
-        """
-        if not isinstance(language_entry, Mapping):
-            return ()
-        if language_entry.get("Name") != c.Infra.SCC_PYTHON_LANG:
-            return ()
-        files = language_entry.get("Files")
-        if not isinstance(files, list):
-            return ()
-        picked = (cls._file_code_line(file_entry) for file_entry in files)
-        return tuple(pair for pair in picked if pair is not None)
-
-    @classmethod
-    def _python_file_code_lines(
-        cls, data: t.JsonValue
-    ) -> t.SequenceOf[t.Pair[str, int]]:
-        """Return every Python file's ``(path, code)`` pair across an scc payload."""
-        if not isinstance(data, list):
-            return ()
-        pairs: t.MutableSequenceOf[t.Pair[str, int]] = []
-        for language_entry in data:
-            pairs.extend(cls._python_language_files(language_entry))
-        return tuple(pairs)
-
-    @staticmethod
     def _issue_for_over_cap(path: str, code: int, cap: int) -> m.Infra.Issue:
-        """Build the ``LOC_CAP`` issue for one module past the SUPREME LAW cap."""
+        """Build the ``LOC_CAP`` issue for one module past the SUPREME LAW cap.
+
+        Returns:
+            The resulting ``m.Infra.Issue``.
+
+        """
         return m.Infra.Issue(
             file=path,
             line=code,
@@ -111,20 +111,43 @@ class FlextInfraLocCapGate(FlextInfraGate):
         )
 
     @classmethod
-    def _files_over_cap(cls, scc_json: str, cap: int) -> t.VariadicTuple[m.Infra.Issue]:
+    def _files_over_cap(
+        cls,
+        scc_json: str,
+        cap: int,
+        project_dir: Path,
+    ) -> t.VariadicTuple[m.Infra.Issue]:
         """Extract over-cap modules from an `scc --format json --by-file` payload.
 
-        Pure function (no subprocess) so the cap logic is unit-testable against
-        a literal scc fixture.
+        SCC paths are relative to its project working directory, not the caller.
+        Parsing and header-read failures propagate. Generated facades carry
+        AUTOGEN_HEADER and are exempt: their size is the generator's obligation,
+        enforced by its own contract — the SUPREME LAW caps authored modules.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.Issue]``.
+
         """
-        parsed = u.Cli.json_parse(scc_json or "[]")
-        empty: t.JsonValue = []
-        data = parsed.unwrap() if parsed.success else empty
+        report = m.Infra.SccReport.model_validate_json(scc_json, strict=True)
         return tuple(
-            cls._issue_for_over_cap(path, code, cap)
-            for path, code in cls._python_file_code_lines(data)
-            if code > cap
+            cls._issue_for_over_cap(file.location, file.code, cap)
+            for language in report.root
+            if language.name == c.Infra.SCC_PYTHON_LANG
+            for file in language.files
+            if file.code > cap
+            and not cls._is_generated_facade(project_dir / file.location)
         )
+
+    @staticmethod
+    def _is_generated_facade(path: Path) -> bool:
+        """Return True when the file opens with the generator's AUTOGEN_HEADER.
+
+        Returns:
+            True when the file opens with the generator's AUTOGEN_HEADER.
+
+        """
+        with path.open(encoding=c.Cli.ENCODING_DEFAULT) as handle:
+            return handle.readline().startswith(c.Infra.AUTOGEN_HEADER)
 
 
 __all__: list[str] = ["FlextInfraLocCapGate"]

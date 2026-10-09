@@ -1,0 +1,71 @@
+id: ban-loose-test-function
+snapshots:
+  ? |
+    @pytest.mark.parametrize("value", [1])
+    def test_param(value: int) -> None:
+        assert value
+  : labels:
+    - source: |-
+        def test_param(value: int) -> None:
+            assert value
+      style: primary
+      start: 39
+      end: 91
+    - source: |
+        @pytest.mark.parametrize("value", [1])
+        def test_param(value: int) -> None:
+            assert value
+      style: secondary
+      start: 0
+      end: 92
+    - source: |-
+        @pytest.mark.parametrize("value", [1])
+        def test_param(value: int) -> None:
+            assert value
+      style: secondary
+      start: 0
+      end: 91
+    - source: test_param
+      style: secondary
+      start: 43
+      end: 53
+  ? |
+    async def test_async() -> None:
+        assert True
+  : labels:
+    - source: |-
+        async def test_async() -> None:
+            assert True
+      style: primary
+      start: 0
+      end: 47
+    - source: |
+        async def test_async() -> None:
+            assert True
+      style: secondary
+      start: 0
+      end: 48
+    - source: test_async
+      style: secondary
+      start: 10
+      end: 20
+  ? |
+    def test_value() -> None:
+        assert True
+  : labels:
+    - source: |-
+        def test_value() -> None:
+            assert True
+      style: primary
+      start: 0
+      end: 41
+    - source: |
+        def test_value() -> None:
+            assert True
+      style: secondary
+      start: 0
+      end: 42
+    - source: test_value
+      style: secondary
+      start: 4
+      end: 14

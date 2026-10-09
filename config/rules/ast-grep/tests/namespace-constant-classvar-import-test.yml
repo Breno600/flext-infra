@@ -1,0 +1,34 @@
+id: namespace-constant-classvar-import
+# `valid` MUST NOT match: ClassVar already imported, no holder constant in the
+# module, and a TYPE_CHECKING-only typing import (not module level).
+valid:
+  - |
+    from typing import ClassVar, Final
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            RETRIES: Final[int] = 30
+  - |
+    from typing import Final
+    class FlextThingConstants:
+        RETRIES: Final[int] = 30
+  - |
+    from typing import TYPE_CHECKING
+    if TYPE_CHECKING:
+        from typing import Final
+    class Other:
+        pass
+# `invalid` MUST match and add ClassVar to the module-level typing import.
+invalid:
+  - |
+    from typing import Final
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            RETRIES: Final[int] = 30
+  - |
+    from typing import TYPE_CHECKING, Final
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            HOST: Final[str] = "localhost"

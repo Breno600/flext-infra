@@ -1,0 +1,106 @@
+# Module-level facts stay module-level: a standard-library or third-party
+# import inside a function body (outside an `if TYPE_CHECKING:` guard) and a
+# dynamic `importlib.import_module(...)` call hide a dependency from the
+# module graph. The one sanctioned exception is the canonical lazy form the
+# FLEXT import law mandates (operator spec 2026-10-06): a concrete project
+# object or facade letter imports INSIDE the function that uses it —
+# `from flext_<pkg>[.<family>] import <Object-or-letter>`. The
+# import-normalization engine produces exactly that shape when it demotes an
+# eager object import to its point of use.
+#
+# Package initialisers and the lazy-export owner (`flext_core/lazy.py`) load
+# modules by design and are out of scope. Private utility members are scoped by
+# the sibling document below.
+#
+# Detection only: hoisting an import can create an initialisation cycle, so the
+# move is decided by the rope import phase, not by a token rewrite.
+id: ban-inline-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/__init__.py"
+  - "**/flext_core/lazy.py"
+  - "**/beartype/**"
+  - "**/_utilities/**"
+rule:
+  all:
+    - matches: inline-or-dynamic-import
+    - not:
+        all:
+          - kind: import_from_statement
+          - regex: "(^from\\s+flext_[a-z_]+(\\.[a-z_][a-z0-9_]*)*\\s+import\\s+([A-Z][A-Za-z0-9_]*|[cmptu])(\\s*,\\s*([A-Z][A-Za-z0-9_]*|[cmptu]))*\\s*$|(?s)^from\\s+flext_[a-z_]+(\\.[a-z_][a-z0-9_]*)*\\s+import\\s*\\(\\s*([A-Z][A-Za-z0-9_]*|[cmptu])(\\s*,\\s*([A-Z][A-Za-z0-9_]*|[cmptu]))*,?\\s*\\)\\s*$)"
+message: >-
+  Inline or dynamic import: declare the dependency at module level; the one
+  sanctioned inline form is the canonical lazy import of a concrete project
+  object or facade letter inside the function that uses it.
+---
+id: ban-inline-import-utilities
+language: python
+severity: error
+files:
+  - "**/_utilities/**/*.py"
+ignores:
+  - "**/__init__.py"
+rule:
+  all:
+    - matches: inline-or-dynamic-import
+    - not:
+        all:
+          - kind: import_from_statement
+          - regex: "(^from\\s+flext_[a-z_]+(\\.[a-z_][a-z0-9_]*)*\\s+import\\s+([A-Z][A-Za-z0-9_]*|[cmptu])(\\s*,\\s*([A-Z][A-Za-z0-9_]*|[cmptu]))*\\s*$|(?s)^from\\s+flext_[a-z_]+(\\.[a-z_][a-z0-9_]*)*\\s+import\\s*\\(\\s*([A-Z][A-Za-z0-9_]*|[cmptu])(\\s*,\\s*([A-Z][A-Za-z0-9_]*|[cmptu]))*,?\\s*\\)\\s*$)"
+message: >-
+  Inline or dynamic import in a utility member: only the canonical lazy form —
+  the package's own facade letters or a concrete project object through a
+  family root — binds at the method point of use.
+---
+# Repair of ban-inline-import for standard-library imports: a stdlib module
+# cannot form an initialisation cycle with project code, so the engine moves
+# the statement to the module import block (relocation module-import). The
+# imported module is captured as $MODULE and the engine admits the finding
+# only when it belongs to the interpreter's standard library
+# (context stdlib-module, read from sys.stdlib_module_names).
+id: hoist-inline-stdlib-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/__init__.py"
+  - "**/flext_core/lazy.py"
+  - "**/beartype/**"
+  - "**/_utilities/**"
+metadata:
+  relocation: module-import
+  context:
+    MODULE:
+      is: stdlib-module
+rule:
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                pattern: $MODULE
+                any:
+                  - kind: dotted_name
+                  - kind: aliased_import
+            - not:
+                has:
+                  nthChild: 2
+                  pattern: $_
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                kind: dotted_name
+                pattern: $MODULE
+    - inside:
+        kind: function_definition
+        stopBy: end
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  A standard-library import inside a function body belongs to the module
+  import block; the engine hoists it.

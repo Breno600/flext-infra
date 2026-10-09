@@ -1,0 +1,15 @@
+# Shape only: the engine admits the finding when the import reaches a later
+# layer than the importing module.
+id: ban-reverse-runtime-import
+valid:
+  - |
+    if TYPE_CHECKING:
+        from pkg import m
+  - |
+    if TYPE_CHECKING:
+        from pkg.models import FlextFooModels
+invalid:
+  - from pkg import m
+  - from pkg.models import FlextFooModels
+  - from .._models import base
+  - import pkg.models

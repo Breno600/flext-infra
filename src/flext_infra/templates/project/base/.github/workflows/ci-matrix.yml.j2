@@ -42,6 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       {{ make.ci.variable }}: {{ make.ci.value }}
+      GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     strategy:
       fail-fast: false
       matrix:
@@ -54,11 +55,10 @@ jobs:
           # token into .git/config would expose it to every later command.
           persist-credentials: false
       - name: Build {% raw %}${{ matrix.distro }}{% endraw %} image
-        env:
-          GITHUB_TOKEN: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
         run: >-
           docker build
           -f tests/fixtures/ci/docker/{% raw %}${{ matrix.distro }}{% endraw %}.Dockerfile
+          --build-context git=.git
           --secret id=github_token,env=GITHUB_TOKEN
           -t ci-matrix-{% raw %}${{ matrix.distro }}{% endraw %}
           .
@@ -66,9 +66,16 @@ jobs:
         env:
           {{ make.ci.variable }}: {{ make.ci.value }}
         run: |
-          docker run --rm -e {{ make.ci.variable }}={{ make.ci.value }} ci-matrix-{% raw %}${{ matrix.distro }}{% endraw %} make help
-          docker run --rm -e {{ make.ci.variable }}={{ make.ci.value }} ci-matrix-{% raw %}${{ matrix.distro }}{% endraw %} make check {{ make.apply_variable }}={{ make.apply_value }}
-          # ci-matrix proves bootstrap + check across distros; it never runs make test.
+          docker run --rm -e {{ make.ci.variable }}={{ make.ci.value }} -e GITHUB_TOKEN ci-matrix-{% raw %}${{ matrix.distro }}{% endraw %} make help
+          docker run --rm -e {{ make.ci.variable }}={{ make.ci.value }} -e GITHUB_TOKEN ci-matrix-{% raw %}${{ matrix.distro }}{% endraw %} make check
+      - name: Upgrade, regenerate, and validate on Linux
+        if: {% raw %}${{ matrix.distro == 'ubuntu' }}{% endraw %}
+        run: >-
+          docker run --rm
+          -e {{ make.ci.variable }}={{ make.ci.value }}
+          -e GITHUB_TOKEN
+          ci-matrix-ubuntu
+          bash -ec 'make upg && make setup && make gen && make gen && make check && make test && make build'
   # End SECTION: distro-matrix
 
   # === SECTION: macos (managed) ===
@@ -77,6 +84,7 @@ jobs:
     runs-on: macos-latest
     env:
       {{ make.ci.variable }}: {{ make.ci.value }}
+      GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
         with:
@@ -84,15 +92,22 @@ jobs:
           # No step needs authenticated git after checkout; persisting the
           # token into .git/config would expose it to every later command.
           persist-credentials: false
+{%- include "_fragments/mise_install.j2" %}
       - name: Bootstrap
         run: {{ make.ci.variable }}={{ make.ci.value }} make setup
-      - name: Verb surface
-        run: {{ make.ci.variable }}={{ make.ci.value }} make help
-      # The canonical gate, not just the verb surface: this matrix exists to
-      # catch platform-specific failures, and `make help` exercises none of
-      # the gates. The linux job already runs it.
-      - name: Canonical check
-        run: {{ make.ci.variable }}={{ make.ci.value }} make check {{ make.apply_variable }}={{ make.apply_value }}
+      - name: Upgrade and frozen bootstrap
+        run: |
+          {{ make.ci.variable }}={{ make.ci.value }} make upg
+          {{ make.ci.variable }}={{ make.ci.value }} make setup
+      - name: Generate twice
+        run: |
+          {{ make.ci.variable }}={{ make.ci.value }} make gen
+          {{ make.ci.variable }}={{ make.ci.value }} make gen
+      - name: Native gates
+        run: |
+          {{ make.ci.variable }}={{ make.ci.value }} make check
+          {{ make.ci.variable }}={{ make.ci.value }} make test
+          {{ make.ci.variable }}={{ make.ci.value }} make build
   # End SECTION: macos
 
   # === SECTION: windows (managed) ===
@@ -101,6 +116,7 @@ jobs:
     runs-on: windows-latest
     env:
       {{ make.ci.variable }}: {{ make.ci.value }}
+      GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
         with:
@@ -108,16 +124,24 @@ jobs:
           # No step needs authenticated git after checkout; persisting the
           # token into .git/config would expose it to every later command.
           persist-credentials: false
+{%- include "_fragments/mise_install.j2" %}
       - name: Bootstrap
         shell: bash
         run: {{ make.ci.variable }}={{ make.ci.value }} make setup
-      - name: Verb surface
+      - name: Upgrade and frozen bootstrap
         shell: bash
-        run: {{ make.ci.variable }}={{ make.ci.value }} make help
-      # The canonical gate, not just the verb surface: this matrix exists to
-      # catch platform-specific failures, and `make help` exercises none of
-      # the gates. The linux job already runs it.
-      - name: Canonical check
+        run: |
+          {{ make.ci.variable }}={{ make.ci.value }} make upg
+          {{ make.ci.variable }}={{ make.ci.value }} make setup
+      - name: Generate twice
         shell: bash
-        run: {{ make.ci.variable }}={{ make.ci.value }} make check {{ make.apply_variable }}={{ make.apply_value }}
+        run: |
+          {{ make.ci.variable }}={{ make.ci.value }} make gen
+          {{ make.ci.variable }}={{ make.ci.value }} make gen
+      - name: Native gates
+        shell: bash
+        run: |
+          {{ make.ci.variable }}={{ make.ci.value }} make check
+          {{ make.ci.variable }}={{ make.ci.value }} make test
+          {{ make.ci.variable }}={{ make.ci.value }} make build
 # End SECTION: windows

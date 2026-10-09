@@ -1,0 +1,76 @@
+id: ban-test-tautology
+valid:
+  - assert x == 1
+  - assert len(items) > 0
+  - assert False, "unreachable"
+  - assert result.success
+  - tm.that(result.failure, eq=True)
+  - tm.that(a.success or b.failure, eq=True)
+  - assert left == right
+  - tm.that(value, eq=expected)
+  - assert container.svc() is container.svc()
+  - tm.that(gen.generate_models(), eq=gen.generate_models())
+  - assert hash(entity) == hash(entity)
+  - assert isinstance(loaded, Service)
+  - tm.that(loaded, is_=Service)
+  - |
+    service = Service()
+    assert isinstance(service.run(), Report)
+  - |
+    service = build_service()
+    tm.that(service, is_=Service)
+  # An owned value compared with another computed value is a real check.
+  - |
+    from flext_core import c
+    assert c.Core.TIMEOUT == runtime.timeout
+  # A local `c` without the owned-facade import is not the constants facade.
+  - |
+    c = Counter()
+    assert c.total == 3
+  - |
+    from flext_core import c
+    tm.that(result.value, eq=c.Core.TIMEOUT)
+  # A local `config` in a module that imports only `c` is not the config facade.
+  - |
+    from flext_db_oracle import c, m
+    config = m.DbOracle.Column(unique=True)
+    tm.that(config.unique, eq=True)
+invalid:
+  - |
+    from flext_core import (
+        c,
+        m,
+    )
+    assert c.Core.TIMEOUT == 30
+  - assert True
+  - assert True, "always"
+  - assert not False
+  - assert not None
+  - assert "still running"
+  - assert 1
+  - assert value == value
+  - assert result.data is result.data
+  - tm.that(payload, eq=payload)
+  - tm.that(42, eq=42)
+  - tm.that(None, eq=None)
+  - tm.that(result.success or result.failure, eq=True)
+  - tm.that(result.failure or result.success, eq=True)
+  - assert result.success or result.failure
+  - assert result.failure or result.success
+  - assert isinstance(Service(), Service)
+  - tm.that(Service(config), is_=Service)
+  - |
+    service = Service()
+    assert isinstance(service, Service)
+  - |
+    settings_model: Settings = Settings(debug=True)
+    tm.that(settings_model, is_=Settings)
+  - |
+    from flext_core import c
+    assert c.Core.TIMEOUT == 30
+  - |
+    from flext_infra import settings
+    tm.that(settings.Infra.mode, eq="strict")
+  - |
+    from tests import c
+    assert "flext" == c.Tests.PROJECT_NAME

@@ -1,4 +1,8 @@
-"""Git identity report models — nested container for FLEXT composition."""
+"""Git identity report models — nested container for FLEXT composition.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,79 +20,77 @@ class FlextInfraModelsGitIdentity:
     class GitIdentityReport(m.ContractModel):
         """Consolidated Git identity snapshot for one repository path."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         primary_root: Annotated[
-            Path, m.Field(description="Canonical primary worktree root")
+            Path,
+            m.Field(description="Canonical primary worktree root"),
         ]
         head_oid: Annotated[t.NonEmptyStr, m.Field(description="HEAD commit hex SHA")]
         porcelain: Annotated[
-            str, m.Field(description="Raw git status --porcelain output")
+            str,
+            m.Field(description="Raw git status --porcelain output"),
         ]
         dirty: Annotated[bool, m.Field(description="Whether the worktree is dirty")]
         git_dir: Annotated[Path, m.Field(description="Absolute .git directory")]
         common_dir: Annotated[
             Path,
             m.Field(
-                description="Git common directory (shared across linked worktrees)"
+                description="Git common directory (shared across linked worktrees)",
             ),
         ]
         branch: Annotated[
             t.NonEmptyStr | None,
             m.Field(
-                default=None, description="Active branch name, None if detached HEAD"
+                description="Active branch name, None if detached HEAD",
             ),
-        ]
+        ] = None
         origin_remote: Annotated[
-            t.NonEmptyStr | None, m.Field(default=None, description="Origin remote URL")
-        ]
+            t.NonEmptyStr | None, m.Field(description="Origin remote URL")
+        ] = None
         upstream_remote: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(default=None, description="Upstream remote URL"),
-        ]
+            t.NonEmptyStr | None, m.Field(description="Upstream remote URL")
+        ] = None
         superproject_root: Annotated[
             Path | None,
             m.Field(
-                default=None,
                 description="Superproject root if nested, None if standalone",
             ),
-        ]
+        ] = None
         requested_path: Annotated[
             Path | None,
             m.Field(
-                default=None,
                 description="Filesystem path submitted to the identity probe, if any",
             ),
-        ]
+        ] = None
         is_worktree: Annotated[
             bool,
             m.Field(
-                default=False,
                 description="Whether the checkout uses a linked (non-primary) Git dir",
             ),
-        ]
+        ] = False
         is_submodule: Annotated[
             bool,
             m.Field(
-                default=False,
                 description="Whether the primary repository is a Git submodule",
             ),
-        ]
+        ] = False
         is_attached_submodule: Annotated[
             bool,
             m.Field(
-                default=False,
                 description=(
                     "Whether this checkout is physically nested in its superproject"
                 ),
             ),
-        ]
+        ] = False
         has_submodules: Annotated[
-            bool, m.Field(description="Whether the repository declares any submodules")
+            bool,
+            m.Field(description="Whether the repository declares any submodules"),
         ] = False
         is_inside_work_tree: Annotated[
-            bool, m.Field(description="Whether the path is inside a Git work tree")
+            bool,
+            m.Field(description="Whether the path is inside a Git work tree"),
         ] = False
 
 

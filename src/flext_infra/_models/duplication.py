@@ -1,56 +1,103 @@
-"""Typed jscpd report contracts for the duplication gate."""
+"""Typed jscpd report contracts for the duplication gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
-from flext_core import m, u
-from flext_infra import t
+from flext_core import m
+from flext_infra import c, t
 
 
 class FlextInfraModelsDuplication:
     """Strict external-boundary models for jscpd 5 reports."""
 
+    class ProjectDuplicationOverrides(m.ContractModel):
+        """Validated ``[tool.flext.project.duplication]`` overrides.
+
+        One project's pyproject.toml may narrow the workspace-wide jscpd
+        defaults; every field defaults to the canonical constant so a project
+        with no overrides table gets the same behavior as the workspace scan.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="forbid",
+            frozen=True,
+            populate_by_name=True,
+        )
+
+        min_lines: Annotated[
+            t.PositiveInt,
+            m.Field(alias="min-lines", description="Minimum duplicated line count"),
+        ] = c.Infra.JSCPD_MIN_LINES
+        min_tokens: Annotated[
+            t.PositiveInt,
+            m.Field(alias="min-tokens", description="Minimum duplicated token count"),
+        ] = c.Infra.JSCPD_MIN_TOKENS
+        threshold_percent: Annotated[
+            t.Percentage,
+            m.Field(
+                alias="threshold-percent",
+                description="Maximum allowed duplication percentage",
+            ),
+        ] = c.Infra.JSCPD_THRESHOLD_PERCENT
+        mode: Annotated[t.NonEmptyStr, m.Field(description="jscpd detection mode")] = (
+            c.Infra.JSCPD_MODE
+        )
+        scope: Annotated[
+            t.StrSequence,
+            m.Field(description="Scope directory names"),
+        ] = c.Infra.JSCPD_SCOPE_DIRNAMES
+
     class JscpdConfig(m.ContractModel):
         """Complete generated jscpd invocation configuration."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, populate_by_name=True
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="forbid",
+            frozen=True,
+            populate_by_name=True,
         )
 
         absolute: Annotated[t.StrictBool, m.Field(description="Emit absolute paths")]
-        formats_exts: Annotated[
-            t.MappingKV[str, t.StrSequence],
-            m.Field(alias="formatsExts", description="Extensions by parser format"),
-        ]
+        formats_exts: t.MappingKV[str, t.StrSequence] = m.Field(
+            alias="formatsExts",
+            description="Extensions by parser format",
+        )
         ignore: Annotated[t.StrSequence, m.Field(description="Ignored path patterns")]
-        min_lines: Annotated[
-            t.PositiveInt,
-            m.Field(alias="minLines", description="Minimum duplicated line count"),
-        ]
-        min_tokens: Annotated[
-            t.PositiveInt,
-            m.Field(alias="minTokens", description="Minimum duplicated token count"),
-        ]
+        min_lines: t.PositiveInt = m.Field(
+            alias="minLines",
+            description="Minimum duplicated line count",
+        )
+        min_tokens: t.PositiveInt = m.Field(
+            alias="minTokens",
+            description="Minimum duplicated token count",
+        )
         mode: Annotated[t.NonEmptyStr, m.Field(description="jscpd detection mode")]
-        no_colors: Annotated[
-            t.StrictBool, m.Field(alias="noColors", description="Disable color output")
-        ]
-        no_tips: Annotated[
-            t.StrictBool, m.Field(alias="noTips", description="Disable tip output")
-        ]
+        no_colors: t.StrictBool = m.Field(
+            alias="noColors",
+            description="Disable color output",
+        )
+        no_tips: t.StrictBool = m.Field(
+            alias="noTips",
+            description="Disable tip output",
+        )
         reporters: Annotated[
-            t.StrSequence, m.Field(description="Required report formats")
+            t.StrSequence,
+            m.Field(description="Required report formats"),
         ]
         threshold: Annotated[
-            t.Percentage, m.Field(description="Maximum allowed duplication percentage")
+            t.Percentage,
+            m.Field(description="Maximum allowed duplication percentage"),
         ]
 
     class JscpdLocation(m.ContractModel):
         """One required source coordinate in a jscpd report."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         column: Annotated[
             t.NonNegativeInt,
@@ -68,8 +115,10 @@ class FlextInfraModelsDuplication:
     class JscpdFile(m.ContractModel):
         """One side of a detected clone."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, populate_by_name=True
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="forbid",
+            frozen=True,
+            populate_by_name=True,
         )
 
         end: Annotated[t.PositiveInt, m.Field(description="Exclusive clone end offset")]
@@ -78,10 +127,12 @@ class FlextInfraModelsDuplication:
             m.Field(alias="endLoc", description="Clone end coordinate"),
         ]
         name: Annotated[
-            t.NonEmptyStr, m.Field(description="Absolute scanned source path")
+            t.NonEmptyStr,
+            m.Field(description="Absolute scanned source path"),
         ]
         start: Annotated[
-            t.NonNegativeInt, m.Field(description="Inclusive clone start offset")
+            t.NonNegativeInt,
+            m.Field(description="Inclusive clone start offset"),
         ]
         start_location: Annotated[
             FlextInfraModelsDuplication.JscpdLocation,
@@ -91,8 +142,10 @@ class FlextInfraModelsDuplication:
     class JscpdDuplicate(m.ContractModel):
         """One complete two-sided clone from jscpd."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, populate_by_name=True
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="forbid",
+            frozen=True,
+            populate_by_name=True,
         )
 
         first_file: Annotated[
@@ -104,7 +157,8 @@ class FlextInfraModelsDuplication:
             m.Field(alias="format", description="jscpd parser format name"),
         ]
         fragment: Annotated[
-            t.NonEmptyStr, m.Field(description="Duplicated source fragment")
+            t.NonEmptyStr,
+            m.Field(description="Duplicated source fragment"),
         ]
         is_new: Annotated[
             t.StrictBool,
@@ -117,7 +171,8 @@ class FlextInfraModelsDuplication:
             ),
         ] = False
         lines: Annotated[
-            t.PositiveInt, m.Field(description="Duplicated logical line count")
+            t.PositiveInt,
+            m.Field(description="Duplicated logical line count"),
         ]
         second_file: Annotated[
             FlextInfraModelsDuplication.JscpdFile,
@@ -128,8 +183,10 @@ class FlextInfraModelsDuplication:
     class JscpdStatisticsSummary(m.ContractModel):
         """Complete aggregate emitted for one format or the whole scan."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, populate_by_name=True
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="forbid",
+            frozen=True,
+            populate_by_name=True,
         )
 
         clones: Annotated[t.NonNegativeInt, m.Field(description="Detected clone count")]
@@ -142,36 +199,44 @@ class FlextInfraModelsDuplication:
             m.Field(alias="duplicatedTokens", description="Duplicated token count"),
         ]
         lines: Annotated[
-            t.NonNegativeInt, m.Field(description="Scanned logical line count")
+            t.NonNegativeInt,
+            m.Field(description="Scanned logical line count"),
         ]
         new_clones: Annotated[
-            t.NonNegativeInt, m.Field(alias="newClones", description="New clone count")
+            t.NonNegativeInt,
+            m.Field(alias="newClones", description="New clone count"),
         ]
         new_duplicated_lines: Annotated[
             t.NonNegativeInt,
             m.Field(
-                alias="newDuplicatedLines", description="New duplicated line count"
+                alias="newDuplicatedLines",
+                description="New duplicated line count",
             ),
         ]
         percentage: Annotated[
-            t.Percentage, m.Field(description="Duplicated line percentage")
+            t.Percentage,
+            m.Field(description="Duplicated line percentage"),
         ]
         percentage_tokens: Annotated[
             t.Percentage,
             m.Field(
-                alias="percentageTokens", description="Duplicated token percentage"
+                alias="percentageTokens",
+                description="Duplicated token percentage",
             ),
         ]
         sources: Annotated[
-            t.NonNegativeInt, m.Field(description="Scanned source file count")
+            t.NonNegativeInt,
+            m.Field(description="Scanned source file count"),
         ]
         tokens: Annotated[t.NonNegativeInt, m.Field(description="Scanned token count")]
 
     class JscpdStatistics(m.ContractModel):
         """Per-format and total statistics proving non-empty collection."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, populate_by_name=True
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="forbid",
+            frozen=True,
+            populate_by_name=True,
         )
 
         detection_date: Annotated[
@@ -190,7 +255,7 @@ class FlextInfraModelsDuplication:
     class JscpdReport(m.ContractModel):
         """Validated complete jscpd JSON report."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         duplicates: Annotated[
             t.SequenceOf[FlextInfraModelsDuplication.JscpdDuplicate],
@@ -201,7 +266,7 @@ class FlextInfraModelsDuplication:
             m.Field(description="Validated scan statistics"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_complete_report(self) -> Self:
             format_summaries = tuple(self.statistics.formats.values())
             if not format_summaries or self.statistics.total.sources == 0:
@@ -234,10 +299,11 @@ class FlextInfraModelsDuplication:
     class JscpdScan(m.ContractModel):
         """Fresh command evidence plus its validated report."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         exit_code: Annotated[
-            t.NonNegativeInt, m.Field(le=255, description="Raw jscpd process exit code")
+            t.NonNegativeInt,
+            m.Field(le=255, description="Raw jscpd process exit code"),
         ]
         report: Annotated[
             FlextInfraModelsDuplication.JscpdReport,

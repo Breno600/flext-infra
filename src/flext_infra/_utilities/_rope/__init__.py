@@ -1,12 +1,26 @@
-"""Rope runtime patches (private).
+# AUTO-GENERATED FILE — Regenerate with: make gen
+"""Flext Infra. Utilities. Rope package.
 
-Holds intentional monkey-patches of rope internals. Each module here patches a
-protected rope surface that exposes no public registration API; the pyright
-``reportPrivateUsage`` diagnostic is scoped off for this subpackage via a
-dedicated ``executionEnvironments`` entry in the root ``pyproject.toml``
-(rationale recorded inline there).
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from types import MappingProxyType
+from typing import TYPE_CHECKING
+
+from flext_core import install_lazy_exports
+
+if TYPE_CHECKING:
+    from flext_infra._utilities._rope.project import FlextInfraRopeProject
+
+
+__all__: tuple[str, ...] = ("FlextInfraRopeProject",)
+
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({"FlextInfraRopeProject": ".project"}),
+    public_exports=__all__,
+)

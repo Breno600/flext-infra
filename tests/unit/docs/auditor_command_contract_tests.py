@@ -1,4 +1,8 @@
-"""Behavior tests for the public documentation command-contract audit."""
+"""Behavior tests for the public documentation command-contract audit.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,32 +19,54 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.fixture
-def command_contract_scope(infra_test_workspace: Path) -> m.Infra.DocScope:
-    """Declare the same repository identity in Git and the typed topology."""
-    name = "infra-pkg"
-    u.Tests.write_project_beads_config(infra_test_workspace, name)
-    u.Tests.write_standalone_workspace_manifest(infra_test_workspace, name)
-    u.Tests.initialize_git_repo(
-        infra_test_workspace, origin_url=u.Tests.repository_ref(name).url
-    )
-    return m.Infra.DocScope(
-        name=name,
-        path=infra_test_workspace,
-        report_dir=infra_test_workspace / ".reports" / "docs",
-        package_name="infra_pkg",
-    )
-
-
-class TestsDocsCommandContract:
+class TestsFlextInfraAuditorCommandContract:
     """Prove canonical Make, Testmon, and public-test documentation policy."""
 
     @staticmethod
+    @pytest.fixture
+    def command_contract_scope(infra_test_workspace: Path) -> m.Infra.DocScope:
+        """Declare the same repository identity in Git and the typed topology.
+
+        Returns:
+            The resulting ``m.Infra.DocScope``.
+
+        """
+        name = "infra-pkg"
+        u.Tests.write_project_beads_config(infra_test_workspace, name)
+        u.Tests.write_standalone_workspace_manifest(infra_test_workspace, name)
+        u.Tests.initialize_git_repo(
+            infra_test_workspace,
+            origin_url=u.Tests.repository_ref(name).url,
+        )
+        return m.Infra.DocScope(
+            name=name,
+            path=infra_test_workspace,
+            report_dir=infra_test_workspace / ".reports" / "docs",
+            package_name="infra_pkg",
+        )
+
+    @staticmethod
+    @pytest.mark.parametrize("tool", ["uv", "mkdocs", "ruff", "pyright", "pre-commit"])
+    def test_tool_filename_is_not_a_command(tool: str) -> None:
+        """Filename prefixes remain prose; actual tool invocations are rejected."""
+        for content, expected in (
+            (f"Configuration is stored in `{tool}.toml`.", 0),
+            (f"The documentation uses `{tool}`.", 0),
+            (f"```bash\n{tool}\n```", 1),
+            (f"```bash\n{tool} --help\n```", 1),
+        ):
+            issues = u.Infra.docs_command_contract_content_issues(
+                content,
+                relative_path="docs/guides/commands.md",
+                effective_verbs=config.Infra.codegen.make.verbs,
+            )
+            tm.that(len(issues), eq=expected)
+
+    @staticmethod
     def test_accepts_every_declared_verb_rendered_from_the_ssot() -> None:
-        """Each declared verb, written exactly as its own spec requires, passes."""
+        """Each declared verb passes without the exterminated apply token."""
         lines = "\n".join(
-            f"make {spec.name} APPLY=Y" if spec.requires_apply else f"make {spec.name}"
-            for spec in config.Infra.codegen.make.verbs
+            f"make {spec.name}" for spec in config.Infra.codegen.make.verbs
         )
         content = f"# Commands\n\n```bash\n{lines}\n```\n"
 
@@ -54,6 +80,7 @@ class TestsDocsCommandContract:
 
     @staticmethod
     def test_ignores_prose_that_begins_with_make() -> None:
+        """Test ignores prose that begins with make."""
         content = """# Scope
 
 Make surfaces and documentation are changed at their canonical owner.
@@ -69,6 +96,7 @@ Make surfaces and documentation are changed at their canonical owner.
 
     @staticmethod
     def test_rejects_invented_make_selectors() -> None:
+        """Test rejects invented make selectors."""
         content = """```bash
 make test PROJECT=flext-demo MATCH=unit
 ```
@@ -85,12 +113,11 @@ make test PROJECT=flext-demo MATCH=unit
         tm.that(issues[0].message, has="invented Make selector")
 
     @staticmethod
-    def test_reads_apply_requirement_from_config_ssot() -> None:
-        """A mutating verb documented without the apply token is rejected."""
-        mutating = next(
-            spec.name for spec in config.Infra.codegen.make.verbs if spec.requires_apply
-        )
-        content = f"```bash\nmake {mutating}\n```\n"
+    @pytest.mark.parametrize("value", ["Y", "N", "", "invalid"])
+    def test_rejects_legacy_apply_flag_on_a_declared_verb(value: str) -> None:
+        """The exterminated `APPLY` flag is rejected in documented commands."""
+        verb = next(spec.name for spec in config.Infra.codegen.make.verbs)
+        content = f"```bash\nmake {verb} APPLY={value}\n```\n"
 
         issues = u.Infra.docs_command_contract_content_issues(
             content,
@@ -99,28 +126,35 @@ make test PROJECT=flext-demo MATCH=unit
         )
 
         tm.that(len(issues), eq=1)
-        tm.that(issues[0].message, has="requires `APPLY=Y`")
+        tm.that(issues[0].message, has="legacy `APPLY` flag is exterminated")
 
     @staticmethod
-    def test_accepts_optional_apply_for_declared_verbs() -> None:
-        """An optional effect token is not a forbidden token at the Make boundary."""
-        lines = "\n".join(
-            f"make {spec.name} APPLY=Y"
-            for spec in config.Infra.codegen.make.verbs
-            if not spec.requires_apply
+    def test_accepts_plain_declared_verbs() -> None:
+        """Every declared verb documented without variables passes."""
+        plain = "\n".join(
+            f"make {spec.name}" for spec in config.Infra.codegen.make.verbs
         )
-        content = f"```bash\n{lines}\n```\n"
 
-        issues = u.Infra.docs_command_contract_content_issues(
-            content,
+        ok = u.Infra.docs_command_contract_content_issues(
+            f"```bash\n{plain}\n```\n",
             relative_path="docs/guides/getting-started.md",
             effective_verbs=config.Infra.codegen.make.verbs,
         )
+        tm.that(ok, eq=[])
 
-        tm.that(issues, eq=[])
+        legacy = "\n".join(
+            f"make {spec.name} APPLY=Y" for spec in config.Infra.codegen.make.verbs
+        )
+        bad = u.Infra.docs_command_contract_content_issues(
+            f"```bash\n{legacy}\n```\n",
+            relative_path="docs/guides/getting-started.md",
+            effective_verbs=config.Infra.codegen.make.verbs,
+        )
+        tm.that(len(bad), eq=len(config.Infra.codegen.make.verbs))
 
     @staticmethod
     def test_rejects_raw_pytest_execution() -> None:
+        """Test rejects raw pytest execution."""
         content = """```bash
 PYTHONPATH=src python -m pytest tests/unit
 ```
@@ -133,10 +167,11 @@ PYTHONPATH=src python -m pytest tests/unit
         )
 
         tm.that(len(issues), eq=1)
-        tm.that(issues[0].message, has="bypasses `make test APPLY=Y`")
+        tm.that(issues[0].message, has="bypasses `make test`")
 
     @staticmethod
     def test_rejects_direct_tool_execution() -> None:
+        """Test rejects direct tool execution."""
         content = """```bash
 ruff check src
 ```
@@ -152,9 +187,27 @@ ruff check src
         tm.that(issues[0].message, has="bypasses the root Make dispatcher")
 
     @staticmethod
+    def test_inline_command_requires_an_execution_directive() -> None:
+        """Describe a tool invocation without treating it as user guidance."""
+        content = (
+            "The fix pass runs `ruff check --fix` internally.\n"
+            "Run `ruff check --fix` to invoke the tool directly.\n"
+        )
+
+        issues = u.Infra.docs_command_contract_content_issues(
+            content,
+            relative_path="docs/guides/commands.md",
+            effective_verbs=config.Infra.codegen.make.verbs,
+        )
+
+        tm.that(len(issues), eq=1)
+        tm.that(issues[0].message, has="line 2: direct tool command")
+
+    @staticmethod
     def test_scans_recursive_live_docs_from_typed_scope(
         command_contract_scope: m.Infra.DocScope,
     ) -> None:
+        """Test scans recursive live docs from typed scope."""
         infra_test_workspace = command_contract_scope.path
         docs_root = infra_test_workspace / "docs"
         governed = {
@@ -193,12 +246,11 @@ ruff check src
     @staticmethod
     @pytest.mark.parametrize("verb_name", ["publish-preview", "archive-assets"])
     @pytest.mark.parametrize(
-        ("declared", "requires_apply", "apply", "expected"),
+        ("declared", "expected"),
         [
-            (True, True, True, ""),
-            (True, True, False, "requires `APPLY=Y`"),
-            (True, False, False, ""),
-            (False, True, True, "not declared"),
+            (True, ""),
+            (True, "legacy `APPLY` flag is exterminated"),
+            (False, "not declared"),
         ],
     )
     def test_audits_repository_declared_verbs(
@@ -206,22 +258,22 @@ ruff check src
         verb_name: str,
         *,
         declared: bool,
-        requires_apply: bool,
-        apply: bool,
         expected: str,
     ) -> None:
+        """Test audits repository declared verbs."""
         scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
             name=verb_name,
             description="Repository-owned operation",
-            requires_apply=requires_apply,
         )
         u.Tests.write_standalone_workspace_manifest(
-            scope.path, scope.name, extra_verbs=(spec,) if declared else ()
+            scope.path,
+            scope.name,
+            extra_verbs=(spec,) if declared else (),
         )
         guide = scope.path / "docs/guides/commands.md"
         guide.parent.mkdir(parents=True)
-        token = " APPLY=Y" if apply else ""
+        token = " APPLY=Y" if "APPLY" in expected else ""
         u.write_file(guide, f"```bash\nmake {verb_name}{token}\n```\n")
 
         issues = u.Infra.docs_command_contract_issues(scope)
@@ -236,52 +288,56 @@ ruff check src
     def test_manifest_changes_update_the_live_contract(
         command_contract_scope: m.Infra.DocScope,
     ) -> None:
+        """Test manifest changes update the live contract."""
         scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
             name="publish-preview",
             description="Repository-owned operation",
-            requires_apply=True,
         )
         guide = scope.path / "docs/guides/commands.md"
         guide.parent.mkdir(parents=True)
         u.write_file(guide, f"```bash\nmake {spec.name}\n```\n")
         u.Tests.write_standalone_workspace_manifest(
-            scope.path, scope.name, extra_verbs=(spec,)
-        )
-        required = u.Infra.docs_command_contract_issues(scope)
-        tm.that(len(required), eq=1)
-        tm.that(required[0].message, has="requires `APPLY=Y`")
-
-        optional = spec.model_copy(update={"requires_apply": False})
-        u.Tests.write_standalone_workspace_manifest(
-            scope.path, scope.name, extra_verbs=(optional,)
+            scope.path,
+            scope.name,
+            extra_verbs=(spec,),
         )
         tm.that(u.Infra.docs_command_contract_issues(scope), eq=[])
 
-        renamed = optional.model_copy(update={"name": "archive-assets"})
-        u.Tests.write_standalone_workspace_manifest(
-            scope.path, scope.name, extra_verbs=(renamed,)
+        u.write_file(guide, f"```bash\nmake {spec.name} APPLY=Y\n```\n")
+        legacy = u.Infra.docs_command_contract_issues(scope)
+        tm.that(len(legacy), eq=1)
+        tm.that(legacy[0].message, has="legacy `APPLY` flag is exterminated")
+
+        renamed = m.Infra.MakeVerbSpec(
+            name="archive-assets",
+            description="Repository-owned operation",
         )
-        undeclared = u.Infra.docs_command_contract_issues(scope)
-        tm.that(len(undeclared), eq=1)
-        tm.that(undeclared[0].message, has="not declared")
+        u.Tests.write_standalone_workspace_manifest(
+            scope.path,
+            scope.name,
+            extra_verbs=(renamed,),
+        )
         u.write_file(guide, f"```bash\nmake {renamed.name}\n```\n")
         tm.that(u.Infra.docs_command_contract_issues(scope), eq=[])
 
     @staticmethod
     @pytest.mark.parametrize("with_guide", [False, True])
     def test_malformed_selected_topology_blocks_with_exact_cause(
-        command_contract_scope: m.Infra.DocScope, *, with_guide: bool
+        command_contract_scope: m.Infra.DocScope,
+        *,
+        with_guide: bool,
     ) -> None:
+        """Test malformed selected topology blocks with exact cause."""
         scope = command_contract_scope
         if with_guide:
             guide = scope.path / "docs/guides/commands.md"
             guide.parent.mkdir(parents=True)
             spec = config.Infra.codegen.make.verbs[0]
-            u.write_file(guide, f"```bash\nmake {spec.name} APPLY=Y\n```\n")
+            u.write_file(guide, f"```bash\nmake {spec.name}\n```\n")
         manifest = u.Tests.write_standalone_workspace_manifest(scope.path, scope.name)
         u.write_file(manifest, "version: [\n")
-        loaded = u.Infra.workspace_spec_load(scope.path)
+        loaded = u.Infra.load_workspace_manifest(scope.path)
         tm.fail(loaded)
         tm.that(loaded.error, has=str(manifest))
 
@@ -294,46 +350,55 @@ ruff check src
     def test_guide_projection_resolves_source_repository_contract(
         command_contract_scope: m.Infra.DocScope,
     ) -> None:
+        """Test guide projection resolves source repository contract."""
         source_scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
             name="publish-preview",
             description="Source repository operation",
-            requires_apply=True,
         )
         manifest = u.Tests.write_standalone_workspace_manifest(
-            source_scope.path, source_scope.name, extra_verbs=(spec,)
+            source_scope.path,
+            source_scope.name,
+            extra_verbs=(spec,),
         )
         guide = source_scope.path / "docs/guides/commands.md"
         guide.parent.mkdir(parents=True)
-        u.write_file(guide, f"```bash\nmake {spec.name} APPLY=Y\n```\n")
+        u.write_file(guide, f"```bash\nmake {spec.name}\n```\n")
         state = u.Cli.atomic_read_binary_file_state(guide, required=True)
         tm.ok(state)
         destination = source_scope.path / "member"
         destination.mkdir()
         scope = m.Infra.DocScope(
-            name="member", path=destination, report_dir=destination / ".reports/docs"
+            name="member",
+            path=destination,
+            report_dir=destination / ".reports/docs",
         )
 
         projected = u.Infra.docs_project_guides_artifacts(
-            scope, repository_root=source_scope.path, source_states=(state.value,)
+            scope,
+            repository_root=source_scope.path,
+            source_states=(state.value,),
         )
 
         tm.ok(projected)
         tm.that(len(projected.value), eq=1)
         tm.that(projected.value[0][1], eq=destination / "docs/guides/commands.md")
-        tm.that(projected.value[0][2], has=f"make {spec.name} APPLY=Y")
+        tm.that(projected.value[0][2], has=f"make {spec.name}")
 
         u.write_file(manifest, "version: [\n")
-        loaded = u.Infra.workspace_spec_load(source_scope.path)
+        loaded = u.Infra.load_workspace_manifest(source_scope.path)
         tm.fail(loaded)
         blocked = u.Infra.docs_project_guides_artifacts(
-            scope, repository_root=source_scope.path, source_states=(state.value,)
+            scope,
+            repository_root=source_scope.path,
+            source_states=(state.value,),
         )
         tm.fail(blocked)
         tm.that(blocked.error, eq=loaded.error)
 
     @staticmethod
     def test_rejects_test_double_examples() -> None:
+        """Test rejects test double examples."""
         content = """```python
 from unittest.mock import patch
 

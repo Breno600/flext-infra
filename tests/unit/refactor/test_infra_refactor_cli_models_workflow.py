@@ -1,4 +1,8 @@
-"""CLI workflow tests for refactor namespace automation."""
+"""CLI workflow tests for refactor namespace automation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import main as infra_main
+from flext_infra import main
 from tests import u
 
 if TYPE_CHECKING:
@@ -18,11 +22,16 @@ if TYPE_CHECKING:
 class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
     """Behavior contract for test_infra_refactor_cli_models_workflow."""
 
+    @staticmethod
     def test_namespace_enforce_cli_fails_on_manual_protocol_violation(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test namespace enforce cli fails on manual protocol violation."""
         workspace = u.Tests.mk_project(
-            tmp_path, "workspace", pyproject="[project]\nname='sample'\n", with_src=True
+            tmp_path,
+            "workspace",
+            pyproject="[project]\nname='sample'\ndependencies = []\n",
+            with_src=True,
         )
         module_dir = workspace / "src" / "sample_pkg"
         module_dir.mkdir(parents=True)
@@ -35,6 +44,9 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
             "        ...\n",
             encoding="utf-8",
         )
+        # The enforcer scans through the repository's pinned Mise lock, which
+        # every governed repository carries; CI runners have no global tool.
+        u.Tests.copy_tracked_mise_seeds(workspace)
         u.Tests.initialize_git_repo(workspace)
         buffer = StringIO()
         cli_args = [
@@ -43,12 +55,17 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
             "--dry-run",
         ]
         with redirect_stdout(buffer):
-            result = infra_main(["refactor", *cli_args])
+            result = main(["refactor", *cli_args])
         tm.that(result, ne=0)
 
-    def test_wrapper_root_namespace_cli_dry_run_succeeds(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_wrapper_root_namespace_cli_dry_run_succeeds(tmp_path: Path) -> None:
+        """Test wrapper root namespace cli dry run succeeds."""
         workspace = u.Tests.mk_project(
-            tmp_path, "workspace", pyproject="[project]\nname='sample'\n", with_src=True
+            tmp_path,
+            "workspace",
+            pyproject="[project]\nname='sample'\ndependencies = []\n",
+            with_src=True,
         )
         scripts_dir = workspace / "scripts"
         scripts_dir.mkdir(parents=True)
@@ -64,7 +81,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         u.Tests.initialize_git_repo(workspace)
 
         with redirect_stdout(StringIO()):
-            result = infra_main([
+            result = main([
                 "refactor",
                 "wrapper-root-namespace",
                 f"--repository-root={workspace!s}",
@@ -74,11 +91,16 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         tm.that(result, eq=0)
         tm.that(source_file.read_text(encoding="utf-8"), has="c.Core.Tests")
 
+    @staticmethod
     def test_wrapper_root_namespace_cli_check_fails_when_changes_are_needed(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test wrapper root namespace cli check fails when changes are needed."""
         workspace = u.Tests.mk_project(
-            tmp_path, "workspace", pyproject="[project]\nname='sample'\n", with_src=True
+            tmp_path,
+            "workspace",
+            pyproject="[project]\nname='sample'\ndependencies = []\n",
+            with_src=True,
         )
         scripts_dir = workspace / "scripts"
         scripts_dir.mkdir(parents=True)
@@ -92,7 +114,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         )
         u.Tests.initialize_git_repo(workspace)
 
-        result = infra_main([
+        result = main([
             "refactor",
             "wrapper-root-namespace",
             f"--repository-root={workspace!s}",
@@ -101,11 +123,16 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
 
         tm.that(result, ne=0)
 
+    @staticmethod
     def test_wrapper_root_namespace_cli_apply_rewrites_file(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test wrapper root namespace cli apply rewrites file."""
         workspace = u.Tests.mk_project(
-            tmp_path, "workspace", pyproject="[project]\nname='sample'\n", with_src=True
+            tmp_path,
+            "workspace",
+            pyproject="[project]\nname='sample'\ndependencies = []\n",
+            with_src=True,
         )
         scripts_dir = workspace / "scripts"
         scripts_dir.mkdir(parents=True)
@@ -118,9 +145,9 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
             "    _ = t.Core.Tests.Testobject\n",
             encoding="utf-8",
         )
-        u.Tests.initialize_git_repo(workspace)
+        u.Tests.provision_checkout(workspace)
 
-        result = infra_main([
+        result = main([
             "refactor",
             "wrapper-root-namespace",
             f"--repository-root={workspace!s}",

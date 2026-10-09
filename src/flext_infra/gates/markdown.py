@@ -1,12 +1,15 @@
-"""FLEXT markdown quality gate."""
+"""FLEXT markdown quality gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m, u
-
-from .base_gate import FlextInfraGate
+from flext_infra import c, m
+from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -14,131 +17,69 @@ if TYPE_CHECKING:
     from flext_infra import p, t
 
 
-class FlextInfraMarkdownGate(FlextInfraGate):
+class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
     """Markdown quality gate."""
 
     gate_id: ClassVar[str] = c.Infra.MARKDOWN
     gate_name: ClassVar[str] = "Markdown"
-    # flext-38p39: the linter flags MD009/MD012 and friends with its own `[*]`
-    # auto-fixable marker, so `make check` blocked on findings that no canonical
-    # verb could repair -- `make fmt APPLY=Y` covers Python only and `make fix
-    # APPLY=Y` skipped this gate, both exiting 0. The tool supports `--fix`, so
-    # the gate offers it and the canonical sequence can reach green.
+    # Fixable findings are repaired by the native linter. The findings that
+    # remain after repair come back under rumdl's declared findings status:
+    # the repair verb completes and reports them, and the read-only gate
+    # enforces them.
     can_fix: ClassVar[bool] = True
-
-    def _collect_markdown_files(self, project_dir: Path) -> t.SequenceOf[Path]:
-        """Collect markdown files."""
-        markdown_files: list[Path] = []
-        for path in u.Infra.iter_matching_files(project_dir, includes=["*.md"]):
-            relative_parts = path.relative_to(project_dir).parts
-            if any(part in c.Infra.CHECK_EXCLUDED_DIRS for part in relative_parts):
-                continue
-            if (
-                len(relative_parts) > 1
-                and relative_parts[0] == ".github"
-                and relative_parts[1] in c.Infra.GITHUB_AGENT_PROJECTION_DIRS
-            ):
-                continue
-            markdown_files.append(path)
-        return markdown_files
-
-    def _resolve_config_args(self, project_dir: Path) -> t.StrSequence:
-        """Resolve only the repository-local markdown settings owner."""
-        config_path = project_dir / c.Infra.MARKDOWNLINT_CONFIG_FILENAME
-        if not config_path.is_file():
-            return ["--no-config"]
-        return ["--config", str(config_path.resolve())]
-
-    def _resolve_exclude_args(self, project_dir: Path) -> t.StrSequence:
-        """Build ``--exclude`` from .markdownlintignore patterns.
-
-        ``rumdl`` only applies ignore patterns when scanning directories,
-        not when files are passed explicitly on the command line. The gate
-        collects files explicitly, so we read the ignore file and forward
-        its patterns via ``--exclude`` to replicate standard tool behavior.
-        """
-        ignore_path = project_dir / c.Infra.MARKDOWNLINT_IGNORE_FILENAME
-        if not ignore_path.is_file():
-            return ()
-        patterns: list[str] = []
-        for line in ignore_path.read_text(c.Cli.ENCODING_DEFAULT).splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            patterns.append(stripped)
-        if not patterns:
-            return ()
-        return ["--exclude", ",".join(patterns)]
-
-    @override
-    def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
-    ) -> t.StrSequence:
-        """Return relative markdown file paths (doubles as check_dirs for _build_check_command)."""
-        _ = ctx
-        return [
-            str(path.relative_to(project_dir))
-            for path in self._collect_markdown_files(project_dir)
-        ]
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build check command."""
+        """Lint the collected Markdown files read-only.
+
+        Returns:
+            The rumdl check invocation.
+
+        """
         _ = ctx
-        return self._python_console_script_command(
-            c.Infra.RUMDL,
-            "check",
-            "--no-cache",
-            "--color",
-            "never",
-            "--output-format",
-            "text",
-            "--deny-config-warnings",
-            *self._resolve_config_args(project_dir),
-            *self._resolve_exclude_args(project_dir),
-            *check_dirs,
-        )
+        return self._rumdl_command(project_dir, "check", check_dirs)
 
     @override
     def _build_fix_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
     ) -> t.StrSequence:
-        """Build the fix command from the tool's FORMATTER, not its linter.
+        """Repair fixable findings and return the linter's residual verdict.
 
-        ``rumdl check --fix`` is a linter: it exits non-zero whenever a finding
-        has no autofix, so a run that repaired every fixable file still failed
-        the verb and `make fix APPLY=Y` could never reach green. ``rumdl fmt``
-        applies the same fixes with formatter-style exit codes, which is the
-        contract the mutating verb promises. It accepts neither
-        ``--output-format`` nor ``--deny-config-warnings`` (both are check-only
-        reporting flags), so the fix surface carries only what it defines.
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         _ = ctx
-        return self._python_console_script_command(
-            c.Infra.RUMDL,
-            "fmt",
-            "--no-cache",
-            "--color",
-            "never",
-            *self._resolve_config_args(project_dir),
-            *self._resolve_exclude_args(project_dir),
-            *targets,
-        )
+        return self._rumdl_command(project_dir, "check", targets, "--fix")
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse rumdl output, discarding lines marking already-applied fixes."""
+        """Parse rumdl output, discarding lines marking already-applied fixes.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         for line in (result.stdout + "\n" + result.stderr).splitlines():
             match = c.Infra.MARKDOWN_RE.match(line.strip())
             if not match:
                 continue
-            if match.group("msg").strip().endswith("[fixed]"):
+            if match.group("msg").strip().endswith(c.Infra.MARKDOWN_FIXED_SUFFIX):
                 continue
             issues.append(
                 m.Infra.Issue(
@@ -147,15 +88,9 @@ class FlextInfraMarkdownGate(FlextInfraGate):
                     column=int(match.group("col") or 1),
                     code=match.group("code"),
                     message=match.group("msg"),
-                )
+                ),
             )
-        if not u.Cli.process_succeeded(result.outcome) and not issues:
-            issues.append(
-                self._command_error_issue(
-                    result, tool=c.Infra.RUMDL, file=str(project_dir), line=1, column=1
-                )
-            )
-        return u.Cli.process_succeeded(result.outcome), issues
+        return self._finalize_parse_result(result, project_dir, issues, c.Infra.RUMDL)
 
 
 __all__: list[str] = ["FlextInfraMarkdownGate"]
