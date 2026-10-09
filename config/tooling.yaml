@@ -307,32 +307,22 @@ Infra:
             - rules:
                 - typing-only-third-party-import
                 - typing-only-standard-library-import
-              authority: operator-ruling-2026-10-01-tc002-tc003-pydantic
+                - runtime-import-in-type-checking-block
+              authority: operator-ruling-2026-10-08-tc001-tc004-off-global
               reason: >-
-                Pydantic evaluates field annotations at runtime, so moving
-                third-party and standard-library annotation imports into a
-                TYPE_CHECKING block breaks model construction.
+                The operator disabled TC001 through TC004 globally. TC001
+                is covered by the first-party import exception above.
+                Pydantic evaluates field annotations at runtime; import
+                placement follows the declaration owner and facade layers,
+                with generated lazy exports retaining their TYPE_CHECKING
+                declarations. Automated typing-import relocation must not
+                change that runtime contract.
             - rules: [camelcase-imported-as-lowercase]
               authority: operator-ruling-2026-10-01-n813-accepted
               reason: >-
                 The facade letters are imported as their facade class under
                 the letter (FlextInfraConstants as c), so type checkers see a
                 class rather than a variable rebind.
-            - files: "**/__init__.py"
-              rules: [runtime-import-in-type-checking-block]
-              authority: operator-ruling-2026-10-01-tc004-tid252
-              reason: >-
-                Generated lazy-init package initializers declare their exports
-                under TYPE_CHECKING and resolve them lazily at runtime, which
-                TC004 reads as runtime use.
-            - files: "**/__init__.py"
-              rules: [typing-only-first-party-import]
-              authority: operator-ruling-2026-10-01-tc001-lazy-root-eager
-              reason: >-
-                Generated lazy-init package initializers import the facade
-                namespaces eagerly by law: the namespace machinery resolves
-                them at runtime (PEP 562), so first-party imports stay eager
-                in every __init__.py.
             - files: "**/__init__.py"
               rules: [unused-import]
               authority: operator-ruling-2026-10-01-init-declared-letter-f401
