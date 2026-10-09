@@ -487,16 +487,9 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 chain = " <- ".join(sorted(visiting))
                 message = f"Cyclic provider reexport: {target} (visiting: {chain})"
                 raise ValueError(message)
-            try:
-                binding = module.get_attribute(name)
-            except (
-                FlextInfraUtilitiesRopeRuntime.rope_attribute_not_found_error_types()
-            ):
-                # The provider cannot resolve the attribute statically (a star
-                # re-export, a runtime-injected name): the base degrades to its
-                # qualified name as a synthetic terminal identity instead of
-                # failing the whole walk.
-                return target
+            # A provider attribute Rope cannot resolve escapes with Rope's own
+            # failure; it never degrades into a synthetic identity.
+            binding = module.get_attribute(name)
             if isinstance(binding, p.Infra.RopeImportedName):
                 return self._provider_imported_name_reference(
                     binding,
@@ -668,7 +661,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             if memo is not None:
                 return memo
             direct = self._definition_keys.get(key)
-            if direct is not None:
+            if direct is not None and self._declaration_is_live(direct):
                 self._resolved_memo[key] = direct
                 return direct
             target, attributes = self._unresolved_target(
@@ -682,6 +675,52 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 target = self._member(target, attribute, 0, visiting)
             self._resolved_memo[key] = target
             return target
+
+        def _declaration_is_live(self, identity: str) -> bool:
+            """Return whether a nested declaration still answers its own path.
+
+            A provider may write a different value onto an enclosing class
+            member (``Owner.Name = replacement``); the dotted path then names
+            that member, not the original nested declaration, at every level.
+
+            An explicit package binding wins over a same-named submodule file
+            in the same way (``document = 0`` in the package hides the
+            ``document`` submodule from ``package.document``).
+
+            Returns:
+                False when any enclosing package binding or class member
+                overrides the path.
+
+            """
+            module_name, qualified, _ = identity.split(":", 2)
+            packages = module_name.split(".")
+            for index in range(1, len(packages)):
+                package = ".".join(packages[:index])
+                name = packages[index]
+                package_bindings = self._modules.get(package, {})
+                if name not in package_bindings:
+                    continue
+                binding = package_bindings[name]
+                if (
+                    binding is None
+                    or binding.target != package
+                    or binding.attributes != (name,)
+                ):
+                    return False
+            parts = qualified.split(".")
+            for index in range(1, len(parts)):
+                parent = self._definition_keys.get(
+                    ".".join((module_name, *parts[:index])),
+                )
+                if parent is None:
+                    continue
+                member = self._definitions[parent].members.get(parts[index])
+                child = self._definition_keys.get(
+                    ".".join((module_name, *parts[: index + 1])),
+                )
+                if member is None or member.target != child:
+                    return False
+            return True
 
         def _alias_rewritten_target(
             self,
@@ -767,6 +806,14 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             )
             module = ".".join(parts[:index])
             remaining = [*parts[index:], *attributes]
+            # Import-from can bind a captured child module rather than a
+            # package export; an explicit package binding still wins.
+            while (
+                remaining
+                and (module not in self._modules or remaining[0] not in self._modules[module])
+                and f"{module}.{remaining[0]}" in self._namespaces
+            ):
+                module = f"{module}.{remaining.pop(0)}"
             if not remaining:
                 message = f"Module used as a class base: {module}"
                 raise ValueError(message)
@@ -923,6 +970,16 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 ValueError: If no ancestor declares the member as a class.
 
             """
+            if name == "__base__" and identity in self._external:
+                value = self._external[identity]
+                if isinstance(value, p.Infra.RopeBuiltinClass):
+                    # A native class's primary base is its type descriptor,
+                    # never an inherited class member.
+                    return self._external_identity(
+                        FlextInfraUtilitiesRopeRuntime.native_class_primary_base(
+                            value.builtin,
+                        ),
+                    )
             for ancestor in self._linearize(identity):
                 if ancestor in self._definitions:
                     members = self._definitions[ancestor].members

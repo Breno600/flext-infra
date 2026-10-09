@@ -261,7 +261,6 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         """
         if FlextInfraUtilitiesRopeSourceBindingCollector._provider_metadata_rebind(
             spec,
-            node,
             targets,
             bindings,
         ):
@@ -302,28 +301,24 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
     @staticmethod
     def _provider_metadata_rebind(
         spec: m.Infra.SourceBindingCollectorSpec,
-        node: ast.Assign | ast.AnnAssign,
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
     ) -> bool:
         """Return whether every target only annotates provider metadata.
 
-        A literal written to a dunder of a bound class (the stdlib
-        ``ABCMeta.__module__ = 'abc'``) relabels metadata: it binds no class
-        and changes no base.
+        A write to a class's naming metadata (the stdlib
+        ``ABCMeta.__module__ = 'abc'``, a provider's
+        ``Contract.__module__ = __name__``) relabels the class: it binds no
+        class and changes no base. Identity slots such as ``__bases__`` are
+        never metadata.
         """
-        literal = isinstance(node.value, ast.Constant)
         return spec.allow_conditional and all(
             isinstance(target, ast.Attribute)
             and isinstance(target.value, ast.Name)
             and target.value.id in bindings
             and (
                 bindings[target.value.id] is None
-                or (
-                    literal
-                    and target.attr.startswith("__")
-                    and target.attr.endswith("__")
-                )
+                or target.attr in {"__module__", "__name__", "__qualname__", "__doc__"}
             )
             for target in targets
         )
@@ -436,14 +431,18 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         targets: t.SequenceOf[ast.expr],
         bindings: MutableMapping[str, m.Infra.SourceClassReference | None],
     ) -> bool:
-        """Publish the RHS class under the attribute name; return handling.
+        """Record a member written onto a declared class; return handling.
 
         Only an external provider module (``allow_conditional``) completes a
-        deferred class namespace; in captured project sources the rebind is
-        an unsupported mutation that must never redirect a class binding.
+        declared class namespace (``Owner.member = value``): the value joins
+        that class definition's members, so inherited member lookup sees it.
+        A write onto anything that is not a declared class (an imported
+        module such as ``typing``, a nested attribute) or onto class identity
+        slots stays an unsupported mutation, and so does every rebind in
+        captured project sources.
 
         Returns:
-            True when the assignment completed a class namespace.
+            True when the assignment completed a declared class namespace.
 
         """
         if not spec.allow_conditional:
@@ -455,23 +454,36 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         ):
             return False
         attribute_target = targets[0]
-        if not isinstance(attribute_target, ast.Attribute):
+        value = node.value
+        if (
+            not isinstance(attribute_target, ast.Attribute)
+            or not isinstance(attribute_target.value, ast.Name)
+            or not isinstance(value, ast.Name)
+            or attribute_target.attr
+            in {"__bases__", "__base__", "__mro__", "__class__", "__dict__"}
+        ):
             return False
         visible = {**spec.lexical, **bindings}
-        value = node.value
-        if not isinstance(value, ast.Name):
+        owner = FlextInfraUtilitiesRopeSourceBindingCollector._reference(
+            attribute_target.value,
+            visible,
+            spec.module,
+        )
+        if (
+            owner.target not in spec.definitions
+            or owner.attributes
+            or value.id not in visible
+        ):
             return False
-        if value.id in visible and visible[value.id] is not None:
-            reference = FlextInfraUtilitiesRopeSourceBindingCollector._reference(
-                value,
-                visible,
-                spec.module,
-            )
-            bindings[attribute_target.attr] = reference.model_copy(
-                update={
-                    "qualified_base": f"{spec.module}.{attribute_target.attr}",
+        definition = spec.definitions[owner.target]
+        spec.definitions[owner.target] = definition.model_copy(
+            update={
+                "members": {
+                    **definition.members,
+                    attribute_target.attr: visible[value.id],
                 },
-            )
+            },
+        )
         return True
 
     @staticmethod
@@ -490,7 +502,13 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         while isinstance(head, (ast.Attribute, ast.Subscript)):
             head = head.value
         reference = (
-            FlextInfraUtilitiesRopeSourceBindingCollector._reference(
+            # A boolean constant binds as its builtin so guards can prove it.
+            m.Infra.SourceClassReference(
+                target="builtins",
+                attributes=(str(value.value),),
+            )
+            if isinstance(value, ast.Constant) and isinstance(value.value, bool)
+            else FlextInfraUtilitiesRopeSourceBindingCollector._reference(
                 value,
                 visible,
                 spec.module,
@@ -591,15 +609,18 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
                 scope,
             )
             return
-        if FlextInfraUtilitiesRopeSourceBindingCollector.type_checking_test(
-            node.test,
-        ):
-            # A TYPE_CHECKING gate never executes at runtime; its imports and
-            # assignments are the module's declared static binding surface,
-            # so they index directly.
+        selected = FlextInfraUtilitiesRopeSourceBindingCollector._runtime_guard(
+            spec,
+            test,
+            bindings,
+        )
+        if selected is not None:
+            # A guard whose runtime value is proven by import identity or a
+            # boolean binding selects the branch that actually executes;
+            # TYPE_CHECKING is False at runtime.
             FlextInfraUtilitiesRopeSourceBindingCollector.collect(
                 spec,
-                node.body,
+                node.body if selected else node.orelse,
                 bindings,
                 scope,
             )
@@ -615,6 +636,46 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
             bindings,
             scope,
         )
+
+    @staticmethod
+    def _runtime_guard(
+        spec: m.Infra.SourceBindingCollectorSpec,
+        test: ast.expr,
+        bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
+    ) -> bool | None:
+        """Return the proven runtime value of one guard, or None when unknown.
+
+        The guard's identity comes from the visible bindings, never from its
+        spelling: an aliased or rebound ``TYPE_CHECKING`` is still False at
+        runtime, and a name bound to a boolean constant keeps that value. A
+        head without a class-capable binding stays undecidable.
+
+        Returns:
+            True or False when the guard is proven, otherwise None.
+
+        """
+        if not isinstance(test, ast.Name | ast.Attribute):
+            return None
+        head = test.value if isinstance(test, ast.Attribute) else test
+        visible = {**spec.lexical, **bindings}
+        if not (
+            isinstance(head, ast.Name)
+            and head.id in visible
+            and visible[head.id] is not None
+        ):
+            return None
+        guard = FlextInfraUtilitiesRopeSourceBindingCollector._reference(
+            test,
+            visible,
+            spec.module,
+        )
+        if guard.target in {"typing", "typing_extensions"} and guard.attributes == (
+            "TYPE_CHECKING",
+        ):
+            return False
+        if guard.target == "builtins" and guard.attributes in {("True",), ("False",)}:
+            return guard.attributes == ("True",)
+        return None
 
     @staticmethod
     def _bind_conditional_branches(
