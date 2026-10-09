@@ -88,16 +88,12 @@ class FlextInfraConstantsMake:
     TIMEOUT_COMMAND: ClassVar[str] = "timeout"
     TIMEOUT_KILL_AFTER_SECONDS: ClassVar[int] = 5
 
-    # Every read-only gate this package implements, derived from the gate SSOT
+    # Every gate this package implements, derived from the gate SSOT
     # (c.Infra.SARIF_TOOL_INFO) so registering a gate makes it available to
-    # the generated Make command surface without a second vocabulary.
-    # Mutating gates (`format`) are excluded: they rewrite files, so they are
-    # owned by `make fmt` / `make fix` and a read-only verb
-    # must never invoke them.
+    # the generated Make command surface without a second vocabulary. Every
+    # gate checks read-only; the formatters apply only through `make fmt`.
     CANONICAL_GATE_IDS: ClassVar[t.VariadicTuple[str]] = tuple(
-        gate
-        for gate in FlextInfraConstantsCheck.SARIF_TOOL_INFO
-        if gate not in FlextInfraConstantsCheck.MUTATING_GATES
+        FlextInfraConstantsCheck.SARIF_TOOL_INFO,
     )
     CANONICAL_FIXABLE_GATE_IDS: ClassVar[t.VariadicTuple[str]] = (
         "lint",

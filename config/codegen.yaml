@@ -507,10 +507,9 @@ Infra:
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
-      # `format` (ruff) is a mutating gate owned by `make fmt` per the gate
-      # registry contract (flext-38p39): check never mutates, fix never
-      # formats — without it the ruff-format surface has no verb home and
-      # drift survives a green check until `make mod` validates.
+      # `format` (ruff) applies only through `make fmt`; its read-only
+      # `--check` side runs in `make check` like markdown-format, so format
+      # drift is red at check time. fix never formats.
       fmt_gates: [ format, markdown-format ]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
@@ -580,44 +579,44 @@ Infra:
         # `direnv allow` that setup grants only outside CI), so it is local-only:
         # under CI=Y the checkout's .envrc is never allowed and the smoke can
         # only report "blocked".
-        local_check_gates: [ mypy, pyright, codemod, smells, pyrefly, direnv ]
-        # mypy and pyright are INFORMATIVE (merge-admin mandate
-        # 2026-10-05): the gates execute in every context they run at all
-        # and their findings never block — base_gate reads the
-        # informative list directly, without a CI environment condition.
-        informative_check_gates: [ mypy, pyright ]
-        # local_check_gates is the only declared partition: CI=N runs
-        # MakeSpec.check_gates_local (its intersection with the active default
-        # gates) and CI=Y runs MakeSpec.check_gates_ci, the strict complement.
-        # An unset CI runs all active gates. Mypy, pyright, the codemod
-        # (ast-grep) rule set, smells (qlty similar-code) and LINT DO NOT
-        # EXECUTE under CI=Y at all — operator order 2026-10-05: never
-        # blocking, never
-        # advisory, not run; locally and on every unset-CI run they execute
-        # as INFORMATIVE gates (findings surface, nothing blocks), so
-        # findings still surface before integration. Mypy stays bounded by
-        # MYPY_MEMORY_LIMIT_MB and the project-owned tools.mypy
-        # .timeout_seconds budget.
-        # `format` is not a check gate -- it mutates files, so it belongs to
-        # make fmt / make fix only.
+        # Gate baseline of the 0.12 line (tracker memory
+        # operator-ruling-2026-10-09-gate-baseline-0122). Every gate
+        # blocks in every context that runs it; there is no informative gate.
+        # local_check_gates is the only declared partition: CI=Y runs
+        # MakeSpec.check_gates_ci, its strict complement (pyrefly included, so
+        # CI is never blind to types); CI=N runs MakeSpec.check_gates_local;
+        # an unset CI (a developer's make check and the pre-push hook) runs
+        # every active gate. The whole-program checkers mypy and pyright, the
+        # project's own codemod rule set and smells never run in CI or at
+        # pre-commit (tracker memory operator-ruling-2026-10-01-precommit-fast-only);
+        # they block at pre-push. Mypy stays bounded by MYPY_MEMORY_LIMIT_MB
+        # and the project-owned tools.mypy.timeout_seconds budget.
+        # direnv proves the developer's own activation, so it is local-only.
+        local_check_gates: [ mypy, pyright, codemod, smells, direnv ]
         # tooling.tools.pytest.ci-excluded-markers defines the slow-test
-        # exclusion for CI and pre-commit, not local/pre-push runs.
+        # exclusion for CI, not local/pre-push runs.
         # An absent CI uses testmon for incremental developer runs.
-        # CI and pre-commit consume the same ordered read-only approval.
-        # Hook installation belongs to the host runtime, not project setup.
+      # The pre-commit hook runs only the fast external gates the gate
+      # registry declares (MakeSpec.check_gates_pre_commit) and no tests
+      # (tracker memory operator-ruling-2026-10-01-testmon-make-test-only);
+      # the pre-push hook runs every pre_push row below. make setup installs
+      # both hooks locally with prek and installs none under CI=Y.
       pre_commit: true
-      pre_push: false
+      pre_push: true
       workflow:
-      - { verb: setup, contexts: [ local, ci, pre_commit ] }
-      - { verb: audit, contexts: [ local, ci, pre_commit ] }
-      - { verb: gen, contexts: [ local, pre_push ] }
+      - { verb: setup, contexts: [ local, ci ] }
+      - { verb: audit, contexts: [ local, ci ] }
+      - { verb: gen, contexts: [ local ] }
       - { verb: fmt, contexts: [ local ] }
       - { verb: fix, contexts: [ local ] }
       - { verb: check, contexts: [ local, ci, pre_push, pre_commit ] }
       # CI also runs the incremental suite with the persistent testmon cache.
       # The full suite remains a separate local verb that first runs this
       # incremental phase and then exercises the complete inventory.
-      - { verb: test, contexts: [ local, ci, pre_push, pre_commit ] }
+      - { verb: test, contexts: [ local, ci, pre_push ] }
+      # The generation fixed point and the clean tree close every CI run and
+      # every push: a projection that drifts from its source is red.
+      - { verb: verify-clean, contexts: [ local, ci, pre_push ] }
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
       clean:
@@ -689,7 +688,7 @@ Infra:
       - name: setup
         description: Provision the declared environment and hooks.
       - name: pre-commit
-        description: Approve this project through locked setup, audit, check, and incremental tests with the enforced CI contract.
+        description: Approve a commit through the fast external gates the gate registry declares; no setup and no tests (the pre-commit hook entry).
       - name: upg
         description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges; gates stay with make check.
       - name: validate-lifecycle
@@ -779,11 +778,9 @@ Infra:
       custom_handler_profile_overrides: {}
       standalone_check_gates:
         smells: smells
-      # Operator ruling flext-uz0dt (2026-09-18, reaffirmed 2026-10-04 in
-      # flext-qtmy2): markdown-code runs only when requested explicitly; make
-      # fix still repairs it. The opt_in_check_gates spec field was retired
-      # by the model wave — the opt-in semantic now lives in plain absence
-      # from the active gate list.
+      # Every built-in gate outside standalone_check_gates is active in
+      # make check (tracker memory operator-ruling-2026-10-09-gate-baseline-0122);
+      # there is no opt-in gate.
       custom_handler_policy:
         filename: custom.mk
         # Custom behavior is one private whole-verb replacement or one lifecycle

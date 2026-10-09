@@ -256,9 +256,18 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
 
         A literal written to a dunder of a bound class (the stdlib
         ``ABCMeta.__module__ = 'abc'``) relabels metadata: it binds no class
-        and changes no base.
+        and changes no base. A dunder name the module never binds is an
+        interpreter-provided module attribute (``Contract.__module__ =
+        __name__``): module metadata, never a class.
         """
-        literal = isinstance(node.value, ast.Constant)
+        value = node.value
+        metadata_value = isinstance(value, ast.Constant) or (
+            isinstance(value, ast.Name)
+            and value.id.startswith("__")
+            and value.id.endswith("__")
+            and value.id not in spec.lexical
+            and value.id not in bindings
+        )
         return spec.allow_conditional and all(
             isinstance(target, ast.Attribute)
             and isinstance(target.value, ast.Name)
@@ -266,7 +275,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
             and (
                 bindings[target.value.id] is None
                 or (
-                    literal
+                    metadata_value
                     and target.attr.startswith("__")
                     and target.attr.endswith("__")
                 )

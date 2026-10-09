@@ -194,10 +194,26 @@ jobs:
           fi
           echo "${mise_path%/*}" >> "${GITHUB_PATH}"
 
-      - name: Approval (blocking)
-        id: approval
-        # One owner for setup -> audit -> check -> test in both profiles.
-        run: CI=Y make pre-commit
+      # CI approval, one visible step per ci workflow row (setup -> audit -> check -> test -> verify-clean).
+      - name: make setup (blocking)
+        id: approval-setup
+        run: CI=Y make setup
+      # CI approval, one visible step per ci workflow row (setup -> audit -> check -> test -> verify-clean).
+      - name: make audit (blocking)
+        id: approval-audit
+        run: CI=Y make audit
+      # CI approval, one visible step per ci workflow row (setup -> audit -> check -> test -> verify-clean).
+      - name: make check (blocking)
+        id: approval-check
+        run: CI=Y make check
+      # CI approval, one visible step per ci workflow row (setup -> audit -> check -> test -> verify-clean).
+      - name: make test (blocking)
+        id: approval-test
+        run: CI=Y make test
+      # CI approval, one visible step per ci workflow row (setup -> audit -> check -> test -> verify-clean).
+      - name: make verify-clean (blocking)
+        id: approval-verify-clean
+        run: CI=Y make verify-clean
 
       - name: Dump reports on failure
         if: ${{ failure() }}
@@ -355,7 +371,7 @@ jobs:
       - name: Release plan and guard
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-        run: make release-plan
+        run: CI=Y make release-plan
   # End SECTION: release-plan job
 
   # === SECTION: merge-guard job (managed) ===

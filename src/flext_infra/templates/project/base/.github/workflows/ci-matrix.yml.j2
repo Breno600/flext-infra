@@ -68,14 +68,14 @@ jobs:
         run: |
           docker run --rm -e {{ make.ci.variable }}={{ make.ci.value }} -e GITHUB_TOKEN ci-matrix-{% raw %}${{ matrix.distro }}{% endraw %} make help
           docker run --rm -e {{ make.ci.variable }}={{ make.ci.value }} -e GITHUB_TOKEN ci-matrix-{% raw %}${{ matrix.distro }}{% endraw %} make check
-      - name: Upgrade, regenerate, and validate on Linux
+      - name: Regenerate and validate on Linux
         if: {% raw %}${{ matrix.distro == 'ubuntu' }}{% endraw %}
         run: >-
           docker run --rm
           -e {{ make.ci.variable }}={{ make.ci.value }}
           -e GITHUB_TOKEN
           ci-matrix-ubuntu
-          bash -ec 'make upg && make setup && make gen && make gen && make check && make test && make build'
+          bash -ec 'make setup && make gen && make gen && make check && make test && make build'
   # End SECTION: distro-matrix
 
   # === SECTION: macos (managed) ===
@@ -95,10 +95,6 @@ jobs:
 {%- include "_fragments/mise_install.j2" %}
       - name: Bootstrap
         run: {{ make.ci.variable }}={{ make.ci.value }} make setup
-      - name: Upgrade and frozen bootstrap
-        run: |
-          {{ make.ci.variable }}={{ make.ci.value }} make upg
-          {{ make.ci.variable }}={{ make.ci.value }} make setup
       - name: Generate twice
         run: |
           {{ make.ci.variable }}={{ make.ci.value }} make gen
@@ -128,11 +124,6 @@ jobs:
       - name: Bootstrap
         shell: bash
         run: {{ make.ci.variable }}={{ make.ci.value }} make setup
-      - name: Upgrade and frozen bootstrap
-        shell: bash
-        run: |
-          {{ make.ci.variable }}={{ make.ci.value }} make upg
-          {{ make.ci.variable }}={{ make.ci.value }} make setup
       - name: Generate twice
         shell: bash
         run: |

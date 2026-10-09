@@ -30,6 +30,9 @@ class TestsFlextInfraCodemodGate:
         rules = config_path.parent / c.Cli.RULES_DIR_NAME
         rules.mkdir(parents=True)
         (project / "src").mkdir()
+        # A governed repository carries its committed toolchain lock; the
+        # scanner version comes from it, never from a moving selector.
+        u.Tests.copy_tracked_mise_seeds(tmp_path)
         (project / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "scanner-contract"\nversion = "1.0.0"\n'
             "dependencies = []\n",
@@ -64,7 +67,7 @@ class TestsFlextInfraCodemodGate:
         policy_findings = tuple(
             issue for issue in execution.issues if issue.code == "contract-second"
         )
-        tm.that(len(policy_findings), eq=1)
+        tm.that(len(policy_findings), eq=1, msg=execution.raw_output)
         finding = policy_findings[0]
         tm.that(finding.file.endswith("src/subject.py"), eq=True)
         tm.that((finding.line, finding.column), eq=(2, 1))
@@ -88,7 +91,7 @@ class TestsFlextInfraCodemodGate:
 
         execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
 
-        tm.that(execution.result.passed, eq=True)
+        tm.that(execution.result.passed, eq=True, msg=execution.raw_output)
         tm.that(execution.issues, empty=True)
         tm.that(execution.raw_output, has="exit=0")
 
@@ -197,7 +200,7 @@ class TestsFlextInfraCodemodGate:
         policy_findings = tuple(
             issue for issue in execution.issues if issue.code == "contract-second"
         )
-        tm.that(len(policy_findings), eq=1)
+        tm.that(len(policy_findings), eq=1, msg=execution.raw_output)
         tm.that(policy_findings[0].file.endswith("src/selected.py"), eq=True)
 
     def test_missing_requested_file_cannot_be_deselected(self, tmp_path: Path) -> None:

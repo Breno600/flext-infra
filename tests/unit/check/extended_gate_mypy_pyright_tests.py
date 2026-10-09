@@ -133,8 +133,7 @@ class TestsFlextInfraTypeGates:
             "--reports-dir",
             str(reports),
         ])
-        informative = gate in config.Infra.codegen.make.ci.informative_check_gates
-        tm.that(code, eq=0 if informative else 1)
+        tm.that(code, eq=1)
         (report_path,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_SARIF_FILENAME}")
         findings = tm.ok(
             u.Infra.check_report_findings(project, reports_dir=report_path.parent),

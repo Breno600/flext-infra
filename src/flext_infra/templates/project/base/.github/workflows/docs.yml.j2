@@ -36,6 +36,7 @@ jobs:
     # backend in Sync workspace toolchain), and docs generation reads the
     # governed sibling repos. The job token authenticates both, as in CI.
     env:
+      {{ make.ci.variable }}: {{ make.ci.value }}
       GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout
@@ -121,6 +122,7 @@ jobs:
       pages: write
     # Why: same authenticated toolchain and docs-source resolution as docs-quality.
     env:
+      {{ make.ci.variable }}: {{ make.ci.value }}
       GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout

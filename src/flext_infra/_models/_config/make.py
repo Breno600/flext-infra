@@ -78,12 +78,6 @@ class FlextInfraConfigModelsMake(
                 ),
             ),
         ]
-        informative_check_gates: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                description="CI check findings are informative; execution errors block",
-            ),
-        ] = ()
 
         @m.model_validator(mode="after")
         def _validate_local_check_gates(self) -> Self:
@@ -96,9 +90,7 @@ class FlextInfraConfigModelsMake(
                 ValueError: If make.ci.local_check_gates contains unknown gates.
             """
             allowed = set(c.Infra.CANONICAL_GATE_IDS)
-            unknown = sorted(
-                {*self.local_check_gates, *self.informative_check_gates} - allowed,
-            )
+            unknown = sorted(set(self.local_check_gates) - allowed)
             if unknown:
                 msg = (
                     "make.ci.local_check_gates contains unknown gates: "
@@ -146,17 +138,6 @@ class FlextInfraConfigModelsMake(
                 description="Execution contexts consuming this single workflow row",
             ),
         ]
-        gates_skip: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=(
-                    "Gate ids this step omits when it runs from a hook context "
-                    "(pre_commit/pre_push). Local and CI invocations of the "
-                    "same verb keep the full default set."
-                ),
-            ),
-        ] = ()
 
         @m.model_validator(mode="after")
         def _validate_contexts(self) -> Self:
@@ -175,14 +156,6 @@ class FlextInfraConfigModelsMake(
                 raise ValueError(msg)
             if "local" not in self.contexts:
                 msg = f"make workflow step {self.verb} must run locally"
-                raise ValueError(msg)
-            allowed = set(c.Infra.CANONICAL_GATE_IDS)
-            unknown = sorted(set(self.gates_skip) - allowed)
-            if unknown:
-                msg = (
-                    f"make workflow step {self.verb} gates_skip contains "
-                    f"unknown gates: {', '.join(unknown)}"
-                )
                 raise ValueError(msg)
             return self
 
@@ -357,35 +330,6 @@ class FlextInfraConfigModelsMake(
             ),
         ]
 
-    class MakeGateSuspensionSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One gate temporarily suspended by a declaring authority.
-
-        The suspension is DATA so the active gate default set stays declared
-        and auditable: suspended gates leave the active default set without
-        leaving the vocabulary, and every suspension records the authority
-        that declared it.
-        """
-
-        gate: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                min_length=1,
-                description=(
-                    "Gate identifier temporarily suspended (the rule name the "
-                    "vocabulary knows)"
-                ),
-            ),
-        ]
-        authority: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                min_length=1,
-                description=(
-                    "Declaring authority for the suspension (operator ruling reference)"
-                ),
-            ),
-        ]
-
     class MakeRuffSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Ruff CLI contract for generated Make verbs and quality gates.
 
@@ -453,17 +397,6 @@ class FlextInfraConfigModelsMake(
 
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
-
-        check_gate_suspensions: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsMake.MakeGateSuspensionSpec],
-            m.Field(
-                description=(
-                    "Gates temporarily suspended for this project (the gate "
-                    "id plus the declaring authority); suspended gates leave "
-                    "the active default set without leaving the vocabulary."
-                ),
-            ),
-        ] = ()
 
         class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
             """Declarative Actions-cache policy for the shared testmon database.
@@ -881,27 +814,17 @@ class FlextInfraConfigModelsMake(
                 ),
             ),
         ] = m.Field(default_factory=lambda: MappingProxyType[str, str]({}))
-        opt_in_check_gates: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                description=(
-                    "Built-in gates that stay allowed and explicitly invocable "
-                    "but never join the default check, CI, or hook gate sets"
-                ),
-            ),
-        ] = ()
 
         @m.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:
-            """Project gates are unique built-in strangers; opt-in gates are built-ins.
+            """Project gates are unique and never shadow a built-in gate.
 
             Returns:
                 The resulting ``Self``.
 
             Raises:
                 ValueError: If make project_check_gates must be unique; or if make
-                    project_check_gates shadow built-in gates; or if make
-                    opt_in_check_gates name unknown gates.
+                    project_check_gates shadow built-in gates.
 
             """
             if len(set(self.project_check_gates)) != len(self.project_check_gates):
@@ -913,12 +836,6 @@ class FlextInfraConfigModelsMake(
                 msg = (
                     "make project_check_gates shadow built-in gates: "
                     f"{', '.join(shadowed)}"
-                )
-                raise ValueError(msg)
-            unknown = sorted(set(self.opt_in_check_gates) - builtin)
-            if unknown:
-                msg = (
-                    f"make opt_in_check_gates name unknown gates: {', '.join(unknown)}"
                 )
                 raise ValueError(msg)
             return self
@@ -1073,12 +990,18 @@ class FlextInfraConfigModelsMake(
             approval = tuple(
                 step.verb for step in self.workflow if "ci" in step.contexts
             )
+            if approval != ("setup", "audit", "check", "test", "verify-clean"):
+                msg = (
+                    "CI requires the setup/audit/check/test/verify-clean workflow"
+                )
+                raise ValueError(msg)
             hook = tuple(
                 step.verb for step in self.workflow if "pre_commit" in step.contexts
             )
-            if approval != hook or approval != ("setup", "audit", "check", "test"):
+            if hook != ("check",):
                 msg = (
-                    "CI and pre-commit require the same setup/audit/check/test workflow"
+                    "the pre-commit hook runs only the fast check: no setup, "
+                    "no audit and no tests"
                 )
                 raise ValueError(msg)
             if "pre-commit" not in declared:
@@ -1142,10 +1065,7 @@ class FlextInfraConfigModelsMake(
         @property
         def check_gates_default(self) -> t.VariadicTuple[str]:
             """Active default gates, shared by local, CI, hooks, and project gates."""
-            excluded = frozenset((
-                *self.standalone_check_gates.values(),
-                *self.opt_in_check_gates,
-            ))
+            excluded = frozenset(self.standalone_check_gates.values())
             declared = (
                 *c.Infra.CANONICAL_GATE_IDS,
                 *self.project_check_gates,
@@ -1173,6 +1093,24 @@ class FlextInfraConfigModelsMake(
             """
             local = frozenset(self.check_gates_local)
             return tuple(gate for gate in self.check_gates_default if gate not in local)
+
+        @m.computed_field
+        @property
+        def check_gates_pre_commit(self) -> t.VariadicTuple[str]:
+            """Fast external gates the pre-commit hook runs, derived from the registry.
+
+            Only gates the registry declares ``GateKind.EXTERNAL`` qualify:
+            whole-program type checkers and this package's own validators
+            never run at pre-commit.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
+            """
+            return tuple(
+                gate
+                for gate in self.check_gates_default
+                if c.Infra.GATE_KINDS.get(gate) is c.Infra.GateKind.EXTERNAL
+            )
 
         @m.computed_field
         @property

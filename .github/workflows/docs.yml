@@ -34,6 +34,7 @@ jobs:
     # backend in Sync workspace toolchain), and docs generation reads the
     # governed sibling repos. The job token authenticates both, as in CI.
     env:
+      CI: Y
       GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
@@ -223,6 +224,7 @@ jobs:
       pages: write
     # Why: same authenticated toolchain and docs-source resolution as docs-quality.
     env:
+      CI: Y
       GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout

@@ -64,7 +64,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             ] = {}
             self._namespaces: set[str] = set()
             self._module_aliases: dict[str, str] = {}
-            self._definition_keys: dict[str, str] = {}
             self._external: dict[str, t.Infra.RopePyObject] = {}
             self._linearizations: dict[str, t.StrTuple] = {}
             self._active: set[str] = set()
@@ -101,11 +100,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 for parts in (module.split("."),)
                 for index in range(1, len(parts) + 1)
             }
-            for definition_identity in self._definitions:
-                module_name, qualified, _ = definition_identity.split(":", 2)
-                self._definition_keys[f"{module_name}.{qualified}"] = (
-                    definition_identity
-                )
 
         def _build_module_alias_map(self) -> None:
             """Merge the captured and extra lazy-export alias maps.
@@ -286,6 +280,10 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
         ) -> str:
             """Resolve one external class declared in a captured module.
 
+            Rope may read an installed copy of the module; the planned source
+            owns the module, so the declaration's dotted path resolves through
+            the planned bindings, never through the installed copy's lines.
+
             Returns:
                 The resolved declaration identity.
 
@@ -343,7 +341,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     allow_conditional=True,
                     provider=module,
                 )
-                self._register_module_definitions(name)
                 identity = self._declared_identity_at_line(name, line)
             if identity is None:
                 message = f"Missing external class declaration: {name}:{line}"
@@ -367,15 +364,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 ),
                 None,
             )
-
-        def _register_module_definitions(self, name: str) -> None:
-            """Register every definition of one module in the key map."""
-            for definition_identity in self._definitions:
-                module_name, qualified, _ = definition_identity.split(":", 2)
-                if module_name == name:
-                    self._definition_keys[f"{module_name}.{qualified}"] = (
-                        definition_identity
-                    )
 
         def _deduplicated_external_identity(self, value: t.Infra.RopePyObject) -> str:
             """Return a stable shared identity for one external runtime object."""
@@ -487,16 +475,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 chain = " <- ".join(sorted(visiting))
                 message = f"Cyclic provider reexport: {target} (visiting: {chain})"
                 raise ValueError(message)
-            try:
-                binding = module.get_attribute(name)
-            except (
-                FlextInfraUtilitiesRopeRuntime.rope_attribute_not_found_error_types()
-            ):
-                # The provider cannot resolve the attribute statically (a star
-                # re-export, a runtime-injected name): the base degrades to its
-                # qualified name as a synthetic terminal identity instead of
-                # failing the whole walk.
-                return target
+            binding = module.get_attribute(name)
             if isinstance(binding, p.Infra.RopeImportedName):
                 return self._provider_imported_name_reference(
                     binding,
@@ -646,6 +625,11 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
         ) -> str:
             """Resolve one source class reference to a declaration identity.
 
+            The dotted path is a binding path: every step reads the current
+            module binding, submodule, or class member, so a rebinding after
+            the declaration (``reflected.Contract = replacement``) replaces
+            the declared lineage instead of being shadowed by it.
+
             Returns:
                 The resolved declaration identity.
 
@@ -667,10 +651,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             memo = self._resolved_memo.get(key)
             if memo is not None:
                 return memo
-            direct = self._definition_keys.get(key)
-            if direct is not None:
-                self._resolved_memo[key] = direct
-                return direct
             target, attributes = self._unresolved_target(
                 target,
                 list(attributes),
@@ -752,12 +732,17 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
         ) -> t.Pair[str, list[str]]:
             """Resolve a namespace-qualified target through its planned module.
 
+            A name the planned module does not bind continues into the captured
+            submodule of that name, as ``from package import submodule`` does;
+            an explicit package binding (class or value) keeps precedence over
+            the file name.
+
             Returns:
                 The resolved target and its remaining attribute path.
 
             Raises:
-                ValueError: If the namespace has no module binding or the name
-                    is unresolved.
+                ValueError: If a module is used as a class base, the namespace
+                    has no module binding, or the name is unresolved.
 
             """
             index = next(
@@ -767,10 +752,16 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             )
             module = ".".join(parts[:index])
             remaining = [*parts[index:], *attributes]
-            if not remaining:
-                message = f"Module used as a class base: {module}"
-                raise ValueError(message)
-            name = remaining.pop(0)
+            while True:
+                if not remaining:
+                    message = f"Module used as a class base: {module}"
+                    raise ValueError(message)
+                name = remaining.pop(0)
+                bound = module in self._modules and name in self._modules[module]
+                submodule = f"{module}.{name}"
+                if bound or submodule not in self._namespaces:
+                    break
+                module = submodule
             if module not in self._modules:
                 message = f"Planned namespace has no module binding: {module}.{name}"
                 raise ValueError(message)

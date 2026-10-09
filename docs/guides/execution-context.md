@@ -261,12 +261,12 @@ skipped silently.
 
 Local runs, CI, and hooks derive their gates from the same active set: `CI=N make check`
 runs the intersection with `make.ci.local_check_gates`, `CI=Y make check` runs the
-complement, and `make check` without `CI` runs the union. The configuration excludes
-Mypy, Pyright, codemod and smells from CI, including advisory execution. Lint and
-remaining type findings follow `make.ci.informative_check_gates`: native `FINDINGS`
-remain reported without stopping tests; native `ERROR`, malformed reports, runtime
-failures and functional findings remain blocking. The `check` pre-push hook drops
-the inherited `CI` to run every active gate.
+complement (Pyrefly included), and `make check` without `CI` runs the union. The
+configuration keeps Mypy, Pyright, codemod and smells out of CI. Every gate blocks in
+every context that runs it; there is no informative or advisory gate. The `check`
+pre-push hook drops the inherited `CI` to run every active gate, so Mypy and Pyright
+block at pre-push. The pre-commit hook runs only the fast external gates the registry
+declares (`make.check_gates_pre_commit`) and no tests.
 
 Every workspace and standalone projection exposes `make pre-commit`. CI and the
 generated pre-commit hook invoke that same approval owner. Its typed workflow is

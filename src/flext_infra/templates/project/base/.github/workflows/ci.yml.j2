@@ -140,10 +140,12 @@ jobs:
 {%- endif %}
 
 {%- include "_fragments/mise_install.j2" %}
-      - name: Approval (blocking)
-        id: approval
-        # One owner for {{ make.approval_verbs | join(" -> ") }} in both profiles.
-        run: {{ make.ci.variable }}={{ make.ci.value }} make pre-commit
+{%- for verb in make.approval_verbs %}
+      # CI approval, one visible step per ci workflow row ({{ make.approval_verbs | join(" -> ") }}).
+      - name: make {{ verb }} (blocking)
+        id: approval-{{ verb }}
+        run: {{ make.ci.variable }}={{ make.ci.value }} make {{ verb }}
+{%- endfor %}
 {%- if ci_tests.selected %}
 
       - name: Dump reports on failure
@@ -218,7 +220,7 @@ jobs:
       - name: Release plan and guard
         env:
           PR_TITLE: {% raw %}${{ github.event.pull_request.title }}{% endraw %}
-        run: make release-plan
+        run: {{ make.ci.variable }}={{ make.ci.value }} make release-plan
   # End SECTION: release-plan job
 
   # === SECTION: merge-guard job (managed) ===

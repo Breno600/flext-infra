@@ -192,12 +192,6 @@ class FlextInfraConstantsCheck:
     "Human-readable check report written beside the SARIF report."
     CHECK_REPORT_SARIF_FILENAME: ClassVar[str] = "check-report.sarif"
     "SARIF 2.1.0 check report: the machine-readable findings owner of ``check run``."
-    MUTATING_GATES: ClassVar[frozenset[str]] = frozenset({FORMAT})
-    (
-        "Gates that rewrite files: owned by `fmt`/`fix`, "
-        "never a read-only `check` vocabulary."
-    )
-
     RUFF_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^\s*-->\s*(.+?):\d+:\d+\s*$",
     )

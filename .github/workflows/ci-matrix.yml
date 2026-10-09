@@ -68,14 +68,14 @@ jobs:
         run: |
           docker run --rm -e CI=Y -e GITHUB_TOKEN ci-matrix-${{ matrix.distro }} make help
           docker run --rm -e CI=Y -e GITHUB_TOKEN ci-matrix-${{ matrix.distro }} make check
-      - name: Upgrade, regenerate, and validate on Linux
+      - name: Regenerate and validate on Linux
         if: ${{ matrix.distro == 'ubuntu' }}
         run: >-
           docker run --rm
           -e CI=Y
           -e GITHUB_TOKEN
           ci-matrix-ubuntu
-          bash -ec 'make upg && make setup && make gen && make gen && make check && make test && make build'
+          bash -ec 'make setup && make gen && make gen && make check && make test && make build'
   # End SECTION: distro-matrix
 
   # === SECTION: macos (managed) ===
@@ -157,10 +157,6 @@ jobs:
 
       - name: Bootstrap
         run: CI=Y make setup
-      - name: Upgrade and frozen bootstrap
-        run: |
-          CI=Y make upg
-          CI=Y make setup
       - name: Generate twice
         run: |
           CI=Y make gen
@@ -252,11 +248,6 @@ jobs:
       - name: Bootstrap
         shell: bash
         run: CI=Y make setup
-      - name: Upgrade and frozen bootstrap
-        shell: bash
-        run: |
-          CI=Y make upg
-          CI=Y make setup
       - name: Generate twice
         shell: bash
         run: |

@@ -644,7 +644,7 @@ _activated-{{ verb.name }}: _builtin_require_environment
 # entry, and the promoted dispatcher renders its contract per WHAT.
 VERB_CONTRACT := $(filter {{ ((contract_env_values | list) + (contract_env_values | map("lower") | list) + (contract_env_values | map("capitalize") | list)) | unique(case_sensitive=true) | join(" ") }},$(OPTIONS) $(HELP))
 ifeq ($(VERB_CONTRACT),)
-{% for verb in profile.verbs if verb.name not in ("setup", "upg", "pre-commit") %}
+{% for verb in profile.verbs if verb.name not in ("setup", "upg") %}
 {{ public_verb_entry(verb) }}
 {% endfor %}
 
@@ -653,23 +653,11 @@ ifeq ($(VERB_CONTRACT),)
 # declaring them in the custom handler surface is actually honoured.
 setup: _bootstrap_setup_tools
 
-# Provisioning-safe approval: never activate before setup creates the venv.
-pre-commit: _builtin_require_workspace
-	+@set -eu; \
-		trap 'if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi' EXIT; \
-{%- for verb in make.approval_verbs %}
-		printf 'approval: {{ verb }} START\n'; \
-		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= {{ make.ci.variable }}={{ make.ci.value }} {{ verb }}; \
-{%- if verb == "setup" %}
-		if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi; \
-		unset FLEXT_SETUP_CREDENTIAL_STORE GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN GIT_CONFIG_COUNT; \
-{%- endif %}
-		printf 'approval: {{ verb }} COMPLETE\n'; \
-{%- endfor %}
-		printf 'approval: COMPLETE\n'
-
-_builtin-pre-commit:
-	+@$(SELF_MAKE) pre-commit
+# The pre-commit hook approval: only the fast external gates the gate
+# registry declares (make.check_gates_pre_commit); no setup, no audit and no
+# tests. CI runs the ci workflow rows as its own steps.
+_builtin-pre-commit: _builtin_require_environment
+	@{{ check_run(gates_csv(make.check_gates_pre_commit)) }}
 
 # `upg` builds the environment from the locks it writes, so like `setup` it
 # must not require an existing environment, and as the only resolver it must

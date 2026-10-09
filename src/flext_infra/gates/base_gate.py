@@ -381,12 +381,6 @@ class FlextInfraGate:
                 self._native_error_issue(project_dir, result.stderr),
             )
             passed = False
-        policy = config.Infra.codegen.make.ci
-        # The SSOT informative list decides by itself: a gate declared
-        # informative reports findings and never blocks, in every execution
-        # context (merge-admin mandate 2026-10-05 — mypy/pyright are
-        # informative, not CI-conditional).
-        informative = self.gate_id in policy.informative_check_gates
         outcome = u.Infra.tool_outcome(
             result.outcome,
             findings=len(issues),
@@ -398,14 +392,6 @@ class FlextInfraGate:
             for issue in issues
         ):
             outcome = c.Infra.ToolOutcome.ERROR
-        if informative:
-            return self._build_gate_execution(
-                project_dir,
-                verdict=outcome is not c.Infra.ToolOutcome.ERROR,
-                issues=issues,
-                raw_output=self._raw_output(result),
-                started=started,
-            ).model_copy(update={"outcome": outcome})
         return self._build_check_gate_execution(
             project_dir,
             passed=passed,
