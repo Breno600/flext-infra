@@ -3,19 +3,35 @@
 Private GitPython parts live under ``_utilities/_git/``. Consumers use
 ``from flext_infra import u`` only — never import this module or ``_git``.
 
+The composing owner imports its bases from their defining modules. Resolving
+them through the aggregate lazy utilities export makes the Git inheritance
+chain depend on that same export during static semantic analysis.
+
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
 
-from flext_infra._utilities import (
+from flext_infra._utilities._git.attestation import (
     FlextInfraUtilitiesGitAttestationMixin,
+)
+from flext_infra._utilities._git.lane_hygiene import (
     FlextInfraUtilitiesGitLaneHygieneMixin,
+)
+from flext_infra._utilities._git.mutation_scope import (
     FlextInfraUtilitiesGitMutationScopeMixin,
+)
+from flext_infra._utilities._git.scope import (
     FlextInfraUtilitiesGitScopeMixin,
+)
+from flext_infra._utilities._git.semantic_submodule import (
     FlextInfraUtilitiesGitSemanticSubmoduleMixin,
+)
+from flext_infra._utilities._git.state_capture import (
     FlextInfraUtilitiesGitStateCaptureMixin,
+)
+from flext_infra._utilities._git.worktree_facts import (
     FlextInfraUtilitiesGitWorktreeFactsMixin,
 )
 
