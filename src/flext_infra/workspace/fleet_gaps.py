@@ -13,9 +13,6 @@ from flext_infra import c, config, m, p, r, t, u
 from flext_infra.base import s
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
     """Report every declared repository's hygiene gaps from that repo's own facts.
