@@ -11,8 +11,9 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
+from flext_infra import c, config, m
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
+from flext_infra.cli import main
 from flext_infra.gates.codemod import FlextInfraCodemodGate
 from tests import u
 
@@ -25,6 +26,8 @@ class TestsFlextInfraCodemodGate:
 
     @staticmethod
     def _project(tmp_path: Path, *, severity: str = "error") -> Path:
+        u.Tests.copy_tracked_mise_seeds(tmp_path)
+        tm.ok(u.Cli.run_checked(["mise", "trust", str(tmp_path / ".mise.toml")]))
         project = tmp_path / "scanner-contract"
         config_path = project / c.Infra.CODEMOD_CONFIG_RELPATH
         rules = config_path.parent / c.Cli.RULES_DIR_NAME
@@ -92,6 +95,38 @@ class TestsFlextInfraCodemodGate:
         tm.that(execution.issues, empty=True)
         tm.that(execution.raw_output, has="exit=0")
 
+    def test_manifest_external_file_does_not_hide_owned_sibling(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Exclude the declared foreign file while enforcing an owned sibling."""
+        project = self._project(tmp_path)
+        manifest = u.Tests.write_standalone_workspace_manifest(
+            project,
+            "scanner-contract",
+        )
+        declared = m.Infra.WorkspaceManifestSpec.model_validate(
+            u.Cli.config_load(manifest, expand_env=False).unwrap().data,
+        ).model_copy(
+            update={
+                "external_dependency_paths": (
+                    (project / "src/vendor.py").relative_to(project),
+                ),
+            }
+        )
+        tm.ok(u.Cli.yaml_dump(manifest, declared.model_dump(mode="json")))
+        (project / "src" / "vendor.py").write_text("second(1)\n", encoding="utf-8")
+        (project / "src" / "owned.py").write_text("second(2)\n", encoding="utf-8")
+
+        execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
+
+        tm.that(execution.result.passed, eq=False)
+        findings = tuple(
+            issue for issue in execution.issues if issue.code == "contract-second"
+        )
+        tm.that(len(findings), eq=1)
+        tm.that(findings[0].file.endswith("src/owned.py"), eq=True)
+
     def test_check_files_uses_every_rule_and_only_requested_files(
         self,
         tmp_path: Path,
@@ -156,7 +191,7 @@ class TestsFlextInfraCodemodGate:
             str(reports),
         ])
         tm.that(code, eq=1 if finding else 0)
-        (report_path,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_SARIF_FILENAME}")
+        report_path = reports / c.Infra.CHECK_REPORT_SARIF_FILENAME
         findings = tm.ok(
             u.Infra.check_report_findings(project, reports_dir=report_path.parent),
         )

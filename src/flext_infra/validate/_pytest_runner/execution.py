@@ -183,7 +183,7 @@ class FlextInfraPytestRunnerExecution(
         # entirely outside this phase's marker. Both are empty scopes. A
         # whole-suite budgeted inventory that collects nothing stays a failure.
         scope_may_be_empty = self.slow_phase or self.target_file is not None
-        accepted = {pytest.ExitCode.OK} | (
+        accepted: set[pytest.ExitCode] = {pytest.ExitCode.OK} | (
             set()
             if complete and not scope_may_be_empty
             else {pytest.ExitCode.NO_TESTS_COLLECTED}
@@ -581,7 +581,10 @@ class FlextInfraPytestRunnerExecution(
 
         """
         incremental_exit = self.execute().unwrap()
-        if incremental_exit:
+        if incremental_exit not in {
+            pytest.ExitCode.OK,
+            pytest.ExitCode.NO_TESTS_COLLECTED,
+        }:
             return r.ok(incremental_exit)
         return self._execute_testmon(complete=True)
 

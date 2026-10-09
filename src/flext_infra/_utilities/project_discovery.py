@@ -300,7 +300,14 @@ class FlextInfraUtilitiesProjectDiscovery(
                         resolved_root,
                         targets,
                     )
-        return tuple(sorted(targets))
+        nonparticipants = cls.manifest_nonparticipant_paths(resolved_root)
+        return tuple(
+            target
+            for target in sorted(targets)
+            if not cls._is_nonparticipant(
+                resolved_root / target, resolved_root, nonparticipants
+            )
+        )
 
     @staticmethod
     def _collect_scan_dir_targets(
