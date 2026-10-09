@@ -268,8 +268,11 @@ MYPY_PATHS := $(strip $(foreach d,src tests examples,$(if $(wildcard $(PROJECT_R
 # Source: the repository's declared Mise toolchain, provisioned by make setup.
 # Every tool resolves from the mise-managed PATH (direnv activation shims, or
 # the CI provisioned PATH); _builtin_require_mise guards the running mise
-# against the committed mise.lock pin.
-override UV := uv
+# against the committed mise.lock pin. uv is resolved through mise itself when
+# a recipe runs: a workspace environment carries a PyPI `uv` executable (a
+# transitive dependency) ahead of the shims, and only the mise.lock release is
+# the producer the toolchain proof accepts.
+override UV := "$$(mise which uv)"
 CALLER_PATH := $(PATH)
 CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 # End SECTION: project tool owner
@@ -479,7 +482,7 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 		printf 'WARNING[setup] uv.lock does not match the manifests of %s:\n%s\n  Right way: only `make upg` writes uv.lock; setup installs the committed lock as-is (--frozen) and never relocks.\n  How: run `make upg` in %s, then commit uv.lock.\n' "$(UV_PROJECT)" "$$uv_lock_report" "$(PROJECT_ROOT)" >&2; \
 		uv_lock_mode=--frozen; \
 	fi; \
-	$$credential_env $(UV) sync --project "$(UV_PROJECT)" --python "3.13" $(UV_SYNC_FLAGS) $$uv_lock_mode --link-mode "$(UV_LINK_MODE)"; \
+	$$credential_env $(UV) sync --project "$(UV_PROJECT)" --python "$$(mise which python)" $(UV_SYNC_FLAGS) $$uv_lock_mode --link-mode "$(UV_LINK_MODE)"; \
 	$(PROJECT_FLEXT_INFRA) workspace sync-environment --repository-root "$(PROJECT_ROOT)"; \
 	if [ "$(strip $(CI))" != "Y" ]; then \
 		for member in $(WORKSPACE_SUBPROJECTS); do \
