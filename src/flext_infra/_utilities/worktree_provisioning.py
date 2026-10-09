@@ -82,8 +82,8 @@ class FlextInfraWorktreeProvisioning:
     ) -> p.Result[bool]:
 
         reference = member_path.as_posix()
-        discovery = FlextInfraUtilitiesGitWorktreeDiscoveryMixin
-        contract = discovery.gitmodule_contract(
+        submodule = FlextInfraUtilitiesGitSemanticSubmoduleMixin
+        contract = submodule.git_submodule_declaration(
             m.Infra.GitSubmoduleContractRequest(repo_root=lane, member_path=reference),
         )
         if contract.failure:
@@ -110,30 +110,11 @@ class FlextInfraWorktreeProvisioning:
         declared = discovery.git_declared_submodule_paths(lane)
         if declared.failure:
             return r[bool].from_failure(declared)
-        submodule = FlextInfraUtilitiesGitSemanticSubmoduleMixin
-        sections = submodule.git_submodule_sections(
-            m.Infra.GitRepoRequest(repo_root=lane),
-        )
-        if sections.failure:
-            return r[bool].from_failure(sections)
-        for member_path in declared.value:
-            section = sections.value.get(member_path.as_posix())
-            if section is None:
-                return r[bool].fail(
-                    f"lane gitlink declaration is missing: {member_path}",
-                )
-            managed = submodule.git_submodule_config_value(
-                m.Infra.GitSubmoduleConfigRequest(
-                    repo_root=lane,
-                    section=section,
-                    key=c.Infra.GITMODULE_MANAGED_KEY,
-                ),
-            )
-            if managed.failure:
-                return r[bool].from_failure(managed)
-            if managed.value.text.lower() != "true":
+        for declaration in declared.value:
+            # Lane provisioning materializes only explicitly managed links.
+            if declaration.managed is not True:
                 continue
-            validated = cls._validate_governed_gitlink(lane, member_path)
+            validated = cls._validate_governed_gitlink(lane, declaration.path)
             if validated.failure:
                 return validated
         return r[bool].ok(value=True)

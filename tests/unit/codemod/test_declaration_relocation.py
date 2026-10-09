@@ -208,13 +208,15 @@ class TestsFlextInfraDeclarationRelocation:
     def test_cycle_refuses_without_mutation(tmp_path: Path) -> None:
         """Test cycle refuses without mutation."""
         root, sources = TestsFlextInfraDeclarationRelocation._seed(tmp_path, cycle=True)
-        with infra.rope_workspace(root) as rope:
-            with pytest.raises(ValueError, match="runtime import cycle"):
-                u.Infra.plan_semantic_cutover(
-                    c.Infra.SemanticCutoverPhase.DECLARATION_RELOCATION,
-                    rope_workspace=rope,
-                    sources=sources,
-                )
+        with (
+            infra.rope_workspace(root) as rope,
+            pytest.raises(ValueError, match="runtime import cycle"),
+        ):
+            u.Infra.plan_semantic_cutover(
+                c.Infra.SemanticCutoverPhase.DECLARATION_RELOCATION,
+                rope_workspace=rope,
+                sources=sources,
+            )
         for path, source in sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=source)
 
@@ -263,13 +265,15 @@ class TestsFlextInfraDeclarationRelocation:
         consumer = next(path for path in sources if path.name == "consumer.py")
         sources[consumer] = sources[consumer].replace("def build()", "def build(m)")
         consumer.write_text(sources[consumer], encoding="utf-8")
-        with infra.rope_workspace(root) as rope:
-            with pytest.raises(ValueError, match="shadowed quoted type destination"):
-                u.Infra.plan_semantic_cutover(
-                    c.Infra.SemanticCutoverPhase.DECLARATION_RELOCATION,
-                    rope_workspace=rope,
-                    sources=sources,
-                )
+        with (
+            infra.rope_workspace(root) as rope,
+            pytest.raises(ValueError, match="shadowed quoted type destination"),
+        ):
+            u.Infra.plan_semantic_cutover(
+                c.Infra.SemanticCutoverPhase.DECLARATION_RELOCATION,
+                rope_workspace=rope,
+                sources=sources,
+            )
         for path, source in sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=source)
 

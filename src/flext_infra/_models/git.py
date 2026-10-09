@@ -292,17 +292,29 @@ class FlextInfraModelsGit(
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         reference: Annotated[t.NonEmptyStr, m.Field(description="Exact Git ref")]
 
-    class GitSubmoduleConfigRequest(m.ContractModel):
-        """One ``.gitmodules`` section key of a declared submodule."""
+    class GitSubmoduleDeclaration(m.ContractModel):
+        """One ``.gitmodules`` submodule section, parsed once by its single owner."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
-        repo_root: Annotated[Path, m.Field(description="Superproject worktree root")]
-        section: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Section, e.g. submodule.flext-core"),
+        path: Annotated[
+            Path,
+            m.Field(description="Submodule path relative to the superproject root"),
         ]
-        key: Annotated[t.NonEmptyStr, m.Field(description="Key inside the section")]
+        url: Annotated[str, m.Field(description="Declared URL; empty when undeclared")]
+        branch: Annotated[
+            str,
+            m.Field(description="Declared branch; empty when undeclared"),
+        ]
+        managed: Annotated[
+            bool | None,
+            m.Field(
+                description=(
+                    "Declared flext-managed flag: None when absent, True only for "
+                    "an explicit true, False for any other explicit value"
+                ),
+            ),
+        ]
 
     class GitCommitishRequest(m.ContractModel):
         """Repository plus commit-ish for resolve/ancestor/merge ops."""
@@ -390,6 +402,65 @@ class FlextInfraModelsGit(
             t.NonEmptyStr | None,
             m.Field(description="Remote tip the mutation is leased on"),
         ] = None
+
+    class GitLaneVerificationRequest(GitRemoteRequest):
+        """Read-only lane admission and census against the live integration tip.
+
+        One request serves both the semantic publication boundary (operation,
+        candidate, expected tip) and the lane hygiene census (declaration and
+        coordinator ownership evidence).
+        """
+
+        declared: Annotated[
+            str | None,
+            m.Field(description="Governing integration declaration"),
+        ] = None
+        evidence_file: Annotated[
+            Path | None,
+            m.Field(description="Typed Bead/PR evidence captured by the coordinator"),
+        ] = None
+        governance_file: Annotated[
+            Path | None,
+            m.Field(description="Global coordination governance SSOT"),
+        ] = None
+        read_pull_requests: Annotated[
+            bool,
+            m.Field(description="Explicitly authorize public PR ownership reads"),
+        ] = False
+        read_beads: Annotated[
+            bool,
+            m.Field(description="Explicitly authorize declared Beads ownership reads"),
+        ] = False
+        operation: Annotated[
+            Literal["verify", "create", "retire"],
+            m.Field(description="Boundary being verified, never an effect selector"),
+        ] = "verify"
+        candidate: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Commit whose integration ancestry must be proved"),
+        ] = "HEAD"
+        expected_tip: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(description="Previously observed tip; drift refuses admission"),
+        ] = None
+
+        @m.model_validator(mode="after")
+        def _validate_ownership_selection(self) -> Self:
+            """Reject competing evidence sources instead of ignoring selection.
+
+            Returns:
+                The uniquely selected ownership request.
+
+            Raises:
+                ValueError: If receipt and live ownership are both selected.
+
+            """
+            if self.evidence_file is not None and (
+                self.read_pull_requests or self.read_beads
+            ):
+                msg = "select either an ownership receipt or authorized live sources"
+                raise ValueError(msg)
+            return self
 
     class GitRefHeadsRequest(m.ContractModel):
         """List every ref below one namespace.
@@ -554,17 +625,6 @@ class FlextInfraModelsGit(
         member_path: Annotated[
             t.NonEmptyStr,
             m.Field(description="Submodule path relative to the superproject root"),
-        ]
-
-    class GitSubmoduleContractReport(m.ContractModel):
-        """Declared ``.gitmodules`` URL and branch for one submodule path."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
-
-        url: Annotated[t.NonEmptyStr, m.Field(description="Declared submodule URL")]
-        branch: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Declared submodule branch"),
         ]
 
     class GitLaneRequest(m.ContractModel):
