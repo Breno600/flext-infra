@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import importlib
 import sys
 import time
 from pathlib import Path
@@ -34,27 +33,29 @@ class FlextInfraPytestEntry:
 
         Raises:
             ValueError: If unsupported pytest operation.
-            TypeError: If the runner returns a non-integer process status.
 
         """
-        # Deliberately deferred past the pre-import clock snapshot: the
-        # module contract keeps every FLEXT import inside the budgeted window.
-        profile_module = importlib.import_module("flext_infra._pytest_profile")
-        runner_module = importlib.import_module("flext_infra.validate.pytest_runner")
-
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
-        if mode == "profile":
-            profile = profile_module.FlextInfraPytestProfile(Path(sys.argv[2]))
-            status = profile.run_parent(
+        if mode in {"profile", "profile-collection"}:
+            from flext_infra._pytest_profile import FlextInfraPytestProfile
+
+            adapter = FlextInfraPytestProfile(Path(sys.argv[2]))
+            if mode == "profile-collection":
+                return adapter.run_collection(Path(sys.argv[3]), tuple(sys.argv[4:]))
+            return adapter.run_parent(
                 started_at_monotonic=cls._STARTED_AT_MONOTONIC,
+                collection_command_prefix=(
+                    sys.executable,
+                    "-m",
+                    "flext_infra._pytest_entry",
+                    "profile-collection",
+                ),
             )
-            if isinstance(status, int):
-                return status
-            msg = f"pytest profile returned a non-integer process status: {status!r}"
-            raise TypeError(msg)
+
+        from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
         slow_phase = mode in {"slow", "full-slow", "file-slow"}
-        runner = runner_module.FlextInfraPytestRunner.from_environment(
+        runner = FlextInfraPytestRunner.from_environment(
             started_at_monotonic=cls._STARTED_AT_MONOTONIC,
             slow_phase=slow_phase,
         )
@@ -65,18 +66,13 @@ class FlextInfraPytestEntry:
             )
             raise ValueError(msg)
         if mode == "coverage":
-            status = runner.execute_coverage().unwrap()
-        elif mode in {"full", "full-slow"}:
-            status = runner.execute_full().unwrap()
-        elif mode in {"", "slow", "file", "file-slow"}:
-            status = runner.execute().unwrap()
-        else:
-            msg = f"unsupported pytest operation: {mode}"
-            raise ValueError(msg)
-        if isinstance(status, int):
-            return status
-        msg = f"pytest runner returned a non-integer process status: {status!r}"
-        raise TypeError(msg)
+            return runner.execute_coverage().unwrap()
+        if mode in {"full", "full-slow"}:
+            return runner.execute_full().unwrap()
+        if mode in {"", "slow", "file", "file-slow"}:
+            return runner.execute().unwrap()
+        msg = f"unsupported pytest operation: {mode}"
+        raise ValueError(msg)
 
 
 if __name__ == "__main__":

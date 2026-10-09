@@ -9,46 +9,35 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import FlextInfraConfig, m, r, s, t, u
-from flext_infra._conform_wiring import FlextInfraConformWiring
-from flext_infra.check import FlextInfraWorkspaceChecker
-from flext_infra.codegen import (
-    FlextInfraCodegenCensus,
-    FlextInfraCodegenConform,
-    FlextInfraCodegenFixer,
-    FlextInfraCodegenMiseArtifacts,
-    FlextInfraCodegenPipeline,
-    FlextInfraCodegenTransaction,
-)
-from flext_infra.codemod import (
-    FlextInfraAccessorRenamePhase,
-    FlextInfraApplyRenames,
-    FlextInfraCodemodBatchApply,
-    FlextInfraImportNormalizationPhase,
-    FlextInfraModTextGateEngine,
-    FlextInfraNamespaceRelocationPhase,
-)
-from flext_infra.services import FlextInfraCandidateBootstrapService
-from flext_infra.validate import FlextInfraNamespaceValidator
-from flext_infra.workspace import (
-    FlextInfraRopeWorkspace,
-    FlextInfraWorkspaceDetector,
-    FlextInfraWorkspaceEnvironmentMixin,
-)
+from flext_infra import FlextInfraConfig, m, r, t, u
+from flext_infra.base import s
+from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
+from flext_infra.codegen.census import FlextInfraCodegenCensus
+from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
+from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra.codegen.fixer import FlextInfraCodegenFixer
+from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+from flext_infra.codegen.pipeline import FlextInfraCodegenPipeline
+from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
+from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
+from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
+from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
+from flext_infra.docs.formatter import FlextInfraDocFormatter
+from flext_infra.docs.generator import FlextInfraDocGenerator
+from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
+from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
+from flext_infra.services.candidate_bootstrap import FlextInfraCandidateBootstrapService
+from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
+from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
+from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
     from flext_infra import p
-    from flext_infra.codegen import FlextInfraCodegenProjectNew
-    from flext_infra.docs import FlextInfraDocFormatter
-    from flext_infra.release import FlextInfraReleaseOrchestrator
-    from flext_infra.workspace import FlextInfraWorkspacePropagation
 
 
-class FlextInfra(
-    FlextInfraWorkspaceEnvironmentMixin,
-    FlextInfraConformWiring,
-    s[t.JsonDict],
-):
+class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
     """Thin public FLEXT facade over infra services."""
 
     app_name: ClassVar[str] = "flext-infra"
@@ -99,7 +88,6 @@ class FlextInfra(
         """
         # NOTE (multi-agent, flext-wkii.17.24): Rope reads its source policy
         # directly from config.Infra at the service boundary.
-
         resolved_root = (
             self.repository_root if repository_root is None else repository_root
         )
@@ -166,6 +154,46 @@ class FlextInfra(
             output_format=request.output_format,
             conform_collaborators=self.codegen_conform_collaborators(),
         ).execute()
+
+    @staticmethod
+    def docs_artifact_planner(
+        *,
+        repository_root: Path,
+        projects: t.StrSequence,
+        include_root: bool,
+    ) -> p.Infra.DocsArtifactPlanner:
+        """Build the docs planner complete conform publishes through.
+
+        Returns:
+            The resulting ``p.Infra.DocsArtifactPlanner``.
+
+        """
+        return FlextInfraDocGenerator(
+            repository_root=repository_root,
+            projects=projects,
+            include_root=include_root,
+        )
+
+    @staticmethod
+    def markdown_format_gate(repository_root: Path) -> p.Infra.MarkdownFormatGate:
+        """Build the markdown format gate the docs formatter delegates to.
+
+        Returns:
+            The resulting ``p.Infra.MarkdownFormatGate``.
+
+        """
+        return FlextInfraMarkdownFormatGate(repository_root)
+
+    def codegen_conform_collaborators(self) -> m.Infra.CodegenConformPorts:
+        """Bind the docs family complete conform crosses into.
+
+        Returns:
+            The resulting ``m.Infra.CodegenConformPorts``.
+
+        """
+        return m.Infra.CodegenConformPorts(
+            docs_planner=self.docs_artifact_planner,
+        )
 
     def codegen_conform(
         self,
@@ -300,11 +328,6 @@ class FlextInfra(
                 progress=progress,
                 rope=rope,
                 rename_inputs=tuple(campaigns),
-                phase_callbacks=(
-                    FlextInfraImportNormalizationPhase(),
-                    FlextInfraNamespaceRelocationPhase(),
-                    FlextInfraAccessorRenamePhase(),
-                ),
             ).execute()
 
     @staticmethod

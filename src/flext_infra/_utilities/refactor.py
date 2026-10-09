@@ -113,63 +113,11 @@ class FlextInfraUtilitiesRefactor:
             The resulting ``p.Result[m.Infra.ModScanEvidenceReceipt]``.
 
         """
-        totals = FlextInfraUtilitiesRefactor._validated_mod_scan_totals(report)
-        if totals.failure:
-            return r[m.Infra.ModScanEvidenceReceipt].from_failure(totals)
-        repository_totals, rule_totals, class_totals = totals.value
-        evidence = m.Infra.ModScanEvidence(
-            schema_version=c.Infra.MOD_SCAN_REPORT_SCHEMA_VERSION,
-            command=command,
-            root=root.resolve(),
-            scope=tuple(scope),
-            findings=report.findings,
-            actionable=report.actionable,
-            detection_only=report.detection_only,
-            non_actionable_with_fix=report.non_actionable_with_fix,
-            totals_by_class=class_totals,
-            totals_by_repository=dict(sorted(repository_totals.items())),
-            totals_by_rule=dict(sorted(rule_totals.items())),
-            entries=report.entries,
-        )
-        content = (evidence.model_dump_json(indent=2) + "\n").encode(
-            c.Cli.ENCODING_DEFAULT,
-        )
-        report_path = root.resolve() / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH
-        published = FlextInfraUtilitiesRefactor._published_mod_scan_bytes(
-            report_path,
-            content,
-        )
-        if published.failure:
-            return r[m.Infra.ModScanEvidenceReceipt].from_failure(published)
-        return r[m.Infra.ModScanEvidenceReceipt].ok(
-            m.Infra.ModScanEvidenceReceipt(
-                path=report_path,
-                sha256=u.Cli.sha256_bytes(content),
-                evidence=evidence,
-            ),
-        )
-
-    @staticmethod
-    def _validated_mod_scan_totals(
-        report: m.Infra.ModScanReport,
-    ) -> p.Result[
-        t.Triple[
-            MutableMapping[str, int],
-            MutableMapping[str, int],
-            MutableMapping[c.Infra.ModScanFindingClass, int],
-        ]
-    ]:
-        """Validate one report's classification invariant and count its totals.
-
-        Returns:
-            The resulting ``p.Result`` of repository, rule, and class totals.
-
-        """
         classified = (
             report.actionable + report.detection_only + report.non_actionable_with_fix
         )
         if classified != report.findings or report.findings != len(report.entries):
-            return r.fail(
+            return r[m.Infra.ModScanEvidenceReceipt].fail(
                 "mod scan classification invariant failed: "
                 f"findings={report.findings} entries={len(report.entries)} "
                 f"classified={classified}",
@@ -194,94 +142,58 @@ class FlextInfraUtilitiesRefactor:
             ),
         }
         if class_totals != expected_class_totals:
-            return r.fail(
+            return r[m.Infra.ModScanEvidenceReceipt].fail(
                 "mod scan entry classification differs from report totals: "
                 f"entries={class_totals} report={expected_class_totals}",
             )
-        return r.ok((repository_totals, rule_totals, class_totals))
-
-    @staticmethod
-    def _published_mod_scan_bytes(
-        report_path: Path,
-        content: bytes,
-    ) -> p.Result[bool]:
-        """Atomically publish one mod scan report and verify its bytes.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        prepared = u.Cli.ensure_dir(report_path.parent)
-        if prepared.failure:
-            return r[bool].from_failure(prepared)
-        before = u.Cli.atomic_read_binary_file_state(report_path, required=False)
-        if before.failure:
-            return r[bool].from_failure(before)
-        written = u.Cli.atomic_write_binary_file_guarded(
-            before.value,
-            content,
-            permission_mode=c.Infra.MOD_SCAN_REPORT_MODE,
+        evidence = m.Infra.ModScanEvidence(
+            schema_version=c.Infra.MOD_SCAN_REPORT_SCHEMA_VERSION,
+            command=command,
+            root=root.resolve(),
+            scope=tuple(scope),
+            findings=report.findings,
+            actionable=report.actionable,
+            detection_only=report.detection_only,
+            non_actionable_with_fix=report.non_actionable_with_fix,
+            totals_by_class=class_totals,
+            totals_by_repository=dict(sorted(repository_totals.items())),
+            totals_by_rule=dict(sorted(rule_totals.items())),
+            entries=report.entries,
         )
-        if written.failure:
-            return r[bool].from_failure(written)
-        published = u.Cli.atomic_read_binary_file_state(report_path, required=True)
-        if published.failure:
-            return r[bool].from_failure(published)
-        if (
-            published.value.content != content
-            or published.value.mode != c.Infra.MOD_SCAN_REPORT_MODE
-        ):
-            return r[bool].fail(
-                f"published mod evidence differs from planned bytes: {report_path}",
-            )
-        return r[bool].ok(value=True)
-
-    @staticmethod
-    def publish_refactor_report_evidence(
-        root: Path,
-        report: m.ContractModel | m.ArbitraryTypesModel,
-        *,
-        relative_path: Path,
-    ) -> p.Result[Path]:
-        """Atomically publish one refactor verb's structured report receipt.
-
-        Mirrors the mod evidence receipt's write discipline (ensure directory,
-        guarded atomic write, byte-exact read-back) for the refactor verbs that
-        own a single report document.
-
-        Returns:
-            The resulting ``p.Result[Path]``.
-
-        """
-        content = (report.model_dump_json(indent=2) + "\n").encode(
+        content = (evidence.model_dump_json(indent=2) + "\n").encode(
             c.Cli.ENCODING_DEFAULT,
         )
-        report_path = root.resolve() / relative_path
+        report_path = root.resolve() / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH
         prepared = u.Cli.ensure_dir(report_path.parent)
         if prepared.failure:
-            return r[Path].from_failure(prepared)
+            return r[m.Infra.ModScanEvidenceReceipt].from_failure(prepared)
         before = u.Cli.atomic_read_binary_file_state(report_path, required=False)
         if before.failure:
-            return r[Path].from_failure(before)
+            return r[m.Infra.ModScanEvidenceReceipt].from_failure(before)
         written = u.Cli.atomic_write_binary_file_guarded(
             before.value,
             content,
             permission_mode=c.Infra.MOD_SCAN_REPORT_MODE,
         )
         if written.failure:
-            return r[Path].from_failure(written)
+            return r[m.Infra.ModScanEvidenceReceipt].from_failure(written)
         published = u.Cli.atomic_read_binary_file_state(report_path, required=True)
         if published.failure:
-            return r[Path].from_failure(published)
+            return r[m.Infra.ModScanEvidenceReceipt].from_failure(published)
         if (
             published.value.content != content
             or published.value.mode != c.Infra.MOD_SCAN_REPORT_MODE
         ):
-            return r[Path].fail(
-                "published refactor evidence differs from planned bytes: "
-                f"{report_path}",
+            return r[m.Infra.ModScanEvidenceReceipt].fail(
+                f"published mod evidence differs from planned bytes: {report_path}",
             )
-        return r[Path].ok(report_path)
+        return r[m.Infra.ModScanEvidenceReceipt].ok(
+            m.Infra.ModScanEvidenceReceipt(
+                path=report_path,
+                sha256=u.Cli.sha256_bytes(content),
+                evidence=evidence,
+            ),
+        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesRefactor"]

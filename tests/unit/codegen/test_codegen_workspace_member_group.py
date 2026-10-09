@@ -1,11 +1,8 @@
-"""A workspace root keeps every attached member in its native uv workspace.
+"""A workspace root keeps its attached members in its own dependency group.
 
-The root environment serves every attached member: setup syncs the root lock
-with ``--all-packages``, so a conform that drops a member from
-``[tool.uv.workspace]`` (or from its ``workspace = true`` source) makes that
-sync uninstall the member and every later member import fails. The retired
-git-pinned ``workspace`` dependency group never returns: a member declared
-both as a path and as a URL is a uv conflict.
+The root environment serves every attached member: setup syncs every group of
+the root lock exactly, so a conform that drops the member group makes that
+sync uninstall the members and every later member import fails.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -41,17 +38,16 @@ class TestsFlextInfraCodegenWorkspaceMemberGroup:
         )
         service = FlextInfraCodegenConform(repository_root=root, request=request)
         first = tm.ok(service.plan(request))
-        members = first.workspace.subprojects
-        tm.that(len(members), eq=1)
+        tm.that(len(first.workspace.subprojects), eq=1)
         rendered = u.Tests.codegen_file_text(
             next(item for item in first.files if item.path == root_pyproject),
         )
-        sources = u.Tests.toml_table_at(rendered, "tool", "uv", "sources")
-        for member in members:
-            tm.that(sources[member.distribution], eq={"workspace": True})
+        declared = tuple(
+            u.Tests.toml_strings_at(rendered, c.Infra.DEPENDENCY_GROUPS, "workspace"),
+        )
         tm.that(
-            "workspace" in u.Tests.toml_table_at(rendered, c.Infra.DEPENDENCY_GROUPS),
-            eq=False,
+            tuple(u.Infra.dep_name(item) for item in declared),
+            eq=tuple(item.distribution for item in first.workspace.subprojects),
         )
         root_pyproject.write_text(rendered, encoding="utf-8")
         second = tm.ok(service.plan(request))

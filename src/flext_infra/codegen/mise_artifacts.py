@@ -12,6 +12,9 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_infra import c, m, r, t, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._mise_artifacts_derivation import (
+    FlextInfraMiseArtifactsDerivation,
+)
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
 if TYPE_CHECKING:
@@ -19,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
-    """Validate generated Mise declarations offline."""
+    """Validate latest-selector Mise declarations and the upg-written launchers."""
 
     config_only: Annotated[
         bool,
@@ -108,16 +111,7 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-        return cls.validate_config_file(project_root / c.Infra.CONFIG_SPEC[0])
-
-    @classmethod
-    def validate_config_file(cls, path: Path) -> p.Result[bool]:
-        """Validate an exact staged or live declaration without installing tools.
-
-        Returns:
-            The TOML consumer's first failure or the validated declaration.
-        """
-        config_result = cls._read_toml(path)
+        config_result = cls._read_toml(project_root / c.Infra.CONFIG_SPEC[0])
         if config_result.failure:
             return r[bool].from_failure(config_result)
         tools_result = cls._tool_specifiers(config_result.value)
@@ -130,21 +124,24 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         project_root: Path,
         runtime_root: Path,
     ) -> p.Result[bool]:
-        """Validate one project's generated declaration offline.
+        """Validate one project's declaration, pin, and launchers offline.
 
-        ``runtime_root`` names the workspace that coordinates generation; the
-        declaration itself is owned by this project alone.
+        The pin and launchers derive from the runtime root's `make upg`
+        output: every launcher bakes the pinned release, and a member's triple
+        is byte-identical to its runtime root's.
 
         Returns:
             The resulting ``p.Result[bool]``.
 
         """
-        del runtime_root
-        return self._validate_config(project_root)
+        declared = self._validate_config(project_root)
+        if declared.failure:
+            return declared
+        return FlextInfraMiseArtifactsDerivation.validate(project_root, runtime_root)
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Validate generated Mise declarations entirely offline.
+        """Validate generated Mise declarations and launchers entirely offline.
 
         Returns:
             The resulting ``p.Result[bool]``.
@@ -156,7 +153,10 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         runtime_root = FlextInfraMiseWorkspacePlanner(self).scope_root()
         if runtime_root.failure:
             return r[bool].from_failure(runtime_root)
-        return declared
+        return FlextInfraMiseArtifactsDerivation.validate(
+            self.repository_root,
+            runtime_root.value,
+        )
 
 
 __all__: list[str] = ["FlextInfraCodegenMiseArtifacts"]

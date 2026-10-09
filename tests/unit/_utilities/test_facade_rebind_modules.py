@@ -41,31 +41,6 @@ class TestsFlextInfraFacadeRebindModules:
         tm.that(u.Infra.facade_rebind_modules(tmp_path, {}), eq=("demo.utilities",))
 
     @staticmethod
-    def test_detects_the_generic_subclass_rebind(tmp_path: Path) -> None:
-        """A PEP 695 generic facade subclassing the letter also qualifies.
-
-        The service bases subclass the letter through a type parameter —
-        ``class FlextApiServiceBase[T: Payload](s[T])`` — so the base reaches
-        the AST as a subscript, not a name, and the detector must see through
-        it or every generic service base loses its authorized mypy scope.
-        """
-        package = tmp_path / "src" / "demo"
-        package.mkdir(parents=True)
-        (package / "__init__.py").write_text("", encoding="utf-8")
-        (package / "base.py").write_text(
-            "from flext_core import s\n\n\n"
-            "class DemoServiceBase[T: str](s[T]):\n    pass\n\n\n"
-            "s = DemoServiceBase\n",
-            encoding="utf-8",
-        )
-        (package / "plain.py").write_text(
-            "from flext_core import s\n\n\nVALUE: str = s.__name__\n",
-            encoding="utf-8",
-        )
-
-        tm.that(u.Infra.facade_rebind_modules(tmp_path, {}), eq=("demo.base",))
-
-    @staticmethod
     def test_a_project_not_on_disk_has_none(tmp_path: Path) -> None:
         tm.that(u.Infra.facade_rebind_modules(tmp_path / "absent", {}), eq=())
 

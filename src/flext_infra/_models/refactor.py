@@ -6,24 +6,20 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import ast
 from collections import defaultdict
 from collections.abc import MutableMapping, MutableSequence, MutableSet
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Annotated, ClassVar
+from typing import Annotated, ClassVar
 
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models.mixins import FlextInfraModelsMixins
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 from flext_infra._models.refactor_ast_grep import FlextInfraModelsRefactorGrep
 from flext_infra._models.refactor_namespace_enforcer import (
     FlextInfraModelsNamespaceEnforcer,
 )
-
-if TYPE_CHECKING:
-    from flext_infra._models.scan import FlextInfraModelsScan
 
 
 class FlextInfraModelsRefactor(
@@ -37,105 +33,13 @@ class FlextInfraModelsRefactor(
     - ``ArbitraryTypesModel`` for mutable report/result payloads.
     """
 
-    class ModTextCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
+    class ModTextCommand(mm.WriteMixin, m.ContractModel):
         """Repository-scoped request for authenticated Sed rule replay."""
 
-    class ViolationsTotals(m.ContractModel):
-        """One mod scan's violation totals as the sweep compares them."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
-
-        findings: Annotated[
-            int,
-            m.Field(description="Total mod scan findings"),
-        ]
-        actionable: Annotated[
-            int,
-            m.Field(description="Findings a mod rewrite would repair"),
-        ]
-        detection_only: Annotated[
-            int,
-            m.Field(description="Findings no rewrite repairs"),
-        ]
-        non_actionable_with_fix: Annotated[
-            int,
-            m.Field(description="Findings whose rewrite matches the current source"),
-        ]
-
-        @classmethod
-        def from_scan_report(
-            cls,
-            report: FlextInfraModelsScan.ModScanReport,
-        ) -> FlextInfraModelsRefactor.ViolationsTotals:
-            """Read one scan report's totals.
-
-            Returns:
-                The resulting ``FlextInfraModelsRefactor.ViolationsTotals``.
-
-            """
-            return cls(
-                findings=report.findings,
-                actionable=report.actionable,
-                detection_only=report.detection_only,
-                non_actionable_with_fix=report.non_actionable_with_fix,
-            )
-
-    class ViolationsSweepReport(m.ContractModel):
-        """Before/after receipt of one violations sweep.
-
-        Published only when the always-reducing law held: no scan total
-        increased across the repair sequence.
-        """
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
-
-        schema_version: Annotated[
-            int,
-            m.Field(description="Report schema version"),
-        ]
-        repository_root: Annotated[
-            Path,
-            m.Field(description="Repository the sweep repaired and proved"),
-        ]
-        repair_verbs: Annotated[
-            t.StrSequence,
-            m.Field(description="Canonical verbs the sweep ran, in order"),
-        ]
-        before: Annotated[
-            FlextInfraModelsRefactor.ViolationsTotals,
-            m.Field(description="Scan totals before the repair sequence"),
-        ]
-        after: Annotated[
-            FlextInfraModelsRefactor.ViolationsTotals,
-            m.Field(description="Scan totals after the repair sequence"),
-        ]
-
-        @property
-        def increased_totals(self) -> t.StrSequence:
-            """Names of the totals that increased, empty when none did.
-
-            Returns:
-                The resulting ``t.StrSequence``.
-
-            """
-            return tuple(
-                name
-                for name in (
-                    "findings",
-                    "actionable",
-                    "detection_only",
-                    "non_actionable_with_fix",
-                )
-                if getattr(self.after, name) > getattr(self.before, name)
-            )
-
-    class RefactorNamespaceEnforceInput(
-        FlextInfraModelsMixins.WriteMixin,
-        m.ContractModel,
-    ):
+    class RefactorNamespaceEnforceInput(mm.WriteMixin, m.ContractModel):
         """CLI/service request for namespace enforcement."""
 
-    class AccessorMigrationInput(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
+    class AccessorMigrationInput(mm.WriteMixin, m.ContractModel):
         """CLI/service request for accessor migration dry-runs and applies."""
 
         preview_limit: Annotated[
@@ -181,7 +85,7 @@ class FlextInfraModelsRefactor(
         package_roots: Annotated[
             MutableSet[str],
             m.Field(description="Top-level Python package roots in src/"),
-        ] = m.Field(default_factory=set[str])
+        ] = m.Field(default_factory=set)
 
     class FileImportData(m.ArbitraryTypesModel):
         """File-level import data with mutable set accumulators.
@@ -193,11 +97,11 @@ class FlextInfraModelsRefactor(
         imported_modules: Annotated[
             MutableSet[str],
             m.Field(description="Imported module roots"),
-        ] = m.Field(default_factory=set[str])
+        ] = m.Field(default_factory=set)
         imported_symbols: Annotated[
             MutableSet[str],
             m.Field(description="Imported symbol names"),
-        ] = m.Field(default_factory=set[str])
+        ] = m.Field(default_factory=set)
 
     class MethodInfo(m.ArbitraryTypesModel):
         """Metadata about a method used for ordering inside classes."""
@@ -244,15 +148,15 @@ class FlextInfraModelsRefactor(
         updates: Annotated[
             MutableMapping[Path, str],
             m.Field(description="Pending file content updates keyed by path"),
-        ] = m.Field(default_factory=dict[Path, str])
+        ] = m.Field(default_factory=dict)
         expected_sources: Annotated[
             MutableMapping[Path, str],
             m.Field(description="Original content keyed by every pending update path"),
-        ] = m.Field(default_factory=dict[Path, str])
+        ] = m.Field(default_factory=dict)
         changed_files: Annotated[
             MutableSequence[str],
             m.Field(description="String paths of files changed by the run"),
-        ] = m.Field(default_factory=list[str])
+        ] = m.Field(default_factory=list)
         total_replacements: Annotated[
             int,
             m.Field(description="Total replacements applied across the run"),
@@ -268,15 +172,15 @@ class FlextInfraModelsRefactor(
         per_project_changes: Annotated[
             defaultdict[str, int],
             m.Field(description="Changed file count keyed by project name"),
-        ] = m.Field(default_factory=lambda: defaultdict[str, int](int))
+        ] = m.Field(default_factory=lambda: defaultdict(int))
         per_project_replacements: Annotated[
             defaultdict[str, int],
             m.Field(description="Replacement count keyed by project name"),
-        ] = m.Field(default_factory=lambda: defaultdict[str, int](int))
+        ] = m.Field(default_factory=lambda: defaultdict(int))
 
     # -- CSV-driven Rename Models ---------------------------------------------
 
-    class ModCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
+    class ModCommand(mm.WriteMixin, m.ContractModel):
         """CLI request for the shared AST, semantic, and text codemod cascade."""
 
         check: Annotated[bool, m.Field(description="Validate without writing")] = False
@@ -285,7 +189,7 @@ class FlextInfraModelsRefactor(
             m.Field(alias="dry-run", description="Inspect without writing"),
         ] = False
 
-    class ApplyRenamesInput(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
+    class ApplyRenamesInput(mm.WriteMixin, m.ContractModel):
         """Validated CLI request for CSV-driven symbol renames."""
 
         csv: Annotated[
@@ -299,38 +203,42 @@ class FlextInfraModelsRefactor(
         bindings: Annotated[
             t.MappingKV[str, t.StrSequence],
             m.Field(
+                default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
                 description=(
                     "CSV expression prefixes mapped to current"
                     " public Rope owner identities"
                 ),
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType[str, t.StrSequence]({}))
+        ]
         text_globs: Annotated[
             t.StrSequence,
             m.Field(
+                default=(),
                 description=(
                     "Explicit root-relative non-Python documentation"
                     " and configuration text surfaces"
                 ),
             ),
-        ] = ()
+        ]
         python_documentation: Annotated[
             bool,
             m.Field(
+                default=False,
                 description=(
                     "Rename comments and actual Python docstrings,"
                     " preserving executable string payloads"
                 ),
             ),
-        ] = False
+        ]
         exclude_globs: Annotated[
             t.StrSequence,
             m.Field(
+                default=(),
                 description=(
                     "Declared generated projections excluded from campaign targets"
                 ),
             ),
-        ] = ()
+        ]
 
     class ApplyRenamesReport(m.ArbitraryTypesModel):
         """Summary of one CSV-driven rename pass."""
@@ -367,77 +275,6 @@ class FlextInfraModelsRefactor(
         tree: Annotated[
             t.Infra.RopePyModule,
             m.Field(description="Parsed PyObject module representation"),
-        ]
-
-    class ImportLawScope(m.ArbitraryTypesModel):
-        """Immutable facts one import-law pass decides a module's imports on."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        project_root: Annotated[Path, m.Field(description="Governed project root")]
-        file_path: Annotated[Path, m.Field(description="Normalized module path")]
-        namespace_dir: Annotated[
-            Path,
-            m.Field(description="Directory of the namespace owning the module"),
-        ]
-        module: Annotated[str, m.Field(description="Dotted name of the module")]
-        layer: Annotated[int, m.Field(description="Module's import-layer rank")]
-        own_exports: Annotated[
-            frozenset[str],
-            m.Field(description="Names the module declares in its own __all__"),
-        ]
-        family_letter: Annotated[
-            str | None,
-            m.Field(
-                description=(
-                    "Facade letter of the family package holding the module, "
-                    "or None outside every family package"
-                ),
-            ),
-        ] = None
-        direct_imports: Annotated[
-            bool,
-            m.Field(
-                description=(
-                    "Whether the module keeps direct leaf imports: a "
-                    "settings/config module or a family base.py, which must "
-                    "never route through the namespace root or a lazy package"
-                ),
-            ),
-        ] = False
-
-        @m.computed_field
-        @property
-        def namespace(self) -> str:
-            """Top-level package name of the owning namespace.
-
-            Returns:
-                The namespace package name.
-
-            """
-            return self.namespace_dir.name
-
-    class ImportLawPass(m.ArbitraryTypesModel):
-        """One parsed module and the facts one import-law pass reads from it."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        scope: Annotated[
-            FlextInfraModelsRefactor.ImportLawScope,
-            m.Field(description="Module facts of the pass"),
-        ]
-        tree: Annotated[ast.Module, m.Field(description="Parsed module")]
-        parents: Annotated[
-            t.MappingKV[int, ast.AST],
-            m.Field(description="Child node id to parent node map"),
-        ]
-        bindings: Annotated[
-            t.MappingKV[str, ast.stmt],
-            m.Field(description="Module-level statement binding each top name"),
-        ]
-        root_exports: Annotated[
-            t.StrMapping,
-            m.Field(description="Names the namespace root publishes lazily"),
         ]
 
 

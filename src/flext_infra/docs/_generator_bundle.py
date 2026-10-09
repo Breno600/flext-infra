@@ -81,99 +81,37 @@ class FlextInfraDocGeneratorBundleMixin:
 
         """
         started_at = perf_counter()
-        sources = cls._discovered_sources(request, started_at)
-        if sources.failure:
-            return r[m.Infra.DocsGenerationBundle].from_failure(sources)
-        repository_root, _selected_roots, source_states = sources.value
-        output_dir = u.Cli.resolve_optional_path(
-            request.output_dir,
-            default=Path(c.Infra.DEFAULT_DOCS_OUTPUT_DIR),
-        )
-        scopes = cls._validated_scopes(repository_root, request, output_dir)
-        if scopes.failure:
-            return r[m.Infra.DocsGenerationBundle].from_failure(scopes)
-        rendered = cls._rendered_scopes(
-            repository_root,
-            scopes.value,
-            source_states,
-        )
-        if rendered.failure:
-            return r[m.Infra.DocsGenerationBundle].from_failure(rendered)
-        return cls._validated_bundle(
-            repository_root,
-            rendered.value,
-            source_states,
-        )
-
-    @classmethod
-    def _discovered_sources(
-        cls,
-        request: m.Infra.DocsGenerateRequest,
-        started_at: float,
-    ) -> p.Result[t.Triple[Path, list[Path], t.VariadicTuple[m.Cli.AtomicFileState]]]:
-        """Discover, select, and authenticate the docs source inventory.
-
-        Returns:
-            The resulting ``(repository_root, selected_roots, source_states)``
-            triple.
-
-        """
-        result_type = r[
-            t.Triple[Path, list[Path], t.VariadicTuple[m.Cli.AtomicFileState]]
-        ]
         roots = u.Infra.docs_repository_roots(request.repository_root)
         if roots.failure:
-            return result_type.from_failure(roots)
+            return r[m.Infra.DocsGenerationBundle].from_failure(roots)
         repository_root = roots.value[0]
         selected_names = u.Infra.normalize_sequence_values(request.projects) or ()
         selected_roots: list[Path] = []
         for name in selected_names:
             selector = Path(name)
             if selector.is_absolute() or ".." in selector.parts:
-                return result_type.fail(
+                return r[m.Infra.DocsGenerationBundle].fail(
                     f"docs project selector escapes workspace: {name}",
                 )
             selected_roots.append(repository_root / selector)
+        output_dir = u.Cli.resolve_optional_path(
+            request.output_dir,
+            default=Path(c.Infra.DEFAULT_DOCS_OUTPUT_DIR),
+        )
         source_paths = u.Infra.docs_source_paths(repository_root, tuple(selected_roots))
         if source_paths.failure:
-            return result_type.from_failure(source_paths)
+            return r[m.Infra.DocsGenerationBundle].from_failure(source_paths)
         u.Cli.info(
             f"docs: discovered {len(source_paths.value)} source paths in "
             f"{perf_counter() - started_at:.2f}s",
         )
         sources = u.Infra.required_file_states(source_paths.value)
         if sources.failure:
-            return result_type.from_failure(sources)
+            return r[m.Infra.DocsGenerationBundle].from_failure(sources)
         u.Cli.info(
             f"docs: authenticated {len(sources.value)} source paths in "
             f"{perf_counter() - started_at:.2f}s",
         )
-        return result_type.ok((repository_root, selected_roots, sources.value))
-
-    @classmethod
-    def _validated_scopes(
-        cls,
-        repository_root: Path,
-        request: m.Infra.DocsGenerateRequest,
-        output_dir: Path,
-    ) -> p.Result[
-        t.Pair[
-            t.VariadicTuple[m.Infra.DocScope],
-            t.VariadicTuple[m.Infra.DocScope],
-        ]
-    ]:
-        """Build and target-validate the selected and aggregate doc scopes.
-
-        Returns:
-            The resulting ``(selected_scopes, aggregate_scopes)`` pair.
-
-        """
-        result_type = r[
-            t.Pair[
-                t.VariadicTuple[m.Infra.DocScope],
-                t.VariadicTuple[m.Infra.DocScope],
-            ]
-        ]
         selected = u.Infra.build_scopes(
             repository_root,
             request.projects,
@@ -181,10 +119,10 @@ class FlextInfraDocGeneratorBundleMixin:
             include_root=request.include_root,
         )
         if selected.failure:
-            return result_type.from_failure(selected)
+            return r[m.Infra.DocsGenerationBundle].from_failure(selected)
         selected_targets = cls._validate_scope_targets(selected.value, output_dir)
         if selected_targets.failure:
-            return result_type.from_failure(selected_targets)
+            return r[m.Infra.DocsGenerationBundle].from_failure(selected_targets)
         # Why (X-47): the aggregate inventory always includes root (independent
         # of `request.include_root`) because `docs_root_artifacts` needs the
         # complete project catalog whenever the root scope IS rendered; it is
@@ -196,34 +134,17 @@ class FlextInfraDocGeneratorBundleMixin:
             include_root=True,
         )
         if aggregate.failure:
-            return result_type.from_failure(aggregate)
+            return r[m.Infra.DocsGenerationBundle].from_failure(aggregate)
         aggregate_targets = cls._validate_scope_targets(aggregate.value, output_dir)
         if aggregate_targets.failure:
-            return result_type.from_failure(aggregate_targets)
-        return result_type.ok((tuple(selected.value), tuple(aggregate.value)))
-
-    @classmethod
-    def _rendered_scopes(
-        cls,
-        repository_root: Path,
-        scopes: t.Pair[
-            t.VariadicTuple[m.Infra.DocScope],
-            t.VariadicTuple[m.Infra.DocScope],
-        ],
-        source_states: t.VariadicTuple[m.Cli.AtomicFileState],
-    ) -> p.Result[list[_DocsScopeArtifacts]]:
-        """Render one docs artifact set per selected scope.
-
-        Returns:
-            The resulting per-scope rendered artifacts.
-
-        """
-        selected, aggregate = scopes
+            return r[m.Infra.DocsGenerationBundle].from_failure(aggregate_targets)
         root_scope: m.Infra.DocScope | None = (
-            selected[0] if selected and selected[0].name == c.Infra.RK_ROOT else None
+            selected.value[0]
+            if selected.value and selected.value[0].name == c.Infra.RK_ROOT
+            else None
         )
         rendered: list[_DocsScopeArtifacts] = []
-        for scope in selected:
+        for scope in selected.value:
             scope_started_at = perf_counter()
             if cls._is_collocated_workspace_project(scope, root_scope=root_scope):
                 rendered.append((scope, ()))
@@ -231,34 +152,21 @@ class FlextInfraDocGeneratorBundleMixin:
             artifacts = u.Infra.docs_scope_artifacts(
                 scope,
                 repository_root=repository_root,
-                aggregate_scopes=aggregate,
-                source_states=source_states,
+                aggregate_scopes=aggregate.value,
+                source_states=sources.value,
             )
             if artifacts.failure:
-                return r[list[_DocsScopeArtifacts]].from_failure(artifacts)
+                return r[m.Infra.DocsGenerationBundle].from_failure(artifacts)
             rendered.append((scope, artifacts.value))
             u.Cli.info(
                 f"docs: rendered {scope.name} artifacts={len(artifacts.value)} "
                 f"elapsed={perf_counter() - scope_started_at:.2f}s",
             )
-        return r[list[_DocsScopeArtifacts]].ok(rendered)
-
-    @classmethod
-    def _normalized_scope_artifacts(
-        cls,
-        rendered: list[_DocsScopeArtifacts],
-    ) -> p.Result[list[m.Infra.DocsScopeArtifacts]]:
-        """Normalize rendered artifacts and bind each to its owning scope.
-
-        Returns:
-            The resulting normalized per-scope artifact sets.
-
-        """
         normalized = u.Infra.docs_normalize_artifacts(
             tuple(artifact for _scope, artifacts in rendered for artifact in artifacts),
         )
         if normalized.failure:
-            return r[list[m.Infra.DocsScopeArtifacts]].from_failure(normalized)
+            return r[m.Infra.DocsGenerationBundle].from_failure(normalized)
         normalized_scopes: list[m.Infra.DocsScopeArtifacts] = []
         offset = 0
         for scope, scope_artifacts in rendered:
@@ -266,7 +174,7 @@ class FlextInfraDocGeneratorBundleMixin:
             normalized_artifacts: list[m.Infra.DocsRenderedArtifact] = []
             for project, target, content in normalized.value[offset : offset + size]:
                 if project != scope.path:
-                    return r[list[m.Infra.DocsScopeArtifacts]].fail(
+                    return r[m.Infra.DocsGenerationBundle].fail(
                         f"docs artifact owner differs from scope: {target}",
                     )
                 normalized_content = content
@@ -300,29 +208,11 @@ class FlextInfraDocGeneratorBundleMixin:
                 ),
             )
             offset += size
-        return r[list[m.Infra.DocsScopeArtifacts]].ok(normalized_scopes)
-
-    @classmethod
-    def _validated_bundle(
-        cls,
-        repository_root: Path,
-        rendered: list[_DocsScopeArtifacts],
-        source_states: t.VariadicTuple[m.Cli.AtomicFileState],
-    ) -> p.Result[m.Infra.DocsGenerationBundle]:
-        """Validate the rendered docs generation bundle.
-
-        Returns:
-            The resulting ``p.Result[m.Infra.DocsGenerationBundle]``.
-
-        """
-        normalized = cls._normalized_scope_artifacts(rendered)
-        if normalized.failure:
-            return r[m.Infra.DocsGenerationBundle].from_failure(normalized)
         validated_bundle: p.Result[m.Infra.DocsGenerationBundle] = u.validate_value(
             m.Infra.DocsGenerationBundle,
             {
-                "scopes": tuple(normalized.value),
-                "source_states": source_states,
+                "scopes": tuple(normalized_scopes),
+                "source_states": sources.value,
                 "repository_root": repository_root,
             },
         )

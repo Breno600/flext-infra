@@ -10,8 +10,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService
-from tests import c, m, u
+from flext_infra import FlextInfraWorktreeService, c, m
+from tests import u
 
 
 class TestsFlextInfraWorktreeTopology(u.Tests.WorktreeFixture):

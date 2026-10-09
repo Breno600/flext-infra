@@ -82,125 +82,68 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
         """
         if destination == c.Infra.GITIGNORE:
-            overlay = cls._composed_gitignore_overlay(
-                repository_root,
+            if render_inputs is None:
+                resolved = u.Infra.load_project_managed_artifacts(repository_root)
+                if resolved.failure:
+                    return r[m.Infra.CodegenArtifactComposition].from_failure(resolved)
+                blocks = resolved.value.artifacts.Gitignore.preserved_blocks
+            else:
+                blocks = render_inputs.managed_artifacts.resolution.artifacts.Gitignore.preserved_blocks
+            composed = u.Infra.preserve_project_gitignore_blocks(
                 rendered,
-                render_inputs,
+                repository_root,
+                blocks,
             )
-            if overlay.failure:
-                return r[m.Infra.CodegenArtifactComposition].from_failure(overlay)
-            rendered = overlay.value
+            if composed.failure:
+                return r[m.Infra.CodegenArtifactComposition].from_failure(composed)
+            rendered = composed.value
         if destination == c.PYPROJECT_FILENAME:
-            return cls._composed_pyproject_overlay(
-                repository_root,
+            live_path = repository_root / c.PYPROJECT_FILENAME
+            live: str | None = None
+            if live_path.is_file():
+                # Overlay reads the live text (managed merge conflicts
+                # resolved) and never writes it.
+                recovered_live = u.Infra.live_pyproject_text(live_path)
+                if recovered_live.failure:
+                    return r[m.Infra.CodegenArtifactComposition].from_failure(
+                        recovered_live,
+                    )
+                live = recovered_live.value
+            overlaid = u.Infra.overlay_preserved(rendered, live)
+            if overlaid.failure:
+                return r[m.Infra.CodegenArtifactComposition].from_failure(overlaid)
+            rendered = overlaid.value
+            if render_inputs is not None:
+                conformed = cls.conformed_pyproject_source(
+                    rendered,
+                    render_inputs=render_inputs,
+                )
+                if conformed.failure:
+                    return r[m.Infra.CodegenArtifactComposition].from_failure(conformed)
+                rendered = conformed.value
+            formatted = u.Infra.format_toml_source(
                 rendered,
-                render_inputs,
+                path=live_path,
+                toolchain_root=repository_root,
+                taplo_version=config.Infra.codegen.toolchain.taplo_version,
             )
+            if formatted.failure:
+                return r[m.Infra.CodegenArtifactComposition].from_failure(formatted)
+            # The parse-merge-dump overlay drops every template comment, so
+            # this composition owner publishes the one generated-file header
+            # (owner, adjustment rule, regeneration verb) on the final bytes.
+            # A re-run reads the live file as data, so it never accumulates.
+            rendered = f"{c.Infra.BANNER}\n{formatted.value.lstrip()}"
         if destination != c.Infra.MISE_TOML_FILENAME:
             return r[m.Infra.CodegenArtifactComposition].ok(
                 m.Infra.CodegenArtifactComposition(rendered=rendered),
             )
-        return cls._composed_mise_overlay(repository_root, rendered, render_inputs)
-
-    @classmethod
-    def _composed_gitignore_overlay(
-        cls,
-        repository_root: Path,
-        rendered: str,
-        render_inputs: m.Infra.CodegenRenderInputs | None,
-    ) -> p.Result[str]:
-        """Preserve the live gitignore's owned blocks in the render.
-
-        Returns:
-            The resulting ``p.Result[str]``.
-
-        """
-        if render_inputs is None:
-            resolved = u.Infra.load_project_managed_artifacts(repository_root)
-            if resolved.failure:
-                return r[str].from_failure(resolved)
-            artifacts = resolved.value.artifacts
-        else:
-            artifacts = render_inputs.managed_artifacts.resolution.artifacts
-        return u.Infra.preserve_project_gitignore_blocks(
-            rendered,
-            repository_root,
-            artifacts.Gitignore.preserved_blocks,
-        )
-
-    @classmethod
-    def _composed_pyproject_overlay(
-        cls,
-        repository_root: Path,
-        rendered: str,
-        render_inputs: m.Infra.CodegenRenderInputs | None,
-    ) -> p.Result[m.Infra.CodegenArtifactComposition]:
-        """Overlay, conform, and format the pyproject render.
-
-        Returns:
-            The resulting ``p.Result[m.Infra.CodegenArtifactComposition]``.
-
-        """
-        result_type = r[m.Infra.CodegenArtifactComposition]
-        live_path = repository_root / c.PYPROJECT_FILENAME
-        live: str | None = None
-        if live_path.is_file():
-            # Overlay reads the live text (managed merge conflicts
-            # resolved) and never writes it.
-            recovered_live = u.Infra.live_pyproject_text(live_path)
-            if recovered_live.failure:
-                return result_type.from_failure(recovered_live)
-            live = recovered_live.value
-        overlaid = u.Infra.overlay_preserved(rendered, live)
-        if overlaid.failure:
-            return result_type.from_failure(overlaid)
-        composed_rendered = overlaid.value
-        if render_inputs is not None:
-            conformed = cls.conformed_pyproject_source(
-                composed_rendered,
-                render_inputs=render_inputs,
-            )
-            if conformed.failure:
-                return result_type.from_failure(conformed)
-            composed_rendered = conformed.value
-        formatted = u.Infra.format_toml_source(
-            composed_rendered,
-            path=live_path,
-            toolchain_root=repository_root,
-            taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
-        )
-        if formatted.failure:
-            return result_type.from_failure(formatted)
-        # The parse-merge-dump overlay drops every template comment, so
-        # this composition owner publishes the one generated-file header
-        # (owner, adjustment rule, regeneration verb) on the final bytes.
-        # A re-run reads the live file as data, so it never accumulates.
-        return result_type.ok(
-            m.Infra.CodegenArtifactComposition(
-                rendered=f"{c.Infra.BANNER}\n{formatted.value.lstrip()}",
-            ),
-        )
-
-    @classmethod
-    def _composed_mise_overlay(
-        cls,
-        repository_root: Path,
-        rendered: str,
-        render_inputs: m.Infra.CodegenRenderInputs | None,
-    ) -> p.Result[m.Infra.CodegenArtifactComposition]:
-        """Compose the mise declaration from the resolved artifact catalog.
-
-        Returns:
-            The resulting ``p.Result[m.Infra.CodegenArtifactComposition]``.
-
-        """
-        result_type = r[m.Infra.CodegenArtifactComposition]
         if render_inputs is None:
             snapshot = u.Infra.snapshot_committed_project_managed_artifacts(
                 repository_root,
             )
             if snapshot.failure:
-                return result_type.from_failure(snapshot)
+                return r[m.Infra.CodegenArtifactComposition].from_failure(snapshot)
             resolved_artifacts = snapshot.value
         else:
             resolved_artifacts = render_inputs.managed_artifacts
@@ -216,11 +159,11 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             )
         )
         if composed.failure:
-            return result_type.from_failure(composed)
+            return r[m.Infra.CodegenArtifactComposition].from_failure(composed)
         config_sources = u.Infra.snapshot_config_sources(repository_root)
         if config_sources.failure:
-            return result_type.from_failure(config_sources)
-        return result_type.ok(
+            return r[m.Infra.CodegenArtifactComposition].from_failure(config_sources)
+        return r[m.Infra.CodegenArtifactComposition].ok(
             m.Infra.CodegenArtifactComposition(
                 rendered=composed.value,
                 source_states=config_sources.value,
@@ -278,39 +221,12 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             The resulting ``p.Result[p.Model]``.
 
         """
-        repository_context = self._repo_config_context(render_inputs, destination)
-        if repository_context is not None:
-            return repository_context
-        static_context = self._static_spec_context(render_inputs, destination)
-        if static_context is not None:
-            return static_context
-        beads_context = self._beads_context(render_inputs, destination)
-        if beads_context is not None:
-            return beads_context
-        github_context = self._github_context(render_inputs, destination)
-        if github_context is not None:
-            return github_context
-        makefile_context = self._makefile_group_context(render_inputs, destination)
-        if makefile_context is not None:
-            return makefile_context
-        return self._project_or_pass_context(render_inputs, project_context)
-
-    def _repo_config_context(
-        self,
-        render_inputs: m.Infra.CodegenRenderInputs,
-        destination: str,
-    ) -> p.Result[p.Model] | None:
-        """Resolve the repository-shaped config specs (gitignore/sonar/qlty/envrc).
-
-        Returns:
-            The resulting ``p.Result[p.Model] | None`` where None marks a
-            destination outside this group.
-
-        """
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
         repository = target.repository
+        repository_root = target.root
+        dist = repository.distribution
         if destination == c.Infra.GITIGNORE:
             project_patterns: t.StrSequence = (
                 render_inputs.managed_artifacts.resolution.artifacts.Gitignore.patterns
@@ -327,6 +243,20 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                         project_patterns=project_patterns,
                     ),
                 ),
+            )
+        if destination == c.Infra.PRE_COMMIT_CONFIG_FILENAME:
+            return r[p.Model].ok(
+                m.Infra.MakeWorkflowRenderSpec(dist=dist, make=codegen.make),
+            )
+        if destination in {
+            c.Infra.MARKDOWNLINT_CONFIG_FILENAME,
+            c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
+            c.Infra.PRETTIER_CONFIG_FILENAME,
+            c.Infra.PRETTIER_IGNORE_FILENAME,
+            f"{c.Infra.QLTY_CONFIG_DIRNAME}/{c.Infra.QLTY_CONFIG_FILENAME}",
+        }:
+            return r[p.Model].ok(
+                m.Infra.MarkdownLintRenderSpec(tooling=config.Infra.tooling),
             )
         if destination == c.Infra.SONARCLOUD_PROPERTIES_FILENAME:
             # Why: conform itself projects managed tests/fixtures/ci/docker files
@@ -345,17 +275,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                         if target.make_profile is c.Infra.MakeProfile.WORKSPACE
                         else ()
                     ),
-                    generated_source_globs=codegen.generated_source_globs,
-                ),
-            )
-        if destination == (
-            f"{c.Infra.QLTY_CONFIG_DIRNAME}/{c.Infra.QLTY_CONFIG_FILENAME}"
-        ):
-            # Generated source trees are tracked, so Git ignore rules no
-            # longer keep them out of the smells scan.
-            return r[p.Model].ok(
-                m.Infra.QltyRenderSpec(
-                    generated_source_globs=codegen.generated_source_globs,
                 ),
             )
         if destination == c.Infra.ENVRC_FILENAME:
@@ -370,35 +289,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     environment_path_prepends=(
                         codegen.toolchain.environment_path_prepends
                     ),
+                    mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 ),
-            )
-        return None
-
-    @classmethod
-    def _static_spec_context(
-        cls,
-        render_inputs: m.Infra.CodegenRenderInputs,
-        destination: str,
-    ) -> p.Result[p.Model] | None:
-        """Resolve the fleet-static and toolchain specs.
-
-        Returns:
-            The resulting ``p.Result[p.Model] | None`` where None marks a
-            destination outside this group.
-
-        """
-        codegen = render_inputs.codegen
-        dist = render_inputs.target.repository.distribution
-        if destination == c.Infra.PRE_COMMIT_CONFIG_FILENAME:
-            return r[p.Model].ok(
-                m.Infra.MakeWorkflowRenderSpec(dist=dist, make=codegen.make),
-            )
-        if destination in {
-            c.Infra.MARKDOWNLINT_CONFIG_FILENAME,
-            c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
-        }:
-            return r[p.Model].ok(
-                m.Infra.MarkdownLintRenderSpec(tooling=config.Infra.tooling),
             )
         if destination in {c.Infra.MISE_TOML_FILENAME, c.Infra.PYTHON_VERSION_FILENAME}:
             # Computed toolchain fields are projections, not inputs: filter the
@@ -409,44 +301,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 if field_name in m.Infra.ToolchainSpec.model_fields
             }
             return r[p.Model].ok(m.Infra.ToolchainSpec(**toolchain_data))
-        if destination == c.Infra.RELEASE_GITLEAKS_CONFIG_PATH:
-            # Why: the release build phase snapshots the gitleaks
-            # policy from the repository; it is fleet policy owned by
-            # config/infra.yaml, never scaffold-only project metadata.
-            return r[p.Model].ok(
-                m.Infra.ReleasePolicySpec(
-                    build_constraints=config.Infra.release.build_constraints,
-                ),
-            )
-        destination_path = Path(destination)
-        if (
-            destination_path.parent.as_posix() == "tests/fixtures/ci/docker"
-            and destination_path.suffix == ".Dockerfile"
-        ):
-            return r[p.Model].ok(
-                m.Infra.DistroDockerRenderSpec(
-                    package_name=dist.replace("-", "_"),
-                    python_version=codegen.toolchain.python_version,
-                    make=codegen.make,
-                ),
-            )
-        return None
 
-    @classmethod
-    def _beads_context(
-        cls,
-        render_inputs: m.Infra.CodegenRenderInputs,
-        destination: str,
-    ) -> p.Result[p.Model] | None:
-        """Resolve the Beads config and identity-marker specs.
-
-        Returns:
-            The resulting ``p.Result[p.Model] | None`` where None marks a
-            destination outside this group.
-
-        """
-        target = render_inputs.target
-        codegen = render_inputs.codegen
         if destination == c.Infra.BEADS_CONFIG_RELPATH:
             if target.beads is None:
                 return r[p.Model].fail(
@@ -485,110 +340,92 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 m.Infra.BeadsMetadataRenderSpec(
                     database=target.beads.database,
                     dolt_mode=codegen.toolchain.beads.dolt_mode,
-                    project_id=cls._beads_project_id(render_inputs.target.root),
+                    project_id=self._beads_project_id(repository_root),
                 ),
             )
-        return None
-
-    def _github_context(
-        self,
-        render_inputs: m.Infra.CodegenRenderInputs,
-        destination: str,
-    ) -> p.Result[p.Model] | None:
-        """Resolve the GitHub workflow render spec for ``.github/`` targets.
-
-        Returns:
-            The resulting ``p.Result[p.Model] | None`` where None marks a
-            destination outside this group.
-
-        """
-        if not destination.startswith(".github/"):
-            return None
-        target = render_inputs.target
-        workspace = render_inputs.workspace
-        codegen = render_inputs.codegen
-        repository_root = target.root
-        dist = target.repository.distribution
-        workspace_repositories = (
-            tuple(workspace.subprojects)
-            if target.make_profile is c.Infra.MakeProfile.WORKSPACE
-            else ()
-        )
-        # Why: ci.yml.j2 iterates this to build its push/pull_request branch
-        # filters, so an unsupplied value fails the render outright. The
-        # repository's own integration branch is the only branch this layer
-        # can name from resolved data; a fleet-wide list hardcoded here would
-        # make every repository trigger on branches it does not have.
-        resolved_branch = self.render_integration_branch(render_inputs)
-        if resolved_branch.failure:
-            return r[p.Model].from_failure(resolved_branch)
-        branch = resolved_branch.value
-        # Forks and local projects never enter the cooldown: they are the
-        # requirements this project takes by direct git reference.
-        excluded = self.direct_sources(render_inputs)
-        if excluded.failure:
-            return r[p.Model].from_failure(excluded)
-        return r[p.Model].ok(
-            m.Infra.GithubWorkflowRenderSpec(
-                dist=dist,
-                owns_workspace_manifest=(
-                    repository_root / "config/workspace.yaml"
-                ).is_file(),
-                make_profile=target.make_profile,
-                gascity_enabled=target.gascity_enabled,
-                repository_branch=branch,
-                ci_trigger_branches=tuple(
-                    dict.fromkeys((
-                        *codegen.branch_policy.ci_trigger_branches,
-                        branch,
-                    )),
+        if destination.startswith(".github/"):
+            workspace_repositories = (
+                tuple(workspace.subprojects)
+                if target.make_profile is c.Infra.MakeProfile.WORKSPACE
+                else ()
+            )
+            # Why: ci.yml.j2 iterates this to build its push/pull_request branch
+            # filters, so an unsupplied value fails the render outright. The
+            # repository's own integration branch is the only branch this layer
+            # can name from resolved data; a fleet-wide list hardcoded here would
+            # make every repository trigger on branches it does not have.
+            resolved_branch = self.render_integration_branch(render_inputs)
+            if resolved_branch.failure:
+                return r[p.Model].from_failure(resolved_branch)
+            branch = resolved_branch.value
+            # Forks and local projects never enter the cooldown: they are the
+            # requirements this project takes by direct git reference.
+            excluded = self.direct_sources(render_inputs)
+            if excluded.failure:
+                return r[p.Model].from_failure(excluded)
+            return r[p.Model].ok(
+                m.Infra.GithubWorkflowRenderSpec(
+                    dist=dist,
+                    make_profile=target.make_profile,
+                    gascity_enabled=target.gascity_enabled,
+                    repository_branch=branch,
+                    ci_trigger_branches=tuple(
+                        dict.fromkeys((
+                            *codegen.branch_policy.ci_trigger_branches,
+                            branch,
+                        )),
+                    ),
+                    python_version=codegen.toolchain.python_version,
+                    github_actions=codegen.github_actions,
+                    make=codegen.make,
+                    workspace_repositories=workspace_repositories,
+                    # Why: dependabot.yml.j2 branches on this and the model
+                    # declares it, but the .github/ spec never supplied it, so
+                    # every render died with "'has_devcontainer' is undefined".
+                    # Dependabot rejects its ENTIRE config when an ecosystem
+                    # names a directory that is absent, so this is read from the
+                    # checkout rather than declared: a stale flag would silently
+                    # disable Dependabot for the repository.
+                    has_devcontainer=(repository_root / ".devcontainer").is_dir(),
+                    dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
+                    cooldown_excluded_dependencies=excluded.value,
+                    checkout_submodules=codegen.checkout_submodules_overrides.get(
+                        dist,
+                        codegen.checkout_submodules,
+                    ),
+                    custom_steps=self._custom_ci_steps(repository_root),
+                    private_submodules=codegen.ci_private_submodules.get(dist),
+                    private_dependency_auth=codegen.ci_private_dependency_auth.get(
+                        dist,
+                    ),
+                    system_packages=tuple(codegen.ci_system_packages.get(dist, ())),
+                    packages_read=dist in codegen.ci_package_registry_read,
                 ),
-                python_version=codegen.toolchain.python_version,
-                github_actions=codegen.github_actions,
-                make=codegen.make,
-                workspace_repositories=workspace_repositories,
-                # Why: dependabot.yml.j2 branches on this and the model
-                # declares it, but the .github/ spec never supplied it, so
-                # every render died with "'has_devcontainer' is undefined".
-                # Dependabot rejects its ENTIRE config when an ecosystem
-                # names a directory that is absent, so this is read from the
-                # checkout rather than declared: a stale flag would silently
-                # disable Dependabot for the repository.
-                has_devcontainer=(repository_root / ".devcontainer").is_dir(),
-                dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
-                cooldown_excluded_dependencies=excluded.value,
-                checkout_submodules=codegen.checkout_submodules_overrides.get(
-                    dist,
-                    codegen.checkout_submodules,
+            )
+        destination_path = Path(destination)
+        if (
+            destination_path.parent.as_posix() == "tests/fixtures/ci/docker"
+            and destination_path.suffix == ".Dockerfile"
+        ):
+            return r[p.Model].ok(
+                m.Infra.DistroDockerRenderSpec(
+                    package_name=dist.replace("-", "_"),
+                    python_version=codegen.toolchain.python_version,
+                    make=codegen.make,
+                    mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 ),
-                custom_steps=self._custom_ci_steps(repository_root),
-                private_submodules=codegen.ci_private_submodules.get(dist),
-                private_dependency_auth=codegen.ci_private_dependency_auth.get(
-                    dist,
+            )
+        if destination == c.Infra.RELEASE_GITLEAKS_CONFIG_PATH:
+            # Why: the release build phase snapshots the gitleaks
+            # policy from the repository; it is fleet policy owned by
+            # config/infra.yaml, never scaffold-only project metadata.
+            return r[p.Model].ok(
+                m.Infra.ReleasePolicySpec(
+                    build_constraints=config.Infra.release.build_constraints,
                 ),
-                system_packages=tuple(codegen.ci_system_packages.get(dist, ())),
-                packages_read=dist in codegen.ci_package_registry_read,
-            ),
-        )
-
-    def _makefile_group_context(
-        self,
-        render_inputs: m.Infra.CodegenRenderInputs,
-        destination: str,
-    ) -> p.Result[p.Model] | None:
-        """Resolve the Makefile and custom-Make render specs.
-
-        Returns:
-            The resulting ``p.Result[p.Model] | None`` where None marks a
-            destination outside this group.
-
-        """
+            )
         if destination == c.Infra.MAKEFILE_FILENAME:
-            makefile = self._makefile_render_spec(
-                render_inputs.target,
-                render_inputs.workspace,
-                render_inputs.codegen,
-            )
+            makefile = self._makefile_render_spec(target, workspace, codegen)
             if makefile.failure:
                 return r[p.Model].from_failure(makefile)
             return r[p.Model].ok(makefile.value)
@@ -600,19 +437,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             if make_context.failure:
                 return r[p.Model].from_failure(make_context)
             return r[p.Model].ok(make_context.value)
-        return None
-
-    def _project_or_pass_context(
-        self,
-        render_inputs: m.Infra.CodegenRenderInputs,
-        project_context: m.Infra.ProjectRenderContext | None,
-    ) -> p.Result[p.Model]:
-        """Pass a supplied project context through, or derive one on demand.
-
-        Returns:
-            The resulting ``p.Result[p.Model]``.
-
-        """
         if project_context is not None:
             return r[p.Model].ok(project_context)
         context_result = self._project_render_context(render_inputs)
@@ -650,6 +474,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     codegen.toolchain.worktree_environment_directory
                 ),
                 pytest=pytest,
+                mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 dist=target.repository.distribution,
                 infra_cli=config.Infra.name,
                 make_profile=target.make_profile,
@@ -659,12 +484,22 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 workspace_subprojects=tuple(
                     item.path.as_posix() for item in workspace.subprojects
                 ),
+                workspace_repositories=(
+                    tuple(workspace.subprojects)
+                    if target.make_profile is c.Infra.MakeProfile.WORKSPACE
+                    else ()
+                ),
                 workspace_gitlinks=gitlinks.value,
                 uv_link_mode=self.link_mode(target.repository, codegen.toolchain),
-                mise_selector=codegen.toolchain.mise_selector,
-                mise_version=codegen.toolchain.mise_version,
-                mise_install_tools=codegen.toolchain.mise_install_keys,
-                python_version=codegen.toolchain.python_version,
+                uv_version=codegen.toolchain.uv_version,
+                mise_lockfile_platforms=codegen.toolchain.mise_lockfile_platforms,
+                npm_package_manager=codegen.toolchain.npm_package_manager,
+                qlty_selector=codegen.toolchain.qlty_selector,
+                jscpd_selector=codegen.toolchain.jscpd_selector,
+                prettier_selector=codegen.toolchain.prettier_selector,
+                ast_grep_selector=codegen.toolchain.ast_grep_selector,
+                scc_selector=codegen.toolchain.scc_selector,
+                waza_selector=codegen.toolchain.waza_selector,
                 make=codegen.make,
                 extra_verbs=(
                     self._merge_extra_verbs(

@@ -1,11 +1,5 @@
 """Canonical Git responsibility mixin for ``u.Infra``.
 
-The repository's committed ``.gitmodules`` is the only composition fact a
-superproject owns. This mixin is its single reader: every path, URL, branch
-and ``flext-managed`` flag reaches a consumer through
-``git_submodule_declarations``, and the recorded member commits and the
-dependency back edges derive from it.
-
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
 """
@@ -13,23 +7,25 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import MutableMapping
+from configparser import Error as ConfigParserError
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from flext_cli import u
-from git import Git, GitCommandError
-from packaging.requirements import InvalidRequirement, Requirement
-from packaging.utils import canonicalize_name
+from git import GitCommandError, GitConfigParser
 
-from flext_infra import c, m, p, r, t
+from flext_infra import c, m, r, t
 from flext_infra._utilities._git.semantic_identity import (
     FlextInfraUtilitiesGitSemanticIdentityMixin,
 )
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
     FlextInfraUtilitiesGitSemanticIdentityMixin,
 ):
-    """Own ``.gitmodules`` composition and its derivations."""
+    """Own semantic submodule operations."""
 
     @classmethod
     def git_submodule_init(
@@ -53,356 +49,104 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
     @classmethod
-    def git_submodule_declarations(
+    def git_submodule_config_value(
         cls,
-        repository_root: Path,
-    ) -> p.Result[t.VariadicTuple[m.Infra.GitSubmoduleDeclaration]]:
-        """Parse the repository's ``.gitmodules`` through ``git config -f``.
-
-        Git itself reads the file, so its syntax is Git's. A missing file is
-        a standalone repository (no members). A non-regular file, a malformed
-        file, a repeated key, a section without a path, and an absolute,
-        empty, escaping or duplicated path fail closed.
+        request: m.Infra.GitSubmoduleConfigRequest,
+    ) -> p.Result[m.Infra.GitTextReport]:
+        """Read one ``.gitmodules`` value, returning empty text when unset.
 
         Returns:
-            Every declared submodule in declaration order.
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
 
         """
-        result = r[t.VariadicTuple[m.Infra.GitSubmoduleDeclaration]]
-        sections = cls._gitmodules_sections(repository_root)
-        if sections.failure:
-            return result.from_failure(sections)
-        declarations: list[m.Infra.GitSubmoduleDeclaration] = []
-        for section, values in sections.value.items():
-            raw_path = values.get(c.Infra.GITMODULE_PATH_KEY, "")
-            relative = Path(raw_path)
-            if relative.is_absolute() or not relative.parts or ".." in relative.parts:
-                return result.fail(
-                    f"invalid Git submodule path in {section}: {raw_path!r}",
-                )
-            if any(item.path == relative for item in declarations):
-                return result.fail(f"duplicate Git submodule path: {raw_path}")
-            flag = values.get(c.Infra.GITMODULE_MANAGED_KEY)
-            declarations.append(
-                m.Infra.GitSubmoduleDeclaration(
-                    path=relative,
-                    url=values.get(c.Infra.GITMODULE_URL_KEY, ""),
-                    branch=values.get(c.Infra.GITMODULE_BRANCH_KEY, ""),
-                    managed=None if flag is None else flag.lower() == "true",
-                ),
-            )
-        return result.ok(tuple(declarations))
-
-    @staticmethod
-    def _gitmodules_sections(
-        repository_root: Path,
-    ) -> p.Result[t.MappingKV[str, t.StrMapping]]:
-        """Group every ``submodule.*`` key Git reads from ``.gitmodules``.
-
-        Returns:
-            Section name to its keys; empty when the file is absent.
-
-        """
-        result = r[t.MappingKV[str, t.StrMapping]]
-        gitmodules = repository_root / c.Infra.GITMODULES
-        if not gitmodules.exists():
-            return result.ok({})
-        if not gitmodules.is_file():
-            return result.fail(
-                f"Git submodule manifest is not a regular file: {gitmodules}",
-            )
+        gitmodules = request.repo_root / c.Infra.GITMODULES
         try:
-            listing = Git(repository_root).config(
-                "--file",
-                str(gitmodules),
-                "--null",
-                "--list",
-            )
-        except (GitCommandError, OSError) as exc:
-            return result.fail(
-                f"failed to read Git submodule declarations: {exc}",
+            with GitConfigParser(file_or_files=gitmodules, read_only=True) as parser:
+                value = (
+                    str(parser.get_value(request.section, request.key))
+                    if parser.has_option(request.section, request.key)
+                    else ""
+                )
+        except (ConfigParserError, OSError, TypeError, ValueError) as exc:
+            return r[m.Infra.GitTextReport].fail(
+                f"failed to read {request.section}.{request.key}: {exc}",
                 exception=exc,
             )
-        sections: MutableMapping[str, MutableMapping[str, str]] = {}
-        for entry in filter(None, listing.split("\0")):
-            key, _, value = entry.partition("\n")
-            section, _, variable = key.rpartition(".")
-            if not section.startswith(c.Infra.GITMODULE_SECTION_PREFIX):
+        return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=value.strip()))
+
+    @classmethod
+    def git_submodule_sections(
+        cls,
+        request: m.Infra.GitRepoRequest,
+    ) -> p.Result[t.StrMapping]:
+        """Map every declared submodule path to its ``.gitmodules`` section.
+
+        A duplicated path is a declaration defect rather than a state defect, so
+        it fails here instead of silently resolving to the last writer.
+
+        Returns:
+            The resulting ``p.Result[t.StrMapping]``.
+
+        """
+        gitmodules = request.repo_root / c.Infra.GITMODULES
+        if not gitmodules.is_file():
+            return r[t.StrMapping].ok({})
+        try:
+            with GitConfigParser(file_or_files=gitmodules, read_only=True) as parser:
+                declarations = tuple(
+                    (str(parser.get_value(section, "path")).strip(), section)
+                    for section in parser.sections()
+                    if section.startswith("submodule ")
+                    and parser.has_option(section, "path")
+                )
+        except (ConfigParserError, OSError, TypeError, ValueError) as exc:
+            return r[t.StrMapping].fail(
+                f"failed to read submodule declarations: {exc}",
+                exception=exc,
+            )
+        sections: MutableMapping[str, str] = {}
+        for declared, section in declarations:
+            if not declared:
                 continue
-            values = sections.setdefault(section, {})
-            if variable in values:
-                return result.fail(f"Git submodule key is declared twice: {key}")
-            values[variable] = value.strip()
-        return result.ok(sections)
+            if declared in sections:
+                return r[t.StrMapping].fail(
+                    f"governed gitlink path is duplicated: {declared}",
+                )
+            sections[declared] = section
+        return r[t.StrMapping].ok(sections)
 
     @classmethod
-    def git_submodule_declaration(
+    def git_unmanaged_submodule_paths(
         cls,
-        request: m.Infra.GitSubmoduleContractRequest,
-    ) -> p.Result[m.Infra.GitSubmoduleDeclaration]:
-        """Return the one declaration of a path that carries URL and branch.
+        request: m.Infra.GitRepoRequest,
+    ) -> p.Result[t.SequenceOf[Path]]:
+        """Return declared submodule paths that opt out of workspace governance.
+
+        An absent ``flext-managed`` key keeps the member governed. Any explicit
+        value other than ``true`` declares a vendored or non-Python checkout
+        that no governed stage may treat as a workspace project.
 
         Returns:
-            The declaration; a missing path, URL or branch fails closed.
+            Declared submodule paths that opt out of workspace governance.
 
         """
-        result = r[m.Infra.GitSubmoduleDeclaration]
-        declared = cls.git_submodule_declarations(request.repo_root)
-        if declared.failure:
-            return result.from_failure(declared)
-        declaration = next(
-            (
-                item
-                for item in declared.value
-                if item.path.as_posix() == request.member_path
-            ),
-            None,
-        )
-        if declaration is None:
-            return result.fail(
-                f"Git submodule path must be declared exactly once: "
-                f"{request.member_path}",
-            )
-        if not declaration.url:
-            return result.fail(f"Git submodule URL is missing: {request.member_path}")
-        if not declaration.branch:
-            return result.fail(
-                f"Git submodule branch is missing: {request.member_path}",
-            )
-        return result.ok(declaration)
-
-    @classmethod
-    def recorded_member_sources(
-        cls,
-        superproject_root: Path,
-    ) -> p.Result[t.VariadicTuple[m.Infra.DependencyCommitSourceSpec]]:
-        """Return each governed member's committed gitlink as a commit source.
-
-        The commit is the superproject ``HEAD`` tree entry (the recorded
-        position), never the index or the member checkout. The distribution
-        is the member's own PEP 621 name and the URL its ``.gitmodules`` URL.
-
-        Returns:
-            One commit source per governed Python member.
-
-        """
-        result = r[t.VariadicTuple[m.Infra.DependencyCommitSourceSpec]]
-        members = cls._member_manifests(superproject_root)
-        if members.failure:
-            return result.from_failure(members)
-        sources: list[m.Infra.DependencyCommitSourceSpec] = []
-        for declaration, manifest in members.value:
-            recorded = cls.git_rev_parse(
-                m.Infra.GitCommitishRequest(
-                    repo_root=superproject_root,
-                    commitish=f"{c.Infra.GIT_HEAD}:{declaration.path.as_posix()}",
+        sections = cls.git_submodule_sections(request)
+        if sections.failure:
+            return r[t.SequenceOf[Path]].from_failure(sections)
+        unmanaged: t.MutableSequenceOf[Path] = []
+        for declared, section in sections.value.items():
+            flag = cls.git_submodule_config_value(
+                m.Infra.GitSubmoduleConfigRequest(
+                    repo_root=request.repo_root,
+                    section=section,
+                    key=c.Infra.GITMODULE_MANAGED_KEY,
                 ),
             )
-            if recorded.failure:
-                return result.from_failure(recorded)
-            try:
-                source = m.Infra.DependencyCommitSourceSpec(
-                    distribution=manifest.name,
-                    url=declaration.url,
-                    commit=recorded.value.oid,
-                )
-            except ValueError as exc:
-                return result.fail(
-                    f"{declaration.path.as_posix()}: {exc}",
-                    exception=exc,
-                )
-            sources.append(source)
-        return result.ok(tuple(sources))
-
-    @classmethod
-    def flext_back_edges(
-        cls,
-        superproject_root: Path,
-    ) -> p.Result[t.VariadicTuple[m.Infra.DependencyEdgeSpec]]:
-        """Derive the dependency-group edges that close a member cycle.
-
-        A back edge is a dependency-group requirement ``X -> Y`` between
-        members where ``X`` is already in ``Y``'s runtime closure. Removing
-        every back edge must leave an acyclic graph; a cycle the rule cannot
-        break (a runtime cycle, or a group-only cycle) fails loudly.
-
-        Returns:
-            Every back edge, sorted by dependent then dependency.
-
-        """
-        result = r[t.VariadicTuple[m.Infra.DependencyEdgeSpec]]
-        members = cls._member_manifests(superproject_root)
-        if members.failure:
-            return result.from_failure(members)
-        declared_runtime: MutableMapping[str, frozenset[str]] = {}
-        grouped: MutableMapping[str, frozenset[str]] = {}
-        for declaration, manifest in members.value:
-            name = canonicalize_name(manifest.name)
-            if name in declared_runtime:
-                return result.fail(
-                    f"workspace member distribution is declared twice: {name} "
-                    f"({declaration.path.as_posix()})",
-                )
-            runtime_names = cls._requirement_names(manifest.dependencies)
-            if runtime_names.failure:
-                return result.from_failure(runtime_names)
-            group_names = cls._requirement_names(
-                tuple(
-                    requirement
-                    for group in manifest.dependency_groups.values()
-                    for requirement in group
-                ),
-            )
-            if group_names.failure:
-                return result.from_failure(group_names)
-            declared_runtime[name] = runtime_names.value - {name}
-            grouped[name] = group_names.value - {name} - runtime_names.value
-        names = frozenset(declared_runtime)
-        runtime = {name: edges & names for name, edges in declared_runtime.items()}
-        back = tuple(
-            (dependent, dependency)
-            for dependent in sorted(grouped)
-            for dependency in sorted(grouped[dependent] & names)
-            if dependent in cls._runtime_closure(dependency, runtime)
-        )
-        remaining = {
-            name: runtime[name]
-            | {
-                dependency
-                for dependency in grouped[name] & names
-                if (name, dependency) not in back
-            }
-            for name in names
-        }
-        cycle = cls._unordered_members(remaining)
-        if cycle:
-            return result.fail(
-                "workspace dependency cycle is not broken by a back edge: "
-                + ", ".join(cycle),
-            )
-        return result.ok(
-            tuple(
-                m.Infra.DependencyEdgeSpec(dependent=dependent, dependency=dependency)
-                for dependent, dependency in back
-            ),
-        )
-
-    @classmethod
-    def _member_manifests(
-        cls,
-        superproject_root: Path,
-    ) -> p.Result[
-        t.VariadicTuple[
-            t.Pair[m.Infra.GitSubmoduleDeclaration, m.Infra.DependencyManifestSpec]
-        ]
-    ]:
-        """Read every governed, materialized member's own ``pyproject.toml``.
-
-        An opted-out member is not composition. A governed member whose
-        checkout is not materialized fails; one without a ``pyproject.toml``
-        is content-only and declares no distribution.
-
-        Returns:
-            Each governed Python member with its declared dependency facts.
-
-        """
-        result = r[
-            t.VariadicTuple[
-                t.Pair[m.Infra.GitSubmoduleDeclaration, m.Infra.DependencyManifestSpec]
-            ]
-        ]
-        declared = cls.git_submodule_declarations(superproject_root)
-        if declared.failure:
-            return result.from_failure(declared)
-        members: list[
-            t.Pair[m.Infra.GitSubmoduleDeclaration, m.Infra.DependencyManifestSpec]
-        ] = []
-        for declaration in declared.value:
-            if declaration.managed is False:
-                continue
-            member_root = superproject_root / declaration.path
-            if not (member_root / c.Infra.GIT_DIR).exists():
-                return result.fail(
-                    "workspace member checkout is not materialized: "
-                    f"{declaration.path.as_posix()}",
-                )
-            pyproject = member_root / c.PYPROJECT_FILENAME
-            if not pyproject.is_file():
-                continue
-            payload = u.Cli.toml_mapping_from_text(
-                pyproject.read_text(encoding=c.Cli.ENCODING_DEFAULT),
-            )
-            if payload is None:
-                return result.fail(f"{pyproject} is not valid TOML")
-            try:
-                manifest = m.Infra.DependencyManifestSpec.model_validate(payload)
-            except ValueError as exc:
-                return result.fail(f"{pyproject}: {exc}", exception=exc)
-            members.append((declaration, manifest))
-        return result.ok(tuple(members))
-
-    @staticmethod
-    def _requirement_names(
-        requirements: t.StrSequence,
-    ) -> p.Result[frozenset[str]]:
-        """Return the canonical distribution names of PEP 508 requirements.
-
-        Returns:
-            The canonical names; an invalid requirement fails.
-
-        """
-        names: set[str] = set()
-        for raw in requirements:
-            try:
-                names.add(canonicalize_name(Requirement(raw).name))
-            except InvalidRequirement as exc:
-                return r[frozenset[str]].fail(
-                    f"invalid requirement {raw!r}: {exc}",
-                    exception=exc,
-                )
-        return r[frozenset[str]].ok(frozenset(names))
-
-    @staticmethod
-    def _runtime_closure(
-        start: str,
-        runtime: t.MappingKV[str, frozenset[str]],
-    ) -> frozenset[str]:
-        """Return every member reachable from ``start`` over runtime edges.
-
-        Returns:
-            The runtime closure, excluding ``start`` unless it is on a cycle.
-
-        """
-        reached: set[str] = set()
-        pending = list(runtime.get(start, frozenset()))
-        while pending:
-            name = pending.pop()
-            if name in reached:
-                continue
-            reached.add(name)
-            pending.extend(runtime.get(name, frozenset()))
-        return frozenset(reached)
-
-    @staticmethod
-    def _unordered_members(
-        graph: t.MappingKV[str, frozenset[str]],
-    ) -> t.StrSequence:
-        """Return the members a topological order cannot place (a cycle).
-
-        Returns:
-            The sorted members left on a cycle; empty for an acyclic graph.
-
-        """
-        pending = {name: set(edges) for name, edges in graph.items()}
-        placed = True
-        while placed:
-            ready = {name for name, edges in pending.items() if not edges}
-            placed = bool(ready)
-            for name in ready:
-                del pending[name]
-            for edges in pending.values():
-                edges.difference_update(ready)
-        return tuple(sorted(pending))
+            if flag.failure:
+                return r[t.SequenceOf[Path]].from_failure(flag)
+            if flag.value.text and flag.value.text.lower() != "true":
+                unmanaged.append(Path(declared))
+        return r[t.SequenceOf[Path]].ok(tuple(unmanaged))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitSemanticSubmoduleMixin"]

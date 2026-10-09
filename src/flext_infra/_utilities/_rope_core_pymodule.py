@@ -7,13 +7,12 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import re
-from pathlib import Path
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
-from rope.base import exceptions
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
-from flext_infra import t
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesRopeCorePyModuleMixin:
@@ -31,7 +30,6 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         *,
         line: int,
         symbol: str,
-        pyname: t.Infra.RopePyName | None = None,
     ) -> int | None:
         """Return the absolute offset of one exact identifier token on a line.
 
@@ -39,30 +37,16 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         variants. Using ``str.find(symbol)`` is incorrect because it can match a
         substring inside another token or keyword, e.g. ``except ... as e``.
         This helper resolves the first exact identifier token equal to ``symbol``
-        on the reported line for lexical callers. Inventory callers supply the
-        binding: candidate tokens are resolved by Rope and compared to that exact
-        binding. Multiple matching tokens fail rather than guessing which is the
-        definition and which is a same-line use.
+        on the reported line.
 
         Returns:
             The absolute offset of one exact identifier token on a line.
 
-        Raises:
-            RuntimeError: If the binding has no defining module or matching tokens
-                are ambiguous on its definition line.
-
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         if line < 1 or line > len(lines):
             return None
         line_start = sum(len(item) for item in lines[: line - 1])
         source_line = lines[line - 1]
-        pymodule = pyname.get_definition_location()[0] if pyname is not None else None
-        if pyname is not None and pymodule is None:
-            msg = f"rope definition binding has no module: {symbol}:{line}"
-            raise RuntimeError(msg)
-        matching_offsets: list[int] = []
         for (
             match
         ) in FlextInfraUtilitiesRopeCorePyModuleMixin._IDENTIFIER_PATTERN.finditer(
@@ -70,48 +54,15 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         ):
             if match.group(0) == symbol:
                 offset: int = line_start + match.start()
-                if pyname is None:
-                    return offset
-                if pymodule is not None and (
-                    FlextInfraUtilitiesRopeRuntime.name_definition_resource_path(
-                        pymodule,
-                        offset,
-                        expected_binding=pyname,
-                    )
-                    is not None
-                ):
-                    matching_offsets.append(offset)
-        if len(matching_offsets) > 1:
-            msg = f"rope definition binding token is ambiguous: {symbol}:{line}"
-            raise RuntimeError(msg)
-        return matching_offsets[0] if matching_offsets else None
-
-    @staticmethod
-    def resolvable_module_resource(resource: t.Infra.RopeResource) -> bool:
-        """Whether the resource can own a Python module for rope's resolver.
-
-        A plain data directory (no ``__init__.py``, no sibling source module)
-        owns no module: rope's ``find_module`` still reports it, and handing
-        it to ``resolve_pymodule`` would fail loud on a non-PyModule.
-
-        Returns:
-            The resulting ``bool``.
-
-        """
-        if FlextInfraUtilitiesRopeRuntime.file_resource(resource):
-            return True
-        path = Path(resource.real_path)
-        return (path / "__init__.py").is_file() or path.with_suffix(".py").is_file()
+                return offset
+        return None
 
     @staticmethod
     def resolve_pymodule(
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
     ) -> t.Infra.RopePyModule:
-        """Resolve modules and packages with Python's namespace precedence.
-
-        A sibling source module takes precedence over an uninitialized data
-        directory; an initialized package retains precedence over that module.
+        """Resolve one concrete rope PyModule through the validated API boundary.
 
         Returns:
             The resulting ``t.Infra.RopePyModule``.
@@ -120,13 +71,6 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
             TypeError: If rope project returned non-PyModule.
 
         """
-        if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
-            path = Path(resource.real_path)
-            if (
-                not (path / "__init__.py").is_file()
-                and path.with_suffix(".py").is_file()
-            ):
-                resource = resource.parent.get_child(f"{path.name}.py")
         pymodule = rope_project.get_pymodule(resource)
         if not FlextInfraUtilitiesRopeRuntime.pymodule(pymodule):
             msg = "rope project returned non-PyModule"
@@ -157,10 +101,7 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
                 ),
             )
         except (
-            exceptions.RefactoringError,
-            exceptions.ResourceNotFoundError,
-            exceptions.ModuleNotFoundError,
-            AttributeError,
+            *FlextInfraUtilitiesRopeRuntime.rope_runtime_errors(),
             TypeError,
         ) as exc:
             msg = (

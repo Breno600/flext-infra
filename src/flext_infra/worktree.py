@@ -9,11 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, override
 
-from flext_cli import r
-
-from flext_infra import c, m, p, t, u
-from flext_infra.base import s
-from flext_infra.git_lanes import FlextInfraGitLanes
+from flext_infra import c, m, p, r, s, t, u
 
 
 class FlextInfraWorktreeService(s[str]):
@@ -518,12 +514,10 @@ class FlextInfraWorktreeService(s[str]):
                 f"worktree remove refuses lane {branch} while children are "
                 f"registered: {nested}",
             )
-        integrated = FlextInfraGitLanes.verify_retirement(primary_root, branch)
-        if integrated.failure:
-            return r[str].from_failure(integrated)
-        return u.Infra.git_remove_clean_worktree(primary_root, lane).map(
-            lambda _: str(lane),
-        )
+        removed = u.Infra.git_remove_clean_worktree(primary_root, lane)
+        if removed.failure:
+            return r[str].from_failure(removed)
+        return r[str].ok(str(lane))
 
     def _update(self, primary_root: Path, branch: str, base: str) -> p.Result[str]:
         """Merge-forward one clean canonical lane to the requested base.

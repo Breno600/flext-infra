@@ -20,6 +20,7 @@ from libcst.metadata import (
     QualifiedNameSource,
 )
 
+from flext_infra import m, t
 from flext_infra._utilities._semantic_cutover.bindings import (
     FlextInfraUtilitiesSemanticCutoverBindings,
 )
@@ -30,7 +31,7 @@ from flext_infra._utilities._semantic_cutover.edits import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import m, p, t
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(

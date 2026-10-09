@@ -12,7 +12,6 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
 from flext_infra.release import FlextInfraReleaseBuildMixin
 from tests import c, m, p, u
 
@@ -45,8 +44,12 @@ class TestsFlextInfraReleaseHelpers:
             tm.that(notes, has=c.Tests.RELEASE_NOTES_CHANGE_LINE)
 
         @staticmethod
-        def test_generate_notes_is_formatter_stable(tmp_path: Path) -> None:
+        def test_generate_notes_is_prettier_stable(tmp_path: Path) -> None:
             """The canonical formatter leaves generated notes byte-identical."""
+            import shutil
+
+            prettier = shutil.which(c.Infra.PRETTIER_BINARY)
+            tm.that(bool(prettier), eq=True)
             notes_path = tmp_path / "release" / c.Infra.RELEASE_NOTES_FILENAME
             first_subject = (
                 "fix(release): *.aihub-prior-* marker and a subject long enough to "
@@ -72,20 +75,15 @@ class TestsFlextInfraReleaseHelpers:
             tm.ok(first)
             tm.ok(second)
             config_dir = Path(__file__).resolve().parents[3]
-            release_dir = notes_path.parent
-            (release_dir / c.Infra.MARKDOWNLINT_CONFIG_FILENAME).write_text(
-                (config_dir / c.Infra.MARKDOWNLINT_CONFIG_FILENAME).read_text(
-                    encoding="utf-8",
-                ),
-                encoding="utf-8",
-            )
-            checked = u.Tests.run_gate_check(
-                FlextInfraMarkdownFormatGate,
-                tmp_path,
-                release_dir,
-            )
-            tm.that(checked.result.passed, eq=True)
-            tm.that(len(checked.issues), eq=0)
+            checked = u.Cli.run_raw([
+                str(prettier),
+                "--check",
+                "--config",
+                str(config_dir / c.Infra.PRETTIER_CONFIG_FILENAME),
+                str(notes_path),
+            ])
+            tm.ok(checked)
+            tm.that(u.Cli.process_succeeded(checked.value.outcome), eq=True)
 
         @staticmethod
         def test_generate_notes_failure_returns_result_error(tmp_path: Path) -> None:

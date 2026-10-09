@@ -7,14 +7,16 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from flext_cli import u as cli_u
 
-from flext_infra import c, m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesCodegenFilePlan,
-    FlextInfraUtilitiesDocsScope,
-)
+from flext_infra import c, m, r, t
+from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesDocsGenerateSourcesMixin:
@@ -46,7 +48,6 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
         Returns:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
-        from flext_cli import u as cli_u
         """
         planned = cli_u.Cli.atomic_plan_directory_chain(root)
         if planned.failure:
@@ -77,7 +78,6 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
         Returns:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
-        from flext_cli import u as cli_u
         """
         roots = FlextInfraUtilitiesDocsScope.docs_repository_roots(
             repository_root,
@@ -87,121 +87,72 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
             return r[t.VariadicTuple[Path]].from_failure(roots)
         paths: set[Path] = set()
         for root in roots.value:
-            collected = (
-                FlextInfraUtilitiesDocsGenerateSourcesMixin._collected_root_paths(
-                    root,
+            # The docs configuration lives one directory down, and a repository
+            # that has never generated documentation has no `docs/` yet. Reading
+            # a leaf under a directory that does not exist is not "absent", it
+            # is a failure, so its presence is established first.
+            docs_root_present = (
+                FlextInfraUtilitiesDocsGenerateSourcesMixin._source_directory_exists(
+                    root / c.Infra.DIR_DOCS,
                 )
             )
-            if collected.failure:
-                return r[t.VariadicTuple[Path]].from_failure(collected)
-            paths.update(collected.value)
+            if docs_root_present.failure:
+                return r[t.VariadicTuple[Path]].from_failure(docs_root_present)
+            fixed_paths = (
+                root / c.Infra.GITMODULES,
+                root / c.PYPROJECT_FILENAME,
+                *(
+                    (root / c.Infra.DIR_DOCS / c.Infra.DOCS_CONFIG_FILENAME,)
+                    if docs_root_present.value
+                    else ()
+                ),
+            )
+            for fixed_path in fixed_paths:
+                state = cli_u.Cli.atomic_read_binary_file_state(
+                    fixed_path,
+                    required=False,
+                )
+                if state.failure:
+                    return r[t.VariadicTuple[Path]].from_failure(state)
+                if state.value.content is not None:
+                    paths.add(fixed_path)
+            config_paths = (
+                FlextInfraUtilitiesDocsGenerateSourcesMixin._source_tree_files(
+                    root / "config",
+                    recursive=False,
+                    suffixes=frozenset({".yaml", ".yml"}),
+                )
+            )
+            if config_paths.failure:
+                return r[t.VariadicTuple[Path]].from_failure(config_paths)
+            paths.update(config_paths.value)
+            source_paths = (
+                FlextInfraUtilitiesDocsGenerateSourcesMixin._source_tree_files(
+                    root / c.Infra.DEFAULT_SRC_DIR,
+                    recursive=True,
+                    suffixes=frozenset({".py"}),
+                )
+            )
+            if source_paths.failure:
+                return r[t.VariadicTuple[Path]].from_failure(source_paths)
+            paths.update(source_paths.value)
+            guide_paths = (
+                FlextInfraUtilitiesDocsGenerateSourcesMixin._source_tree_files(
+                    root / c.Infra.DIR_DOCS / "guides",
+                    recursive=False,
+                    suffixes=frozenset({".md"}),
+                    excluded_names=frozenset({"README.md"}),
+                )
+            )
+            if guide_paths.failure:
+                return r[t.VariadicTuple[Path]].from_failure(guide_paths)
+            paths.update(guide_paths.value)
         templates_root = Path(__file__).absolute().parent.parent / "templates"
         paths.update({
             templates_root / c.Infra.TEMPLATE_MKDOCS_PROJECT,
             templates_root / c.Infra.TEMPLATE_MKDOCS_ROOT,
         })
         return r[t.VariadicTuple[Path]].ok(tuple(sorted(paths)))
-
-    @classmethod
-    def _collected_root_paths(cls, root: Path) -> p.Result[t.VariadicTuple[Path]]:
-        """Collect one repository root's documented physical source paths.
-
-        Returns:
-            The resulting ``p.Result[t.VariadicTuple[Path]]``.
-
-        """
-        # The docs configuration lives one directory down, and a repository
-        # that has never generated documentation has no `docs/` yet. Reading
-        # a leaf under a directory that does not exist is not "absent", it
-        # is a failure, so its presence is established first.
-        docs_root_present = cls._source_directory_exists(root / c.Infra.DIR_DOCS)
-        if docs_root_present.failure:
-            return r[t.VariadicTuple[Path]].from_failure(docs_root_present)
-        paths: set[Path] = set()
-        fixed_paths = (
-            root / c.Infra.GITMODULES,
-            root / c.PYPROJECT_FILENAME,
-            *(
-                (root / c.Infra.DIR_DOCS / c.Infra.DOCS_CONFIG_FILENAME,)
-                if docs_root_present.value
-                else ()
-            ),
-        )
-        collectors = (
-            cls._collected_fixed_paths(paths, fixed_paths),
-            cls._collected_tree_paths(
-                paths,
-                root / "config",
-                recursive=False,
-                suffixes=frozenset({".yaml", ".yml"}),
-            ),
-            cls._collected_tree_paths(
-                paths,
-                root / c.Infra.DEFAULT_SRC_DIR,
-                recursive=True,
-                suffixes=frozenset({".py"}),
-            ),
-            cls._collected_tree_paths(
-                paths,
-                root / c.Infra.DIR_DOCS / "guides",
-                recursive=False,
-                suffixes=frozenset({".md"}),
-                excluded_names=frozenset({"README.md"}),
-            ),
-        )
-        for collected in collectors:
-            if collected.failure:
-                return r[t.VariadicTuple[Path]].from_failure(collected)
-        return r[t.VariadicTuple[Path]].ok(tuple(sorted(paths)))
-
-    @staticmethod
-    def _collected_fixed_paths(
-        paths: set[Path],
-        fixed_paths: t.SequenceOf[Path],
-    ) -> p.Result[bool]:
-        """Add each existing fixed path to the collected set.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        for fixed_path in fixed_paths:
-            state = cli_u.Cli.atomic_read_binary_file_state(
-                fixed_path,
-                required=False,
-            )
-            if state.failure:
-                return r[bool].from_failure(state)
-            if state.value.content is not None:
-                paths.add(fixed_path)
-        return r[bool].ok(value=True)
-
-    @classmethod
-    def _collected_tree_paths(
-        cls,
-        paths: set[Path],
-        tree_root: Path,
-        *,
-        recursive: bool,
-        suffixes: frozenset[str],
-        excluded_names: frozenset[str] = frozenset(),
-    ) -> p.Result[bool]:
-        """Add one inventoried source tree's files to the collected set.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        tree_paths = cls._source_tree_files(
-            tree_root,
-            recursive=recursive,
-            suffixes=suffixes,
-            excluded_names=excluded_names,
-        )
-        if tree_paths.failure:
-            return r[bool].from_failure(tree_paths)
-        paths.update(tree_paths.value)
-        return r[bool].ok(value=True)
 
     @staticmethod
     def docs_verify_sources(

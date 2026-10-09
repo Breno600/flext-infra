@@ -17,7 +17,6 @@ import ast
 from typing import TYPE_CHECKING
 
 from flext_infra import m, r, t
-from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
@@ -26,6 +25,9 @@ from flext_infra._utilities._semantic_cutover.facade_base_cst import (
 )
 from flext_infra._utilities._semantic_cutover.facade_owners import (
     FlextInfraUtilitiesSemanticCutoverFacadeOwners,
+)
+from flext_infra._utilities.private_import_facades import (
+    FlextInfraUtilitiesPrivateImportFacades,
 )
 
 if TYPE_CHECKING:

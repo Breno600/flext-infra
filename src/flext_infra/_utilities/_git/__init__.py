@@ -10,14 +10,11 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra._utilities._git.attestation import (
         FlextInfraUtilitiesGitAttestationMixin,
-    )
-    from flext_infra._utilities._git.lane_hygiene import (
-        FlextInfraUtilitiesGitLaneHygieneMixin,
     )
     from flext_infra._utilities._git.mutation_scope import (
         FlextInfraUtilitiesGitMutationScopeMixin,
@@ -103,7 +100,6 @@ if TYPE_CHECKING:
 
 __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesGitAttestationMixin",
-    "FlextInfraUtilitiesGitLaneHygieneMixin",
     "FlextInfraUtilitiesGitMutationScopeMixin",
     "FlextInfraUtilitiesGitRemote",
     "FlextInfraUtilitiesGitRepo",
@@ -136,44 +132,46 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesGitWorktreeStatusMixin",
 )
 
-install_lazy_exports(
-    __name__,
-    globals(),
-    MappingProxyType({
-        "FlextInfraUtilitiesGitAttestationMixin": ".attestation",
-        "FlextInfraUtilitiesGitLaneHygieneMixin": ".lane_hygiene",
-        "FlextInfraUtilitiesGitMutationScopeMixin": ".mutation_scope",
-        "FlextInfraUtilitiesGitRemote": ".remote",
-        "FlextInfraUtilitiesGitRepo": ".repo",
-        "FlextInfraUtilitiesGitScopeMixin": ".scope",
-        "FlextInfraUtilitiesGitSemanticIdentityMixin": ".semantic_identity",
-        "FlextInfraUtilitiesGitSemanticIndexMixin": ".semantic_index",
-        "FlextInfraUtilitiesGitSemanticLaneMixin": ".semantic_lane",
-        "FlextInfraUtilitiesGitSemanticPathsMixin": ".semantic_paths",
-        "FlextInfraUtilitiesGitSemanticPublishMixin": ".semantic_publish",
-        "FlextInfraUtilitiesGitSemanticRefsMixin": ".semantic_refs",
-        "FlextInfraUtilitiesGitSemanticSubmoduleMixin": ".semantic_submodule",
-        "FlextInfraUtilitiesGitSemanticWorktreeMixin": ".semantic_worktree",
-        "FlextInfraUtilitiesGitStateCaptureMixin": ".state_capture",
-        "FlextInfraUtilitiesGitStateCheckpointMixin": ".state_checkpoint",
-        "FlextInfraUtilitiesGitStateFilesMixin": ".state_files",
-        "FlextInfraUtilitiesGitStatePublicationMixin": ".state_publication",
-        "FlextInfraUtilitiesGitStateSnapshotMixin": ".state_snapshot",
-        "FlextInfraUtilitiesGitStateTransitionMixin": ".state_transition",
-        "FlextInfraUtilitiesGitStateTreesMixin": ".state_trees",
-        "FlextInfraUtilitiesGitWorktreeCheckpointMixin": ".worktree_checkpoint",
-        "FlextInfraUtilitiesGitWorktreeDiscoveryMixin": ".worktree_discovery",
-        "FlextInfraUtilitiesGitWorktreeFactsMixin": ".worktree_facts",
-        "FlextInfraUtilitiesGitWorktreeIO": ".worktree_io",
-        "FlextInfraUtilitiesGitWorktreeMaterializationMixin": (
-            ".worktree_materialization"
-        ),
-        "FlextInfraUtilitiesGitWorktreeMeasureMixin": ".worktree_measure",
-        "FlextInfraUtilitiesGitWorktreeMixin": ".worktree",
-        "FlextInfraUtilitiesGitWorktreePatchMixin": ".worktree_patch",
-        "FlextInfraUtilitiesGitWorktreeRemovalMixin": ".worktree_removal",
-        "FlextInfraUtilitiesGitWorktreeRootsMixin": ".worktree_roots",
-        "FlextInfraUtilitiesGitWorktreeStatusMixin": ".worktree_status",
-    }),
-    public_exports=__all__,
+_LAZY_IMPORTS = MappingProxyType(
+    build_lazy_import_map(
+        MappingProxyType({
+            ".attestation": ("FlextInfraUtilitiesGitAttestationMixin",),
+            ".mutation_scope": ("FlextInfraUtilitiesGitMutationScopeMixin",),
+            ".remote": ("FlextInfraUtilitiesGitRemote",),
+            ".repo": ("FlextInfraUtilitiesGitRepo",),
+            ".scope": ("FlextInfraUtilitiesGitScopeMixin",),
+            ".semantic_identity": ("FlextInfraUtilitiesGitSemanticIdentityMixin",),
+            ".semantic_index": ("FlextInfraUtilitiesGitSemanticIndexMixin",),
+            ".semantic_lane": ("FlextInfraUtilitiesGitSemanticLaneMixin",),
+            ".semantic_paths": ("FlextInfraUtilitiesGitSemanticPathsMixin",),
+            ".semantic_publish": ("FlextInfraUtilitiesGitSemanticPublishMixin",),
+            ".semantic_refs": ("FlextInfraUtilitiesGitSemanticRefsMixin",),
+            ".semantic_submodule": ("FlextInfraUtilitiesGitSemanticSubmoduleMixin",),
+            ".semantic_worktree": ("FlextInfraUtilitiesGitSemanticWorktreeMixin",),
+            ".state_capture": ("FlextInfraUtilitiesGitStateCaptureMixin",),
+            ".state_checkpoint": ("FlextInfraUtilitiesGitStateCheckpointMixin",),
+            ".state_files": ("FlextInfraUtilitiesGitStateFilesMixin",),
+            ".state_publication": ("FlextInfraUtilitiesGitStatePublicationMixin",),
+            ".state_snapshot": ("FlextInfraUtilitiesGitStateSnapshotMixin",),
+            ".state_transition": ("FlextInfraUtilitiesGitStateTransitionMixin",),
+            ".state_trees": ("FlextInfraUtilitiesGitStateTreesMixin",),
+            ".worktree": ("FlextInfraUtilitiesGitWorktreeMixin",),
+            ".worktree_checkpoint": ("FlextInfraUtilitiesGitWorktreeCheckpointMixin",),
+            ".worktree_discovery": ("FlextInfraUtilitiesGitWorktreeDiscoveryMixin",),
+            ".worktree_facts": ("FlextInfraUtilitiesGitWorktreeFactsMixin",),
+            ".worktree_io": ("FlextInfraUtilitiesGitWorktreeIO",),
+            ".worktree_materialization": (
+                "FlextInfraUtilitiesGitWorktreeMaterializationMixin",
+            ),
+            ".worktree_measure": ("FlextInfraUtilitiesGitWorktreeMeasureMixin",),
+            ".worktree_patch": ("FlextInfraUtilitiesGitWorktreePatchMixin",),
+            ".worktree_removal": ("FlextInfraUtilitiesGitWorktreeRemovalMixin",),
+            ".worktree_roots": ("FlextInfraUtilitiesGitWorktreeRootsMixin",),
+            ".worktree_status": ("FlextInfraUtilitiesGitWorktreeStatusMixin",),
+        }),
+        alias_groups=MappingProxyType({}),
+        sort_keys=False,
+    ),
 )
+
+install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

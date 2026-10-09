@@ -126,10 +126,10 @@ class FlextInfraMypyGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Run the resource-limited Mypy invocation with its JSON report.
+        """Build check command.
 
         Returns:
-            The limited Mypy command over the resolved settings owner.
+            The resulting ``t.StrSequence``.
 
         Raises:
             ValueError: If Mypy profile output requires an absolute path in an existing
@@ -156,7 +156,6 @@ class FlextInfraMypyGate(FlextInfraGate):
                 targets=tuple(project_dir / target for target in check_dirs),
                 config_file=cfg,
                 report_json=True,
-                verbose=True,
                 profile_output=destination,
                 report_file=machine_report,
             ),
@@ -272,7 +271,7 @@ class FlextInfraMypyGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Validate Mypy's one-JSON-object-per-line report into findings.
+        """Parse check output.
 
         The machine channel is the owned report file the report runner wrote:
         every diagnostic line is a JSON object there, whatever the checker
@@ -281,11 +280,11 @@ class FlextInfraMypyGate(FlextInfraGate):
         stay the tool's own human stream, never diagnostics.
 
         Returns:
-            The run's verdict and its diagnostics, stderr failures or limit hit.
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
 
         """
         _ = ctx
-        diagnostics: t.MutableSequenceOf[m.Infra.Issue] = []
+        issues: t.MutableSequenceOf[m.Infra.Issue] = []
         if resource_diagnostic := u.Infra.mypy_failure_diagnostic(result):
             return (
                 False,
@@ -323,16 +322,14 @@ class FlextInfraMypyGate(FlextInfraGate):
             if validated.failure:
                 return False, (
                     self._malformed_report_issue(
-                        f"{validated.error}\n"
-                        f"mypy exited with code {result.outcome.raw_return_code}\n"
-                        f"stdout: {result.stdout}\n"
+                        f"{validated.error}\nstdout: {raw_line}\n"
                         f"stderr: {result.stderr}",
                         tool=c.Infra.MYPY,
                         file=str(project_dir),
                     ),
                 )
             diagnostic = validated.value
-            diagnostics.append(
+            issues.append(
                 m.Infra.Issue(
                     file=diagnostic.file,
                     line=diagnostic.line,
@@ -346,7 +343,24 @@ class FlextInfraMypyGate(FlextInfraGate):
                     severity=diagnostic.severity,
                 ),
             )
-        issues = self._checker_issues(result, project_dir, diagnostics)
+        issues.extend(self._checker_stderr_issues(result, project_dir))
+        if (not issues) and not u.Cli.process_succeeded(result.outcome):
+            message = (result.stderr or result.stdout).strip()
+            if not message:
+                message = (
+                    f"mypy exited with code {result.outcome.raw_return_code} "
+                    f"without JSON diagnostics"
+                )
+            issues.append(
+                m.Infra.Issue(
+                    file=c.PYPROJECT_FILENAME,
+                    line=1,
+                    column=1,
+                    code="mypy-exec",
+                    message=message,
+                    severity=c.Infra.ERROR,
+                ),
+            )
         return (
             u.Cli.process_succeeded(result.outcome)
             and not any(issue.severity.lower() == "error" for issue in issues),

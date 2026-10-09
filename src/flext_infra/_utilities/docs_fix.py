@@ -12,11 +12,9 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 
 from flext_infra import c, config, m, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDocs,
-    FlextInfraUtilitiesDocsContract,
-    FlextInfraUtilitiesDocsGithubLinks,
-)
+from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
 
 if TYPE_CHECKING:
     import re
@@ -96,7 +94,7 @@ class FlextInfraUtilitiesDocsFix:
                 ]
                 fix_outcome = u.Cli.run_raw(
                     (*common, *config.Infra.codegen.make.ruff.lint_fix),
-                    options=m.Cli.ProcessOptions(input_data=body.encode()),
+                    input_data=body.encode(),
                 )
                 if fix_outcome.failure:
                     raise RuntimeError(
@@ -107,10 +105,7 @@ class FlextInfraUtilitiesDocsFix:
                 # is accepted only when a second, fix-free check comes back
                 # clean, never on the fix pass's own exit code.
                 fixed_body = fix_outcome.value.stdout
-                verify_outcome = u.Cli.run_raw(
-                    common,
-                    options=m.Cli.ProcessOptions(input_data=fixed_body.encode()),
-                )
+                verify_outcome = u.Cli.run_raw(common, input_data=fixed_body.encode())
                 if verify_outcome.failure:
                     raise RuntimeError(
                         verify_outcome.error or f"Ruff could not verify {rel}",

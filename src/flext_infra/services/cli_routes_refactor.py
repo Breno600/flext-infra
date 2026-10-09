@@ -10,8 +10,7 @@ from typing import ClassVar
 
 from flext_cli import cli
 
-from flext_infra import c, m, p, r, t
-from flext_infra.api import infra
+from flext_infra import infra, m, p, r, t
 from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
 from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
 from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
@@ -20,12 +19,38 @@ from flext_infra.refactor.accessor_migration import (
 )
 from flext_infra.refactor.census import FlextInfraRefactorCensus
 from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
-from flext_infra.refactor.violations_sweep import FlextInfraRefactorViolationsSweep
 from flext_infra.refactor.wrapper_root_namespace import (
     FlextInfraWrapperRootNamespaceRefactor,
 )
-from flext_infra.services.cli_mod_progress import FlextInfraCliModProgress
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
+
+
+class FlextInfraCliModProgress:
+    """Render mod progress at the CLI transport boundary."""
+
+    @staticmethod
+    def emit(message: str) -> None:
+        """Show the current canonical mod phase."""
+        cli.display_text(message)
+
+    @staticmethod
+    def emit_rename(report: m.Infra.ApplyRenamesReport) -> None:
+        """Show one completed CSV campaign."""
+        cli.display_text(FlextInfraCliModProgress.render_rename(report))
+
+    @staticmethod
+    def render_rename(report: m.Infra.ApplyRenamesReport) -> str:
+        """Render native published paths and pending edit spans.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        return (
+            f"{report.label}: {report.files_changed} published file(s), "
+            f"{report.occurrences} pending source edit(s), "
+            f"{report.files_scanned} scanned file(s)"
+        )
 
 
 class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
@@ -174,19 +199,6 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             ),
             model_cls=FlextInfraCodemodAstScan,
             handler=FlextInfraCodemodAstScan.execute_command,
-        ),
-        m.Cli.ResultCommandRoute(
-            name=c.Infra.VIOLATIONS_SWEEP_ROUTE_NAME,
-            help_text=(
-                "Run the canonical repair sequence (make fix, make fmt, "
-                "make mod) between two mod scans; the command fails the "
-                "moment any violation total increased"
-            ),
-            model_cls=FlextInfraRefactorViolationsSweep,
-            handler=FlextInfraCliRouteBase.result_handler(
-                FlextInfraRefactorViolationsSweep.execute_command,
-            ),
-            success_message="violations sweep reduced or held every total",
         ),
     )
 

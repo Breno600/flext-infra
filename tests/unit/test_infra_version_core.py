@@ -10,7 +10,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import __version__, __version_info__, u
+import flext_infra as infra_pkg
+from flext_infra import u
 
 
 class TestsFlextInfraInfraVersionCore:
@@ -23,7 +24,7 @@ class TestsFlextInfraInfraVersionCore:
             u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2]),
         )
 
-        tm.that(__version__, eq=metadata.project.version)
+        tm.that(infra_pkg.__version__, eq=metadata.project.version)
 
     @staticmethod
     def test_package_version_info_matches_current_workspace_semver_prefix() -> None:
@@ -35,13 +36,13 @@ class TestsFlextInfraInfraVersionCore:
         tm.ok(version_result)
         parse_result = u.Infra.parse_semver(version_result.value)
         tm.ok(parse_result)
-        tm.that(__version_info__[:3], eq=parse_result.value)
+        tm.that(infra_pkg.__version_info__[:3], eq=parse_result.value)
 
     @staticmethod
     def test_package_version_fields_have_public_runtime_types() -> None:
         """Test package version fields have public runtime types."""
-        tm.that(__version__, is_=str)
-        tm.that(__version_info__, is_=tuple)
+        tm.that(infra_pkg.__version__, is_=str)
+        tm.that(infra_pkg.__version_info__, is_=tuple)
 
     @staticmethod
     def test_latest_release_tag_ranks_versions_and_ignores_foreign_namespaces() -> None:

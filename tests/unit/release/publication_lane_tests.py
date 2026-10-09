@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_core import r
-from tests import c, m, p, t, u
+from tests import TestsFlextInfraUtilities as u, c, m, p, t
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -162,45 +162,5 @@ class TestsFlextInfraReleasePublicationLane:
             )
 
             tm.fail(result)
-            tm.that(self._published(tmp_path), eq="")
-            tm.that(gh_log.exists(), eq=False)
-
-    def test_failed_production_preserves_partial_output(self, tmp_path: Path) -> None:
-        """A failed producer retains staged and untracked bytes for recovery."""
-        with self._lane(tmp_path) as (repo, request, gh_log):
-            original_head = u.Tests.git_capture(repo, "rev-parse", "HEAD").strip()
-            staged = repo / "staged.txt"
-            untracked = repo / "partial.txt"
-            content = "partial production\n"
-
-            def produce() -> p.Result[bool]:
-                tm.ok(u.Cli.files_write_text(staged, content))
-                tm.that(u.Tests.git_run(repo, "add", "--", staged.name), eq=True)
-                tm.ok(u.Cli.files_write_text(untracked, content))
-                return r[bool].fail("production failed")
-
-            result = u.Infra.git_publish_lane(request, produce)
-
-            tm.fail(result)
-            tm.that(result.error or "", has="production failed")
-            tm.that(staged.read_text(encoding="utf-8"), eq=content)
-            tm.that(untracked.read_text(encoding="utf-8"), eq=content)
-            tm.that(
-                tm.ok(
-                    u.Cli.run_bytes(
-                        [c.Infra.GIT, "show", f":{staged.name}"],
-                        cwd=repo,
-                    ),
-                ).stdout,
-                eq=content.encode("utf-8"),
-            )
-            tm.that(
-                u.Tests.git_capture(repo, "rev-parse", "HEAD").strip(),
-                eq=original_head,
-            )
-            tm.that(
-                u.Tests.git_capture(repo, "branch", "--show-current").strip(),
-                eq=request.branch,
-            )
             tm.that(self._published(tmp_path), eq="")
             tm.that(gh_log.exists(), eq=False)

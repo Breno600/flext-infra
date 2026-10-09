@@ -11,13 +11,13 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, t
+from flext_infra import c, m, u
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
-from tests import u
+from tests import u as test_u
 
 
-class TestsFlextInfraBatchReplacements:
+class TestsBatchReplacements:
     """Only authenticated authored bytes may receive engine-proposed edits."""
 
     @staticmethod
@@ -30,7 +30,7 @@ class TestsFlextInfraBatchReplacements:
         path.write_bytes(content)
         state = tm.ok(u.Cli.atomic_read_binary_file_state(path, required=True))
         start = content.index(b"before")
-        offsets: t.JsonDict = {"start": start, "end": start + len(b"before")}
+        offsets = {"start": start, "end": start + len(b"before")}
         finding = m.Infra.ModScanFinding(
             rule_file=str(path.parent / "rule.yaml"),
             rule_id="fixture-rewrite",
@@ -56,39 +56,19 @@ class TestsFlextInfraBatchReplacements:
 
     def test_utf8_replacements_use_engine_byte_offsets(self, tmp_path: Path) -> None:
         """Test utf8 replacements use engine byte offsets."""
-        root = u.Tests.git_repository(tmp_path)
+        root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         original = '# ação\nvalue = "before"\n'.encode()
         report = self._report(path, original)
         tm.ok(FlextInfraModReplacements.publish(root, report))
         tm.that(path.read_bytes(), eq=original.replace(b"before", b"after"))
 
-    def test_removed_references_leave_no_type_only_import_scaffold(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """Publishing a rewrite normalizes imports as well as formatting."""
-        root = u.Tests.git_repository(tmp_path)
-        path = root / "subject.py"
-        original = (
-            b"from __future__ import annotations\n\n"
-            b"from typing import TYPE_CHECKING\n\n"
-            b"if TYPE_CHECKING:\n    from pathlib import Path\n\n"
-            b'value = "before"\n__all__ = ("value",)\n'
-        )
-        report = self._report(path, original)
-        tm.ok(FlextInfraModReplacements.publish(root, report))
-        tm.that(path.read_text(), lacks="TYPE_CHECKING")
-        tm.that(path.read_text(), lacks="from pathlib import Path")
-        tm.that(path.read_text(), has='value = "after"')
-        tm.that(path.read_text(), has='__all__ = ("value",)')
-
     def test_generator_findings_remain_visible_and_unmodified(
         self,
         tmp_path: Path,
     ) -> None:
         """Test generator findings remain visible and unmodified."""
-        root = u.Tests.git_repository(tmp_path)
+        root = test_u.Tests.git_repository(tmp_path)
         path = root / "generated.py"
         original = b'value = "before"\n'
         report = self._report(path, original, generated=True)
@@ -103,7 +83,7 @@ class TestsFlextInfraBatchReplacements:
         tmp_path: Path,
     ) -> None:
         """Test generator evidence never blocks authored rewrites."""
-        root = u.Tests.git_repository(tmp_path)
+        root = test_u.Tests.git_repository(tmp_path)
         original = b'value = "before"\n'
         authored = self._report(root / "authored.py", original).entries[0]
         generated = self._report(
@@ -134,7 +114,7 @@ class TestsFlextInfraBatchReplacements:
         changed: bytes,
     ) -> None:
         """Test changed source is not overwritten."""
-        root = u.Tests.git_repository(tmp_path)
+        root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         report = self._report(path, b'value = "before"\n')
         path.write_bytes(changed)
@@ -143,7 +123,7 @@ class TestsFlextInfraBatchReplacements:
 
     def test_missing_actionable_snapshot_is_rejected(self, tmp_path: Path) -> None:
         """Test missing actionable snapshot is rejected."""
-        root = u.Tests.git_repository(tmp_path)
+        root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         report = self._report(path, b'value = "before"\n')
         finding = report.entries[0].model_copy(update={"source_state": None})
@@ -160,7 +140,7 @@ class TestsFlextInfraBatchReplacements:
         byte-splice leaves the source line blank and the mod circuit enforces
         canonical formatting on the first pass after applying.
         """
-        root = u.Tests.git_repository(tmp_path)
+        root = test_u.Tests.git_repository(tmp_path)
         path = root / "tests" / "unit" / "test_demo.py"
         path.parent.mkdir(parents=True)
         original = (
@@ -170,7 +150,7 @@ class TestsFlextInfraBatchReplacements:
         state = tm.ok(u.Cli.atomic_read_binary_file_state(path, required=True))
         statement = b'__all__ = ["X"]'
         start = original.index(statement)
-        offsets: t.JsonDict = {"start": start, "end": start + len(statement)}
+        offsets = {"start": start, "end": start + len(statement)}
         finding = m.Infra.ModScanFinding(
             rule_file=str(root / "rule.yaml"),
             rule_id="ban-test-suite-module-all",

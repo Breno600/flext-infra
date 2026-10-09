@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import c, m, t, u
+from tests import c, u
 
 pytestmark = pytest.mark.slow
 
@@ -29,11 +29,11 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
     )
 
     @classmethod
-    def _runtime_values(cls, project_root: Path) -> t.StrDict:
+    def _runtime_values(cls, project_root: Path) -> dict[str, str]:
         """Print the resolved runtime through the public help verb's post hook.
 
         Returns:
-            The resulting ``t.StrDict``.
+            The resulting ``dict[str, str]``.
 
         """
         (project_root / "custom.mk").write_text(
@@ -117,9 +117,7 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
                         "OBSERVED_VENV_DIR",
                     ),
                     cwd=entry,
-                    options=m.Cli.ProcessOptions(
-                        remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
-                    ),
+                    remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
                 ),
             )
         finally:

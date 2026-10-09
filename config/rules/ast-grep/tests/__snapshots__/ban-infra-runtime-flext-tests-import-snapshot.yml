@@ -6,49 +6,23 @@ snapshots:
       style: primary
       start: 0
       end: 25
-    - source: flext_tests
-      style: secondary
-      start: 5
-      end: 16
   from flext_tests.validator import FlextTestsValidator:
     labels:
     - source: from flext_tests.validator import FlextTestsValidator
       style: primary
       start: 0
       end: 53
-    - source: flext_tests.validator
-      style: secondary
-      start: 5
-      end: 26
   import flext_tests:
     labels:
     - source: import flext_tests
       style: primary
       start: 0
       end: 18
-    - source: flext_tests
-      style: secondary
-      start: 7
-      end: 18
-  import flext_tests as tests_tier:
-    labels:
-    - source: import flext_tests as tests_tier
-      style: primary
-      start: 0
-      end: 32
-    - source: flext_tests
-      style: secondary
-      start: 7
-      end: 18
   import flext_tests.validator:
     labels:
     - source: import flext_tests.validator
       style: primary
       start: 0
-      end: 28
-    - source: flext_tests.validator
-      style: secondary
-      start: 7
       end: 28
   module = __import__("flext_tests"):
     labels:

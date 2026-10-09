@@ -10,22 +10,21 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, config, m, r, t, u
+from flext_infra import c, config, m, r, u
 from flext_infra.codegen import (
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,
 )
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import p, t
 
 
 class FlextInfraSemanticPublication:
     """Publish semantic file plans through the recoverable codegen transaction."""
 
-    @classmethod
+    @staticmethod
     def publish_semantic_file_plans(
-        cls,
         plans: t.SequenceOf[m.Infra.SemanticFilePlan],
         *,
         repository_root: Path,
@@ -41,20 +40,50 @@ class FlextInfraSemanticPublication:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
         """
-        files = cls._concrete_file_plans(plans, codegen)
-        if files.failure:
-            return r[tuple[Path, ...]].from_failure(files)
-        if not files.value:
+        files: list[m.Infra.CodegenFilePlan] = []
+        template_sources = u.Infra.codegen_template_sources(
+            config.Infra.codegen if codegen is None else codegen,
+        )
+        for plan in plans:
+            if plan.desired_content is None:
+                continue
+            if plan.desired_mode is None:
+                return r[tuple[Path, ...]].fail(
+                    f"semantic desired mode is absent: {plan.path}",
+                )
+            if (
+                plan.path.resolve() not in template_sources
+                and plan.before.content is not None
+                and plan.before.content.decode(c.Cli.ENCODING_DEFAULT).startswith(
+                    c.Infra.AUTOGEN_HEADERS,
+                )
+            ):
+                return r[tuple[Path, ...]].fail(
+                    "generated findings require canonical generator repair: "
+                    f"{plan.path}",
+                )
+            files.append(
+                m.Infra.CodegenFilePlan(
+                    project=plan.project,
+                    path=plan.path,
+                    before=plan.before,
+                    desired_content=plan.desired_content,
+                    desired_mode=plan.desired_mode,
+                    source_states=(plan.before,),
+                    owner="semantic",
+                ),
+            )
+        if not files:
             return r[tuple[Path, ...]].ok(())
-        inputs = cls._semantic_input_snapshots(plans)
-        if inputs.failure:
-            return r[tuple[Path, ...]].from_failure(inputs)
         analysis = m.Infra.CodegenPhaseAnalysis(
             phase=c.Infra.CodegenStagedFilePhase.SEMANTIC,
             files=tuple(files.value),
             inputs=inputs.value,
         )
-        roots = cls._semantic_phase_roots(files.value)
+        roots = {
+            f"@semantic-{index}": project
+            for index, project in enumerate(sorted({plan.project for plan in files}))
+        }
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=repository_root),
         )

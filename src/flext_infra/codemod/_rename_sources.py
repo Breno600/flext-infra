@@ -12,8 +12,7 @@ import re
 import tokenize
 from pathlib import Path
 
-from flext_infra import c, m, t, u
-from flext_infra._config import FlextInfraConfig, config
+from flext_infra import FlextInfraConfig, c, config, m, t, u
 
 
 class FlextInfraRenameSources:
@@ -56,15 +55,6 @@ class FlextInfraRenameSources:
         roots: t.SequenceOf[Path],
         params: m.Infra.ApplyRenamesInput,
     ) -> t.MappingKV[Path, m.Cli.AtomicFileState]:
-        """Index scanned files minus ignored, generated, and driver paths.
-
-        Returns:
-            The authenticated file states of every electable rename source.
-
-        Raises:
-            ValueError: If rename source disappeared.
-
-        """
         files: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         ignored = config.Infra.codegen.source_scan_ignored
         generated = {item.path for item in config.Infra.codegen.managed_files}

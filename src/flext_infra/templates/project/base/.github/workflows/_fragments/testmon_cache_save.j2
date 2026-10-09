@@ -1,11 +1,10 @@
 
-{%- if make.testmon_cache_policy.save_enabled %}
-      # Completed failing tests may save; cancelled/incomplete/corrupt runs cannot.
+      # Why: save on every outcome, a failing or budget-stopped make test
+      # included, under a key unique to this run, so every run hands the
+      # results it recorded to the next selection.
       - name: Save testmon database
-        if: >-
-          {% raw %}${{ always() && !cancelled() && github.event_name == 'push' && steps.approval.outputs.testmon_saveable == 'true' && steps.approval.outputs.testmon_database == steps.testmon_path.outputs.database && steps.approval.outputs.testmon_digest != '' && contains(fromJSON('{% endraw %}{{ make.testmon_cache_policy.allowed_save_refs | list | tojson }}{% raw %}'), github.ref_name) && startsWith(github.ref, 'refs/heads/') }}{% endraw %}
+        if: {% raw %}${{ always() }}{% endraw %}
         uses: {{ github_actions["cache"].repository }}/save@{{ github_actions["cache"].version }}
         with:
-          path: {% raw %}${{ steps.approval.outputs.testmon_database }}{% endraw %}
-          key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}-{{ make.testmon_cache_policy.key_prefix }}-{{ dist }}-{% raw %}${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml', 'config/**') }}-${{ github.run_id }}-${{ github.run_attempt }}{% endraw %}
-{%- endif %}
+          path: ~/{{ make.testmon_cache.home_cache_directory }}/{{ make.testmon_cache.external_storage_directory }}
+          key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}-{{ make.testmon_cache_policy.key_prefix }}{% raw %}-${{ github.run_id }}-${{ github.run_attempt }}{% endraw %}

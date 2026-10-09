@@ -7,17 +7,19 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from flext_infra import c, m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDocsApi,
-    FlextInfraUtilitiesDocsContract,
-    FlextInfraUtilitiesDocsGuidesMixin,
-    FlextInfraUtilitiesDocsRender,
-)
+from flext_infra import c, m, r, t
 from flext_infra._utilities._docs_generate_plan import (
     FlextInfraUtilitiesDocsGeneratePlanMixin,
 )
+from flext_infra._utilities._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities.docs_render import FlextInfraUtilitiesDocsRender
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesDocsGenerateProjectMixin(

@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config
-from tests import p, t, u
+from flext_infra import c, config, u
+from tests import p, t, u as test_u
 
 # The run-scoped template resolves a real toolchain through Make upg before any
 # item starts; each scenario provisions its own physical environment frozen
@@ -60,7 +60,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         # Only governed source and lock inputs travel; setup creates a distinct
         # physical environment for every scenario instead of borrowing the seed.
         root.mkdir(parents=True)
-        u.Tests.copy_tracked_mise_seeds(root, source_root=template)
+        test_u.Tests.copy_tracked_mise_seeds(root, source_root=template)
         for relative in (
             c.Infra.MAKEFILE_FILENAME,
             c.PYPROJECT_FILENAME,
@@ -80,7 +80,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
             root / c.Infra.DEFAULT_SRC_DIR,
             ignore=shutil.ignore_patterns("__pycache__"),
         )
-        u.Tests.initialize_git_repo(root)
+        test_u.Tests.initialize_git_repo(root)
         tm.that(u.Infra.runtime_environment_dir(root).exists(), eq=False)
 
     @staticmethod
@@ -92,7 +92,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
 
         """
         return tm.ok(
-            u.Tests.run_isolated_make(
+            test_u.Tests.run_isolated_make(
                 ["--no-print-directory", "setup"],
                 cwd=root,
                 env={"GIT_ALLOW_PROTOCOL": "file:https:ssh"},
@@ -206,7 +206,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         # Hatchling consumes this real gitlink file while uv builds the package.
         # A setup that reaches the build before initialization fails natively.
         pyproject = project / c.PYPROJECT_FILENAME
-        document = u.Tests.toml_doc(pyproject.read_text(encoding="utf-8"))
+        document = test_u.Tests.toml_doc(pyproject.read_text(encoding="utf-8"))
         metadata = tm.not_none(u.Cli.toml_table_child(document, "project"))
         metadata["readme"] = {
             "file": direct_marker.relative_to(project).as_posix(),

@@ -96,7 +96,7 @@ class FlextInfraDocGenerator(
                     directories,
                 )
             analysis = m.Infra.CodegenPhaseAnalysis(
-                phase=c.Infra.CodegenStagedFilePhase.DOCS,
+                phase="docs",
                 files=plans.value,
                 inputs=current.value.source_states,
             )
@@ -104,16 +104,8 @@ class FlextInfraDocGenerator(
                 scope_root,
                 roots,
                 analysis,
-                m.Infra.CodegenPhasePublicationPolicy(
-                    directories=tuple(
-                        path for path in directories.value if path not in roots.values()
-                    ),
-                    validator=lambda: self._verify_generated(
-                        request,
-                        current.value,
-                        plans.value,
-                    ),
-                ),
+                tuple(path for path in directories.value if path not in roots.values()),
+                lambda: self._verify_generated(request, current.value, plans.value),
             )
             if written.failure:
                 return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(written)
@@ -138,9 +130,16 @@ class FlextInfraDocGenerator(
 
         """
         outputs = {plan.path for plan in plans}
-        untouched = self._verify_sources_unchanged(bundle.source_states, outputs)
-        if untouched.failure:
-            return r[bool].from_failure(untouched)
+        for expected in bundle.source_states:
+            if expected.path in outputs:
+                continue
+            observed = u.Cli.atomic_read_binary_file_state(expected.path, required=True)
+            if observed.failure:
+                return r[bool].from_failure(observed)
+            if observed.value != expected:
+                return r[bool].fail(
+                    f"docs source changed during publication: {expected.path}",
+                )
         prepared = self._prepare_request(request)
         if prepared.failure:
             return r[bool].from_failure(prepared)
@@ -153,29 +152,6 @@ class FlextInfraDocGenerator(
             return r[bool].from_failure(current)
         if any(u.Infra.codegen_file_requires_effect(plan) for plan in current.value):
             return r[bool].fail("docs generation did not reach an unchanged render")
-        return r[bool].ok(value=True)
-
-    @staticmethod
-    def _verify_sources_unchanged(
-        source_states: t.VariadicTuple[m.Cli.AtomicFileState],
-        outputs: t.IterableOf[Path],
-    ) -> p.Result[bool]:
-        """Require every authenticated source to be untouched by the publication.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        for expected in source_states:
-            if expected.path in outputs:
-                continue
-            observed = u.Cli.atomic_read_binary_file_state(expected.path, required=True)
-            if observed.failure:
-                return r[bool].from_failure(observed)
-            if observed.value != expected:
-                return r[bool].fail(
-                    f"docs source changed during publication: {expected.path}",
-                )
         return r[bool].ok(value=True)
 
     def _generation_reports(

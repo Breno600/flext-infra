@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from flext_tests import tm
 
-from flext_infra.validate import FlextInfraLocDeltaValidator
+from flext_infra.validate.loc_delta import FlextInfraLocDeltaValidator
 
 
 class TestsFlextInfraLocDelta:

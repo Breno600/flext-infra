@@ -157,7 +157,10 @@ class TestsFlextInfraUtilitiesReleaseMixin:
                 "MIT License\n\nCopyright (c) FLEXT Tests\n",
                 encoding="utf-8",
             )
-            TestsFlextInfraUtilitiesProjectFixtureMixin.write_member_package(
+            src_dir = project / "src" / package_name
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (src_dir / "__init__.py").write_text("", encoding="utf-8")
+            TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
                 project,
                 name,
             )

@@ -18,11 +18,7 @@
 # body holds that one class, its alias binding, __all__ and imports; a
 # function other than the executable `main` entry point, a value binding that
 # is not an alias of a name, and any further class are loose objects.
-# Typing declarations are ban-manual-typing-alias-outside-typings's. The one
-# admitted value binding is the facade's self-typed singleton: the
-# class-nesting cutover itself keeps it at module level (it reads the owner
-# while the owner is being defined), and the pattern owner publishes it as
-# the process-wide facade instance (`from flext_cli import cli, config`).
+# Typing declarations are ban-manual-typing-alias-outside-typings's.
 id: ban-loose-module-object
 language: python
 severity: error
@@ -35,12 +31,6 @@ ignores:
   - "**/__main__.py"
   - "**/__version__.py"
   - "**/conftest.py"
-  # pytest11 entry-point modules live under the same contract as conftest.py:
-  # pytest imports hook functions (pytest_configure, pytest_addoption, ...) by
-  # module attribute name, so the hooks must stay module-level and the
-  # facade-nesting the rule mandates is impossible there.
-  - "**/conftest_plugin.py"
-  - "**/enforcement_plugin.py"
   - "**/settings.py"
   - "**/_settings.py"
   - "**/typings.py"
@@ -68,41 +58,6 @@ rule:
         - kind: expression_statement
         - inside:
             kind: module
-        # The facade's self-typed singleton: the binding reads the owner
-        # class while it is being defined, so the class-nesting cutover
-        # keeps it at module level; it is admitted only when the
-        # annotation, the fetch_global receiver and a class this module
-        # defines carry one name.
-        - not:
-            all:
-              - has:
-                  kind: assignment
-                  all:
-                    - has:
-                        field: type
-                        pattern: $OWNER
-                    - has:
-                        field: right
-                        kind: call
-                        has:
-                          field: function
-                          kind: attribute
-                          all:
-                            - has:
-                                field: object
-                                kind: identifier
-                                pattern: $OWNER
-                            - has:
-                                field: attribute
-                                kind: identifier
-                                regex: "^fetch_global$"
-              - inside:
-                  kind: module
-                  has:
-                    kind: class_definition
-                    has:
-                      field: name
-                      pattern: $OWNER
         - has:
             kind: assignment
             all:
@@ -224,13 +179,6 @@ severity: error
 files:
   - "**/*.py"
 ignores:
-  # Generator-contract bootstrap modules: the generator emits these fixed
-  # file names importing the framework facade directly — the own-package
-  # facade is not importable at that bootstrap layer
-  # (operator-ruling-2026-10-05-bootstrap-model-imports).
-  - "**/_config_models.py"
-  - "**/_settings_models.py"
-  - "**/utilities.py"
   - "**/__init__.py"
   - "**/_constants/**"
   - "**/_models/**"
@@ -280,11 +228,6 @@ severity: error
 files:
   - "**/*.py"
 ignores:
-  # Lockstep with ENFORCE-003: generator-contract bootstrap modules
-  # (operator-ruling-2026-10-05-bootstrap-model-imports).
-  - "**/_config_models.py"
-  - "**/_settings_models.py"
-  - "**/utilities.py"
   - "**/__init__.py"
   - "**/_constants/**"
   - "**/_models/**"
@@ -415,8 +358,7 @@ message: >-
 # in __all__, exactly once, to the facade class that module defines. Each
 # branch captures its own variable, so each carries its own context. A name
 # declared in __all__ and never bound is the type checkers'
-# unsupported-dunder-all finding. An import of the alias is a binding too:
-# mypy keeps the imported type and rejects the later assignment.
+# unsupported-dunder-all finding.
 id: ban-runtime-alias-rebind
 language: python
 severity: error
@@ -431,76 +373,10 @@ metadata:
       - not: module-export
     REBOUND:
       is: runtime-alias
-    SHADOWED:
-      is: runtime-alias
     ALIAS:
       is: runtime-alias
 rule:
   any:
-    # Bound after a module-level import of the same name. Listed first: the
-    # engine reads the captures of the first matching branch only, and the
-    # undeclared branch matches every module-level binding.
-    - all:
-        - kind: expression_statement
-        - inside:
-            kind: module
-        - has:
-            kind: assignment
-            has:
-              field: left
-              kind: identifier
-              pattern: $SHADOWED
-        - follows:
-            stopBy: end
-            kind: import_from_statement
-            # A field relation reaches only the first imported name; the
-            # module path is the statement's first named child.
-            any:
-              - has:
-                  kind: dotted_name
-                  not:
-                    nthChild: 1
-                  has:
-                    kind: identifier
-                    pattern: $SHADOWED
-              - has:
-                  kind: aliased_import
-                  has:
-                    field: alias
-                    pattern: $SHADOWED
-        # ENFORCE-046 Pattern-A consumer admission: a consumer's canonical
-        # facade imports the letter and rebinds it to the consumer-named
-        # class the module defines (flext-core forbids the bare-class import
-        # a peer uses). The consumer-name gate is an inline regex on the
-        # rebind target — the complement of the facade naming law's
-        # ^(?:Tests)?Flext[A-Z] peer pattern, enumerated for Rust regex (no
-        # lookaround) — because constraints are not enforced on metavariables
-        # bound inside a not sub-rule. A peer target or a target this module
-        # does not define stays a finding.
-        - not:
-            all:
-              - has:
-                  kind: assignment
-                  has:
-                    field: right
-                    pattern: $CONSUMER
-                    regex: "^(?:[^FT].*|F|F[^l].*|Fl|Fl[^e].*|Fle|Fle[^x].*|Flex|Flex[^t].*|Flext|Flext[^A-Z].*|T|T[^e].*|Te|Te[^s].*|Tes|Tes[^t].*|Test|Test[^s].*|Tests|Tests[^F].*|TestsF|TestsF[^l].*|TestsFl|TestsFl[^e].*|TestsFle|TestsFle[^x].*|TestsFlex|TestsFlex[^t].*|TestsFlext|TestsFlext[^A-Z].*)$"
-              - inside:
-                  kind: module
-                  any:
-                    - has:
-                        kind: class_definition
-                        has:
-                          field: name
-                          pattern: $CONSUMER
-                    - has:
-                        kind: decorated_definition
-                        has:
-                          field: definition
-                          kind: class_definition
-                          has:
-                            field: name
-                            pattern: $CONSUMER
     # Bound by a module that does not declare it.
     - all:
         - kind: expression_statement
@@ -571,8 +447,6 @@ constraints:
     regex: "^[^_]"
   REBOUND:
     regex: "^[^_]"
-  SHADOWED:
-    regex: "^[^_]"
   ALIAS:
     regex: "^[^_]"
 message: >-
@@ -583,10 +457,8 @@ message: >-
 # class extending a model preset in the models family, an enumeration in
 # the constants family, a utilities class in the utilities family. The
 # family letter is derived from the declaration and compared with the
-# family the module belongs to. A class composing Mixin-suffixed
-# superclasses over a preset is the service-composite shape, not a
-# declaration-layer entity, so it is exempt wherever it lives. Protocol
-# classes are ban-manual-protocol-outside-protocols's.
+# family the module belongs to. Protocol classes are
+# ban-manual-protocol-outside-protocols's.
 id: ban-class-wrong-facade-layer
 language: python
 severity: error
@@ -614,12 +486,6 @@ rule:
             kind: decorated_definition
             inside:
               kind: module
-  not:
-    has:
-      field: superclasses
-      has:
-        kind: identifier
-        regex: "Mixin$"
   any:
     - has:
         field: superclasses

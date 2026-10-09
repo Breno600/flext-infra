@@ -8,13 +8,9 @@ from __future__ import annotations
 
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
-from flext_infra import c, m, t
-from flext_infra.base import s
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra import c, m, s, t
 
 
 class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
@@ -56,7 +52,7 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
     @staticmethod
     def link_mode(
         repository: m.Infra.RepositoryRef,
-        toolchain: p.Infra.ToolchainSpec,
+        toolchain: m.Infra.ToolchainSpec,
     ) -> str:
         """Resolve the repository override through one codegen authority.
 
@@ -136,32 +132,9 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
         cls,
         surface: c.Infra.CodegenConformSurface,
     ) -> m.Infra.CodegenConformSurfaceContract:
-        """Resolve a declared surface without defaulting an invalid input.
-
-        Returns:
-            The contract owned by the declared conformance surface.
-
-        Raises:
-            ValueError: If the surface is not a declared conformance surface.
-
-        """
-        supported = isinstance(surface, c.Infra.CodegenConformSurface)
-        if not supported:
-            message = f"unsupported codegen conform surface: {surface}"
-            raise ValueError(message)
         match surface:
             case c.Infra.CodegenConformSurface.ALL:
                 return m.Infra.CodegenConformSurfaceContract(complete_governed=True)
-            case (
-                c.Infra.CodegenConformSurface.LAZY_INIT
-                | c.Infra.CodegenConformSurface.FACADES
-            ):
-                return m.Infra.CodegenConformSurfaceContract(
-                    delegates=False,
-                    pyproject=False,
-                    templates=False,
-                    custom=False,
-                )
             case (
                 c.Infra.CodegenConformSurface.DEPENDENCIES
                 | c.Infra.CodegenConformSurface.PYPROJECT
@@ -188,11 +161,17 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                     pyproject=False,
                     custom=False,
                 )
-            case c.Infra.CodegenConformSurface.MISE_CONFIG:
+            case c.Infra.CodegenConformSurface.MISE_TRIPLE:
                 return m.Infra.CodegenConformSurfaceContract(
-                    destinations=frozenset({c.Infra.MISE_TOML_FILENAME}),
-                    delegates=False,
+                    destinations=frozenset(c.Infra.ARTIFACT_NAMES),
                     pyproject=False,
+                    delegates=False,
+                    custom=False,
+                )
+            case _:
+                return m.Infra.CodegenConformSurfaceContract(
+                    destinations=frozenset({c.PYPROJECT_FILENAME}),
+                    delegates=False,
                     custom=False,
                 )
 

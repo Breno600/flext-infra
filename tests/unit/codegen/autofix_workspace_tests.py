@@ -99,9 +99,6 @@ class TestsFlextInfraCodegenAutofixWorkspace:
         )
         u.Tests.declare_workspace_projects(tmp_path, (project.name,))
         u.Tests.provision_checkout(project)
-        # The workspace carries its governed Mise declaration, so the fixer's
-        # ast-grep resolves the pinned tool from it on any runner.
-        u.Tests.copy_tracked_mise_seeds(tmp_path)
         fixer = FlextInfraCodegenFixer(repository_root=tmp_path)
         [result] = fixer.fix_workspace(projects=[self._project_info(project)])
         modified_paths = tuple(Path(path) for path in result.files_modified)

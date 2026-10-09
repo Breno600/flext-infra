@@ -9,7 +9,6 @@ from __future__ import annotations
 import stat
 import tarfile
 import zipfile
-from email.message import Message
 from email.parser import Parser
 from pathlib import Path, PurePosixPath
 
@@ -118,17 +117,34 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
         wheel = path.suffix == ".whl"
         package = project.replace("-", "_").casefold()
         roots: t.Infra.StrSet = set()
-        for member in members:
-            error = cls._member_error(
-                path,
-                package,
-                wheel=wheel,
-                allowed_roots=allowed_roots,
-                member=member,
-            )
+        for name, link, regular in members:
+            # A wheel's content root is its package; an sdist's sits under
+            # its single `<name>-<version>/` directory.
+            error = cls._path_error(name, "archive member", root_index=int(not wheel))
             if error:
                 return error
-            roots.add(PurePosixPath(member[0]).parts[0].casefold())
+            root = PurePosixPath(name).parts[0].casefold()
+            roots.add(root)
+            if link:
+                return f"{path.name} contains symbolic or hard link: {name}"
+            if (
+                wheel
+                and root != package
+                and not (
+                    root.startswith(f"{package}-")
+                    and root.endswith((".data", ".dist-info"))
+                )
+            ):
+                return f"wheel contains unexpected top-level path: {name}"
+            if (
+                not wheel
+                and regular
+                and not cls._sdist_member_allowed(
+                    PurePosixPath(name).parts,
+                    allowed_roots,
+                )
+            ):
+                return f"sdist contains unexpected public content: {name}"
         if wheel:
             return ""
         root = next(iter(roots), "")
@@ -136,52 +152,6 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
             return f"sdist must contain exactly one top-level directory: {path}"
         if not root.startswith((f"{project.casefold()}-", f"{package}-")):
             return f"sdist root does not match project {project}: {root}"
-        return ""
-
-    @classmethod
-    def _member_error(
-        cls,
-        path: Path,
-        package: str,
-        *,
-        wheel: bool,
-        allowed_roots: t.StrSequence,
-        member: t.Triple[str, bool, bool],
-    ) -> str:
-        """Return one archive member's boundary error, or an empty string.
-
-        A wheel's content root is its package; an sdist's sits under its
-        single ``<name>-<version>/`` directory.
-
-        Returns:
-            One archive member's boundary error, or an empty string.
-
-        """
-        name, link, regular = member
-        error = cls._path_error(name, "archive member", root_index=int(not wheel))
-        if error:
-            return error
-        root = PurePosixPath(name).parts[0].casefold()
-        if link:
-            return f"{path.name} contains symbolic or hard link: {name}"
-        if (
-            wheel
-            and root != package
-            and not (
-                root.startswith(f"{package}-")
-                and root.endswith((".data", ".dist-info"))
-            )
-        ):
-            return f"wheel contains unexpected top-level path: {name}"
-        if (
-            not wheel
-            and regular
-            and not cls._sdist_member_allowed(
-                PurePosixPath(name).parts,
-                allowed_roots,
-            )
-        ):
-            return f"sdist contains unexpected public content: {name}"
         return ""
 
     @classmethod
@@ -200,6 +170,7 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
         result_type = r[
             t.Pair[t.Infra.ReleaseArtifactKind, t.Infra.ReleaseArtifactSha256]
         ]
+        project, version = expectation.project, expectation.version
         kind: t.Infra.ReleaseArtifactKind = (
             "wheel" if path.suffix == ".whl" else "sdist"
         )
@@ -207,45 +178,6 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
         if contents.failure:
             return result_type.from_failure(contents)
         members, payload = contents.value
-        error, metadata_text = cls._boundary_verdict(
-            path,
-            expectation.project,
-            members,
-            payload,
-            expectation,
-        )
-        if error:
-            return result_type.fail(error)
-        try:
-            message = Parser().parsestr(metadata_text)
-        except UnicodeDecodeError as exc:
-            return result_type.fail_op(f"read core metadata of {path}", exc)
-        identity = cls._identity_verdict(message, expectation)
-        if identity.failure:
-            return result_type.from_failure(identity)
-        pins = cls._requirement_pins_verdict(message, expectation)
-        if pins.failure:
-            return result_type.from_failure(pins)
-        return cls._artifact_digest(path, kind)
-
-    @classmethod
-    def _boundary_verdict(
-        cls,
-        path: Path,
-        project: str,
-        members: t.SequenceOf[t.Triple[str, bool, bool]],
-        payload: t.MappingKV[str, bytes],
-        expectation: m.Infra.ArtifactExpectation,
-    ) -> t.Pair[str, str]:
-        """Return the artifact's boundary error and its core metadata text.
-
-        Returns:
-            The ``(error, metadata_text)`` pair; the text is empty on error.
-
-        """
-        kind: t.Infra.ReleaseArtifactKind = (
-            "wheel" if path.suffix == ".whl" else "sdist"
-        )
         error = cls._archive_error(path, project, members, expectation.allowed_roots)
         licenses = [data for name, data in payload.items() if cls._is_license(name)]
         metadata = [data for name, data in payload.items() if not cls._is_license(name)]
@@ -255,54 +187,30 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
             error = f"{kind} LICENSE differs from committed source: {path}"
         if not error and len(metadata) != 1:
             error = f"{kind} must contain one core metadata file: {path}"
-        text = "" if error else metadata[0].decode("utf-8")
-        return (error, text)
-
-    @classmethod
-    def _identity_verdict(
-        cls,
-        message: Message,
-        expectation: m.Infra.ArtifactExpectation,
-    ) -> p.Result[bool]:
-        """Prove the artifact's core metadata identity against the expectation.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        project, version = expectation.project, expectation.version
+        if error:
+            return result_type.fail(error)
+        try:
+            message = Parser().parsestr(metadata[0].decode("utf-8"))
+        except UnicodeDecodeError as exc:
+            return result_type.fail_op(f"read core metadata of {path}", exc)
         name = message.get("Name")
         if name is None or canonicalize_name(name) != canonicalize_name(project):
-            return r[bool].fail(
+            return result_type.fail(
                 f"artifact Name mismatch: expected {project}, found {name}",
             )
         try:
             expected, actual = Version(version), Version(message.get("Version") or "")
         except InvalidVersion as exc:
-            return r[bool].fail_op("validate artifact Version", exc)
+            return result_type.fail_op("validate artifact Version", exc)
         if actual != expected:
-            return r[bool].fail(
+            return result_type.fail(
                 f"artifact Version mismatch: expected {expected}, found {actual}",
             )
-        return r[bool].ok(value=True)
-
-    @classmethod
-    def _requirement_pins_verdict(
-        cls,
-        message: Message,
-        expectation: m.Infra.ArtifactExpectation,
-    ) -> p.Result[bool]:
-        """Prove every internal requirement carries its declared fleet pin.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
         for text in message.get_all("Requires-Dist", []):
             try:
                 requirement = Requirement(text)
             except InvalidRequirement as exc:
-                return r[bool].fail_op("parse artifact requirement", exc)
+                return result_type.fail_op("parse artifact requirement", exc)
             dependency = canonicalize_name(requirement.name)
             # A direct reference is source-declared; only fleet pins derive.
             if requirement.url is not None or not dependency.startswith(
@@ -315,25 +223,9 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
                 else r[str].fail(f"internal dependency version unknown: {dependency}")
             )
             if pin.failure or str(requirement.specifier) != pin.value:
-                return r[bool].fail(
+                return result_type.fail(
                     f"artifact contains unpinned FLEXT dependency: {text}",
                 )
-        return r[bool].ok(value=True)
-
-    @staticmethod
-    def _artifact_digest(
-        path: Path,
-        kind: t.Infra.ReleaseArtifactKind,
-    ) -> p.Result[t.Pair[t.Infra.ReleaseArtifactKind, t.Infra.ReleaseArtifactSha256]]:
-        """Hash one validated artifact with its kind.
-
-        Returns:
-            The resulting ``(kind, digest)`` pair.
-
-        """
-        result_type = r[
-            t.Pair[t.Infra.ReleaseArtifactKind, t.Infra.ReleaseArtifactSha256]
-        ]
         try:
             digest = u.Cli.sha256_file(path)
         except OSError as exc:

@@ -84,174 +84,74 @@ class FlextInfraCodegenProtocolModelAnnotations:
     @classmethod
     def render(
         cls,
-        annotation: object,
+        annotation: t.TypeHintSpecifier | None,
         target: ProtocolModelTarget,
     ) -> str:
         """Render one field/property type without exposing a concrete model.
 
-        ``annotation`` accepts any runtime annotation object carried by
-        ``typing.get_args``; unsupported payloads fail loud with
-        ``TypeError``.
-
         Returns:
             The resulting ``str``.
 
+        Raises:
+            TypeError: If unsupported protocol annotation; or if unsupported protocol
+                annotation origin; or if unsupported Callable parameters.
+
         """
-        if isinstance(annotation, ForwardRef | str):
-            forward = (
-                annotation.__forward_arg__
-                if isinstance(annotation, ForwardRef)
-                else annotation
-            )
-            return cls._render_forward(forward, target)
+        if isinstance(annotation, ForwardRef):
+            return cls._render_forward(annotation.__forward_arg__, target)
+        if isinstance(annotation, str):
+            return cls._render_forward(annotation, target)
         if annotation is None or annotation is type(None):
             return "None"
         if isinstance(annotation, TypeAliasType):
             return cls.render(annotation.__value__, target)
-        return cls._render_origin_dispatch(annotation, target)
-
-    @classmethod
-    def _render_origin_dispatch(
-        cls,
-        annotation: object,
-        target: ProtocolModelTarget,
-    ) -> str:
-        """Render an annotation by its generic origin.
-
-        Returns:
-            The resulting ``str``.
-
-        """
         origin = get_origin(annotation)
         arguments = get_args(annotation)
         if isinstance(origin, TypeAliasType):
-            return cls._render_alias_origin(origin, arguments, target)
+            bindings = dict(zip(origin.__type_params__, arguments, strict=True))
+            value = origin.__value__
+            for parameter, argument in bindings.items():
+                if value is parameter:
+                    return cls.render(argument, target)
+            parameters = getattr(value, "__parameters__", ())
+            if parameters:
+                value = value[tuple(bindings[parameter] for parameter in parameters)]
+            return cls.render(value, target)
         if origin is Annotated:
             return cls.render(arguments[0], target)
         if origin is UnionType:
             return " | ".join(cls.render(argument, target) for argument in arguments)
-        return cls._render_special_origin(origin, arguments, annotation, target)
-
-    @classmethod
-    def _render_special_origin(
-        cls,
-        origin: object,
-        arguments: tuple[object, ...],
-        annotation: object,
-        target: ProtocolModelTarget,
-    ) -> str:
-        """Render a Literal, Callable, generic, or bare annotation.
-
-        Returns:
-            The resulting ``str``.
-
-        """
         if origin is Literal:
             return f"Literal[{', '.join(repr(argument) for argument in arguments)}]"
         if origin is abc.Callable:
-            return cls._render_callable(arguments, target)
+            parameters, return_type = arguments
+            if parameters is Ellipsis:
+                rendered_parameters = "..."
+            elif isinstance(parameters, list):
+                rendered_parameters = ", ".join(
+                    cls.render(parameter, target) for parameter in parameters
+                )
+            else:
+                msg = f"unsupported Callable parameters: {parameters!r}"
+                raise TypeError(msg)
+            rendered = cls.render(return_type, target)
+            return f"Callable[[{rendered_parameters}], {rendered}]"
         if origin is not None:
-            return cls._render_origin(origin, arguments, target)
-        return cls._render_bare_type(annotation, target)
-
-    @classmethod
-    def _render_alias_origin(
-        cls,
-        origin: TypeAliasType,
-        arguments: tuple[object, ...],
-        target: ProtocolModelTarget,
-    ) -> str:
-        """Render a parameterized type alias through its bound value.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        bindings = dict(zip(origin.__type_params__, arguments, strict=True))
-        value = origin.__value__
-        for parameter, argument in bindings.items():
-            if value is parameter:
-                return cls.render(argument, target)
-        parameters = getattr(value, "__parameters__", ())
-        if parameters:
-            value = value[tuple(bindings[parameter] for parameter in parameters)]
-        return cls.render(value, target)
-
-    @classmethod
-    def _render_callable(
-        cls,
-        arguments: tuple[object, ...],
-        target: ProtocolModelTarget,
-    ) -> str:
-        """Render a ``Callable`` annotation with its parameters and return.
-
-        Returns:
-            The resulting ``str``.
-
-        Raises:
-            TypeError: If unsupported Callable parameters.
-
-        """
-        parameters, return_type = arguments
-        if parameters is Ellipsis:
-            rendered_parameters = "..."
-        elif isinstance(parameters, list):
-            rendered_parameters = ", ".join(
-                cls.render(parameter, target) for parameter in parameters
+            rendered_origin = cls._ORIGINS.get(origin)
+            if rendered_origin is None:
+                rendered_origin = cls._facade_name(origin, target)
+            if rendered_origin is None:
+                msg = f"unsupported protocol annotation origin: {origin!r}"
+                raise TypeError(msg)
+            rendered_arguments = ", ".join(
+                "..." if argument is Ellipsis else cls.render(argument, target)
+                for argument in arguments
             )
-        else:
-            msg = f"unsupported Callable parameters: {parameters!r}"
-            raise TypeError(msg)
-        rendered = cls.render(return_type, target)
-        return f"Callable[[{rendered_parameters}], {rendered}]"
-
-    @classmethod
-    def _render_origin(
-        cls,
-        origin: object,
-        arguments: tuple[object, ...],
-        target: ProtocolModelTarget,
-    ) -> str:
-        """Render a generic annotation over a recognized origin.
-
-        Returns:
-            The resulting ``str``.
-
-        Raises:
-            TypeError: If unsupported protocol annotation origin.
-
-        """
-        rendered_origin = cls._ORIGINS.get(origin)
-        if rendered_origin is None:
-            rendered_origin = cls._facade_name(origin, target)
-        if rendered_origin is None:
-            msg = f"unsupported protocol annotation origin: {origin!r}"
-            raise TypeError(msg)
-        rendered_arguments = ", ".join(
-            "..." if argument is Ellipsis else cls.render(argument, target)
-            for argument in arguments
-        )
-        return (
-            f"{rendered_origin}[{rendered_arguments}]"
-            if rendered_arguments
-            else rendered_origin
-        )
-
-    @classmethod
-    def _render_bare_type(
-        cls,
-        annotation: object,
-        target: ProtocolModelTarget,
-    ) -> str:
-        """Render a bare (non-generic) annotation type.
-
-        Returns:
-            The resulting ``str``.
-
-        Raises:
-            TypeError: If unsupported protocol annotation.
-
-        """
+            return (
+                f"{rendered_origin}[{rendered_arguments}]"
+                if rendered_arguments
+                else rendered_origin
+            )
         if isinstance(annotation, type):
             if issubclass(annotation, m.BaseModel):
                 if annotation.__module__.startswith(target.package_module_prefix):

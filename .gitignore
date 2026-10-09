@@ -6,6 +6,7 @@
 !.beads/identity.toml
 
 # mise native dependency graphs
+/.mise-lock-transaction.lock
 !/.mise/
 /.mise/*
 !/.mise/locks/
@@ -59,9 +60,8 @@
 .gc/
 /worktrees/
 
-# Machine-local MCP projection and hooks runtime state (never source)
+# Machine-local MCP projection (runtime state, never source)
 /.cursor/mcp.json
-/.cursor/hooks/state/
 
 # RESIDUE: never track backups or repo-local policy copies
 *.bak
@@ -285,6 +285,10 @@ legado/
 .bin/
 !/bin/
 /bin/*
+!/bin/mise
+!/bin/mise.cmd
+!/bin/mise-lock-transaction.py
+!/bin/mise-lock-converge.py
 .tools/
 __pycache__/
 base.mk
@@ -293,7 +297,6 @@ base.mk
 # Derived build and tool artifacts
 __pyrefly_virtual__/
 .benchmarks/
-.archive/
 .bkp/
 .cache/
 .dolt_dropped_databases/
@@ -367,3 +370,4 @@ CLAUDE.local.md
 !.vscode/settings.json
 !config/
 !config/gitleaks-release.toml
+!bin/

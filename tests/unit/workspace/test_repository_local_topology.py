@@ -12,9 +12,10 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
+from flext_infra import c, m, t
 from flext_infra.codegen import FlextInfraCodegenConform
-from flext_infra.workspace import FlextInfraWorkspaceDetector
-from tests import c, m, t, u
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+from tests import u
 
 
 class TestsFlextInfraRepositoryLocalTopology:
@@ -32,11 +33,9 @@ class TestsFlextInfraRepositoryLocalTopology:
             tmp_path,
             directory,
             distribution=f"fixture-{directory}",
-            beads=u.Tests.BeadsIdentity(
-                workspace="fixture-workspace",
-                database="fixture-database",
-                issue_prefix="fixture-prefix",
-            ),
+            workspace="fixture-workspace",
+            database="fixture-database",
+            issue_prefix="fixture-prefix",
         )
 
     @staticmethod
@@ -67,11 +66,9 @@ class TestsFlextInfraRepositoryLocalTopology:
             tmp_path,
             directory,
             distribution=name,
-            beads=u.Tests.BeadsIdentity(
-                workspace=name,
-                database=name.replace("-", "_"),
-                issue_prefix=name,
-            ),
+            workspace=name,
+            database=name.replace("-", "_"),
+            issue_prefix=name,
         )
 
     def test_selected_workspace_manifest_owns_repository_policy(
@@ -231,11 +228,9 @@ class TestsFlextInfraRepositoryLocalTopology:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-project",
-            beads=u.Tests.BeadsIdentity(
-                workspace="fixture-workspace",
-                database="fixture-database",
-                issue_prefix="fixture-prefix",
-            ),
+            workspace="fixture-workspace",
+            database="fixture-database",
+            issue_prefix="fixture-prefix",
             custom_issue_types=("incident",),
         )
 
@@ -314,11 +309,9 @@ class TestsFlextInfraRepositoryLocalTopology:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-workspace",
-            beads=u.Tests.BeadsIdentity(
-                workspace="fixture-workspace",
-                database="fixture-database",
-                issue_prefix="fixture-prefix",
-            ),
+            workspace="fixture-workspace",
+            database="fixture-database",
+            issue_prefix="fixture-prefix",
         )
         u.Tests.WorktreeFixture.write_gitmodules(root, ())
 
@@ -337,22 +330,18 @@ class TestsFlextInfraRepositoryLocalTopology:
         u.Tests.WorktreeFixture.initialize_governed_project(
             parent,
             "parent",
-            beads=u.Tests.BeadsIdentity(
-                workspace="parent-workspace",
-                database="parent-database",
-                issue_prefix="parent-prefix",
-            ),
+            workspace="parent-workspace",
+            database="parent-database",
+            issue_prefix="parent-prefix",
         )
         u.Tests.WorktreeFixture.write_gitmodules(parent, ("child",))
         child = parent / "child"
         u.Tests.WorktreeFixture.initialize_governed_project(
             child,
             "child",
-            beads=u.Tests.BeadsIdentity(
-                workspace="child-workspace",
-                database="child-database",
-                issue_prefix="child-prefix",
-            ),
+            workspace="child-workspace",
+            database="child-database",
+            issue_prefix="child-prefix",
         )
 
         mode = tm.ok(FlextInfraWorkspaceDetector().detect(child))
@@ -376,14 +365,25 @@ class TestsFlextInfraRepositoryLocalTopology:
             The resulting ``Path``.
 
         """
+        child_source = tmp_path / "child-source"
+        u.Tests.WorktreeFixture.initialize_governed_project(
+            child_source,
+            "fixture-member",
+            workspace="member-workspace",
+            database="member-database",
+            issue_prefix="member-prefix",
+            beads_owner=False,
+        )
         parent = tmp_path / "parent"
-        member = u.Tests.WorktreeFixture.copied_member(
+        u.Tests.WorktreeFixture.initialize_governed_project(
             parent,
             "fixture-parent",
             workspace="parent-workspace",
             database="parent-database",
             issue_prefix="parent-prefix",
         )
+        member = parent / "apps" / "member"
+        shutil.copytree(child_source, member)
         # A composed project follows the workspace ledger through its own
         # declared identity. The ``.beads -> ../.beads`` link that used to
         # carry it is prohibited, and both conform and the detector reject it.
@@ -656,11 +656,9 @@ class TestsFlextInfraRepositoryLocalTopology:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-workspace",
-            beads=u.Tests.BeadsIdentity(
-                workspace="root-workspace",
-                database="root-database",
-                issue_prefix="root-prefix",
-            ),
+            workspace="root-workspace",
+            database="root-database",
+            issue_prefix="root-prefix",
         )
         identities = {
             "fixture-alpha": ("alpha-workspace", "alpha-database", "alpha-prefix"),
@@ -670,11 +668,9 @@ class TestsFlextInfraRepositoryLocalTopology:
             u.Tests.WorktreeFixture.initialize_governed_project(
                 root / project_name,
                 project_name,
-                beads=u.Tests.BeadsIdentity(
-                    workspace=identity[0],
-                    database=identity[1],
-                    issue_prefix=identity[2],
-                ),
+                workspace=identity[0],
+                database=identity[1],
+                issue_prefix=identity[2],
                 beads_owner=False,
             )
             u.Tests.WorktreeFixture.link_member_beads(
@@ -711,21 +707,17 @@ class TestsFlextInfraRepositoryLocalTopology:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-workspace",
-            beads=u.Tests.BeadsIdentity(
-                workspace="root-workspace",
-                database="root-database",
-                issue_prefix="root-prefix",
-            ),
+            workspace="root-workspace",
+            database="root-database",
+            issue_prefix="root-prefix",
         )
         python_project = "fixture-python"
         u.Tests.WorktreeFixture.initialize_governed_project(
             root / python_project,
             python_project,
-            beads=u.Tests.BeadsIdentity(
-                workspace="python-workspace",
-                database="python-database",
-                issue_prefix="python-prefix",
-            ),
+            workspace="python-workspace",
+            database="python-database",
+            issue_prefix="python-prefix",
             beads_owner=False,
         )
         u.Tests.WorktreeFixture.link_member_beads(
@@ -777,11 +769,9 @@ class TestsFlextInfraRepositoryLocalTopology:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "without-origin",
-            beads=u.Tests.BeadsIdentity(
-                workspace="without-origin",
-                database="without_origin",
-                issue_prefix="without-origin",
-            ),
+            workspace="without-origin",
+            database="without_origin",
+            issue_prefix="without-origin",
         )
         tm.ok(u.Cli.run_checked(["git", "remote", "remove", "origin"], cwd=root))
 
@@ -807,11 +797,9 @@ class TestsFlextInfraRepositoryLocalTopology:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-workspace",
-            beads=u.Tests.BeadsIdentity(
-                workspace="fixture-workspace",
-                database="fixture_workspace",
-                issue_prefix="fixture-workspace",
-            ),
+            workspace="fixture-workspace",
+            database="fixture_workspace",
+            issue_prefix="fixture-workspace",
         )
         provider = u.Tests.provider()
         fields = {
@@ -1002,11 +990,10 @@ class TestsFlextInfraRepositoryLocalTopology:
             ),
         )
         _ = u.Tests.WorktreeFixture.attach_member_child(root)
-        child_url = u.Tests.WorktreeFixture.governed_repository_url("fixture-child")
         (root / c.Infra.GITMODULES).write_text(
             '[submodule "fixture-child"]\n'
             "\tpath = fixture-child\n"
-            f"\turl = {child_url}\n"
+            f"\turl = {u.Tests.WorktreeFixture.governed_repository_url('fixture-child')}\n"
             "\tbranch = develop\n",
             encoding="utf-8",
         )

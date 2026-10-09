@@ -12,8 +12,6 @@ from typing import TYPE_CHECKING
 from flext_infra import c, config, m, u
 
 if TYPE_CHECKING:
-    from ruamel.yaml.comments import CommentedMap
-
     from flext_infra import t
 
 
@@ -84,63 +82,28 @@ class FlextInfraDepsFloorProfileWriter:
         Returns:
             The resulting ``t.StrSequence``.
 
+        Raises:
+            TypeError: If dependency profile must be a mapping in; or if ``not
+                isinstance(reqs, list)``; or if ``not isinstance(req, str)``.
+            ValueError: If ``loaded.failure``; or if Infra section missing in; or if
+                Infra.codegen section missing in; or if Infra.codegen.scaffold section
+                missing in; or if Infra.codegen.scaffold.project section missing in; or
+                if dependency_profiles missing or not a list in.
+
         """
         sources = cls._source_paths(root)
         if not sources:
             return ()
         (ssot_path,) = sources
-        document = cls._loaded_document(ssot_path)
-        sections = cls._validated_sections(document, ssot_path)
-        changes = cls._rewrite_profiles(
-            sections,
-            ssot_path,
-            resolved_versions=resolved_versions,
-            internal_names=internal_names,
-        )
-        if not changes:
-            return ()
 
-        # Dump back with comments preserved
-        dumped = u.Cli.yaml_roundtrip_dump_text(document).unwrap()
-        u.Cli.atomic_write_text_file(ssot_path, dumped).unwrap()
-
-        return changes
-
-    @staticmethod
-    def _loaded_document(ssot_path: Path) -> CommentedMap:
-        """Round-trip load the dependency floor owner document.
-
-        Returns:
-            The loaded comment-preserving mapping document.
-
-        Raises:
-            ValueError: If ``loaded.failure`` — a missing or unparseable owner is
-                the same invalid-owner failure as a missing section: one
-                ValueError contract, original cause chained.
-
-        """
+        # Round-trip load preserves comments and ordering. A missing or
+        # unparseable owner is the same invalid-owner failure as a missing
+        # section below: one ValueError contract, original cause chained.
         loaded = u.Cli.yaml_roundtrip_load_map(ssot_path)
         if loaded.failure:
             raise ValueError(loaded.error) from loaded.exception
-        return loaded.value
+        document = loaded.value
 
-    @staticmethod
-    def _validated_sections(
-        document: t.MappingKV[str, t.JsonValue],
-        ssot_path: Path,
-    ) -> t.Pair[t.SequenceOf[t.JsonValue], m.Infra.CodegenConfigSpec]:
-        """Navigate to and validate the dependency-profile declaration sections.
-
-        Returns:
-            The ``(raw_profiles, validated_spec)`` pair.
-
-        Raises:
-            ValueError: If Infra section missing in; or if Infra.codegen section
-                missing in; or if Infra.codegen.scaffold section missing in; or if
-                Infra.codegen.scaffold.project section missing in; or if
-                dependency_profiles missing or not a list in.
-
-        """
         # Navigate to Infra.codegen.scaffold.project.dependency_profiles
         infra = document.get("Infra")
         if not infra or not isinstance(infra, dict):
@@ -163,29 +126,10 @@ class FlextInfraDepsFloorProfileWriter:
         if not profiles or not isinstance(profiles, list):
             message = f"dependency_profiles missing or not a list in {ssot_path}"
             raise ValueError(message)
-        return (profiles, validated)
 
-    @classmethod
-    def _rewrite_profiles(
-        cls,
-        sections: t.Pair[t.SequenceOf[t.JsonValue], m.Infra.CodegenConfigSpec],
-        ssot_path: Path,
-        *,
-        resolved_versions: t.MappingKV[str, str],
-        internal_names: t.StrSequence,
-    ) -> t.StrSequence:
-        """Rewrite each profile's runtime and codegen requirement lists.
-
-        Returns:
-            One change description per rewritten requirement constraint.
-
-        Raises:
-            TypeError: If dependency profile must be a mapping in; or if ``not
-                isinstance(reqs, list)``; or if ``not isinstance(req, str)``.
-
-        """
-        profiles, validated = sections
         changes: t.MutableSequenceOf[str] = []
+
+        # Rewrite each profile's runtime and codegen requirement lists
         for profile, contract in zip(
             profiles,
             validated.scaffold.project.dependency_profiles,
@@ -221,6 +165,14 @@ class FlextInfraDepsFloorProfileWriter:
                         changes.append(
                             f"profile({upstream}).{key_name}: {req} -> {rewritten}",
                         )
+
+        if not changes:
+            return ()
+
+        # Dump back with comments preserved
+        dumped = u.Cli.yaml_roundtrip_dump_text(document).unwrap()
+        u.Cli.atomic_write_text_file(ssot_path, dumped).unwrap()
+
         return tuple(changes)
 
 

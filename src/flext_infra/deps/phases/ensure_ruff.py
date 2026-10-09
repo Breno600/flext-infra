@@ -295,7 +295,6 @@ class FlextInfraEnsureRuffConfigPhase:
         """
         # One fleet exemption map, declared with its authority at the tooling
         # owner, reaches every project unchanged.
-
         effective_ignores = self._tool_config.tools.ruff.lint.per_file_ignores
         current_ignores = u.Cli.toml_mapping_path(
             payload,

@@ -1,21 +1,10 @@
-# ``model_rebuild`` patches annotations that failed to resolve.
-#
-# OPERATOR RULING 2026-10-06 (global disable): the rule's premise — "every
-# declaration namespace is importable at class creation" — is empirically
-# false for the fleet's namespace-class models under pydantic 2.13. Nested
-# sibling models referenced through the enclosing class path cannot resolve
-# while the enclosing class body is still executing, and pydantic never
-# re-resolves them from module globals at first use. The one completion
-# mechanism that is clean for consumers and checkers alike is the documented
-# per-module completion tail (``model_rebuild(_types_namespace=globals())``).
-# The alternatives were all proven worse in the flext-tests matchers/base
-# case: full-path annotations alone stay incomplete, sibling-frame name pins
-# are non-canonical hacks, and hoisting models to module level violates the
-# namespace-class convention. Per operator directive, the check is disabled
-# globally instead of forcing those patterns project-wide.
+# ``model_rebuild`` patches annotations that failed to resolve. In a strict
+# fleet every declaration namespace (config, settings, c/t/p/m/u, base,
+# services, api, cli) is importable at class creation, so a required rebuild
+# is evidence of a broken declaration: fix the owner, never call rebuild.
 id: ban-model-rebuild
 language: python
-severity: off
+severity: error
 files:
   - "**/*.py"
 ignores:

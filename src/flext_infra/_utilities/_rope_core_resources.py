@@ -8,13 +8,14 @@ from __future__ import annotations
 
 import operator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from flext_infra import t
-from flext_infra._constants import (
-    FlextInfraConstantsNamespace,
-    FlextInfraConstantsSharedInfra,
-)
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+from flext_infra._constants.namespace import FlextInfraConstantsNamespace
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesRopeCoreResourcesMixin:
@@ -24,7 +25,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
     def resolve_resource_from_path(
         rope_project: t.Infra.RopeProject,
         file_path: Path,
-    ) -> t.Infra.RopeFile | None:
+    ) -> t.Infra.RopeResource | None:
         """Return rope File for a filesystem Path, or None if outside project.
 
         ``None`` is the documented "unresolvable" outcome: the path sits
@@ -55,11 +56,11 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
         skip_protected: bool = False,
         skip_settings: bool = False,
         skip_init_py: bool = False,
-    ) -> t.Infra.RopeFile | None:
+    ) -> t.Infra.RopeResource | None:
         """Resolve a Python source as a Rope resource, or None when skipped.
 
         Returns:
-            The resulting ``t.Infra.RopeFile | None``.
+            The resulting ``t.Infra.RopeResource | None``.
 
         """
         if not FlextInfraUtilitiesRopeCoreResourcesMixin._python_resource_allowed(
@@ -109,12 +110,8 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
     @staticmethod
     def python_resources(
         rope_project: t.Infra.RopeProject,
-    ) -> t.SequenceOf[t.Infra.RopeFile]:
+    ) -> t.SequenceOf[t.Infra.RopeResource]:
         """Return Rope's already-filtered Python resources without a path roundtrip.
-
-        Every yielded resource passed the ``file_resource`` predicate, so the
-        element contract is the file shape with content access, not the wider
-        file-or-folder resource.
 
         Returns:
             Rope's already-filtered Python resources without a path roundtrip.

@@ -151,7 +151,6 @@ class FlextInfraUtilitiesDocsCollectionSources:
             The resulting ``t.VariadicTuple[m.Cli.AtomicFileState]``.
 
         Raises:
-            from flext_cli import u as cli_u
             ValueError: If plan companion is a symlink.
 
         """
@@ -183,7 +182,6 @@ class FlextInfraUtilitiesDocsCollectionSources:
             The resulting ``t.Pair[str | None, str | None]``.
 
         Raises:
-            from flext_cli import u as cli_u
             ValueError: If plan frontmatter has no closing delimiter.
 
         """
@@ -232,6 +230,12 @@ class FlextInfraUtilitiesDocsCollectionSources:
             The resulting ``t.Pair[m.Infra.PlanCollectionManifest,
                 t.VariadicTuple[Path]]``.
 
+        Raises:
+            ValueError: If collection manifest has unsafe owned path; or if collection
+                receipt has unsafe relative locator; or if projected collection manifest
+                was modified; or if projected collection metadata was modified; or if
+                owned projection artifact disappeared.
+
         """
         manifest_path = canonical / "collection-manifest.json"
         before = cls.collection_capture(manifest_path, states)
@@ -239,177 +243,60 @@ class FlextInfraUtilitiesDocsCollectionSources:
             return m.Infra.PlanCollectionManifest(), ()
         manifest = m.Infra.PlanCollectionManifest.model_validate_json(before.content)
         excluded: list[Path] = [manifest_path]
-        cls._validate_revision_locators(manifest)
-        plans = {canonical / revision.canonical_path for revision in manifest.revisions}
-        affected: set[Path] = set()
-        excluded.extend(
-            cls._classified_owned_outputs(
-                (canonical, projection),
-                manifest,
-                states,
-                plans,
-                affected,
-            ),
-        )
-        projected_manifest = (
-            cls._verified_projected_manifest(canonical, projection, states, before)
-            if projection is not None
-            else None
-        )
-        if projected_manifest is not None:
-            excluded.append(projected_manifest)
-        return manifest, tuple(path for path in excluded if path not in affected)
-
-    @staticmethod
-    def _validate_revision_locators(
-        manifest: m.Infra.PlanCollectionManifest,
-    ) -> None:
-        """Require every revision locator to stay relative and contained.
-
-        Raises:
-            ValueError: If collection receipt has unsafe relative locator.
-
-        """
+        roots = (canonical,) if projection is None else (canonical, projection)
         for revision in manifest.revisions:
             for locator in (revision.canonical_path, revision.source_path):
                 if locator.is_absolute() or not locator.parts or ".." in locator.parts:
                     msg = f"collection receipt has unsafe relative locator: {locator}"
                     raise ValueError(msg)
-
-    @staticmethod
-    def _validated_owned_path(path: Path) -> Path:
-        """Require one owned manifest path to stay relative and contained.
-
-        Returns:
-            The validated ``Path``.
-
-        Raises:
-            ValueError: If collection manifest has unsafe owned path.
-
-        """
-        if path.is_absolute() or not path.parts or ".." in path.parts:
-            msg = f"collection manifest has unsafe owned path: {path}"
-            raise ValueError(msg)
-        return path
-
-    @staticmethod
-    def _artifact_matches(
-        state: m.Cli.AtomicFileState,
-        artifact: m.Infra.PlanCollectionOwnedArtifact,
-    ) -> bool:
-        """Whether one captured output still matches its manifest digest.
-
-        Returns:
-            The resulting ``bool``.
-
-        """
-        return state.content is not None and (
-            sha256(state.content).hexdigest() == artifact.digest
-        )
-
-    @classmethod
-    def _verify_projected_artifact(
-        cls,
-        candidate: Path,
-        state: m.Cli.AtomicFileState,
-        roots: t.Pair[Path, Path | None],
-        plans: set[Path],
-        affected: set[Path],
-    ) -> None:
-        """Verify one projected owned artifact against its canonical plans.
-
-        ``roots`` carries ``(canonical, projection)``.
-
-        Raises:
-            ValueError: If projected collection metadata was modified; or if
-                owned projection artifact disappeared.
-
-        """
-        canonical, projection = roots
-        if projection is None:
-            msg = f"owned projection artifact has no projection root: {candidate}"
-            raise ValueError(msg)
-        if state.content is None:
-            msg = f"owned projection artifact disappeared: {candidate}"
-            raise ValueError(msg)
-        projected_plans = {projection / plan.relative_to(canonical) for plan in plans}
-        owners = tuple(
-            plan
-            for plan in projected_plans
-            if candidate.is_relative_to(plan.with_suffix(""))
-        )
-        if candidate not in projected_plans and not owners:
-            msg = f"projected collection metadata was modified: {candidate}"
-            raise ValueError(msg)
-        for plan in plans:
-            projected_plan = projection / plan.relative_to(canonical)
-            if candidate.is_relative_to(projected_plan.with_suffix("")):
-                affected.add(projected_plan)
-
-    @classmethod
-    def _classified_owned_outputs(
-        cls,
-        roots: t.Pair[Path, Path | None],
-        manifest: m.Infra.PlanCollectionManifest,
-        states: t.MutableMappingKV[Path, m.Cli.AtomicFileState],
-        plans: set[Path],
-        affected: set[Path],
-    ) -> list[Path]:
-        """Capture every owned output and exclude its current bytes.
-
-        ``roots`` carries ``(canonical, projection)``.
-
-        Returns:
-            The resulting ``list[Path]``.
-
-        """
-        canonical, projection = roots
-        scan_roots = (canonical,) if projection is None else (canonical, projection)
-        excluded: list[Path] = []
+        plans = {canonical / revision.canonical_path for revision in manifest.revisions}
+        affected: set[Path] = set()
         for artifact in manifest.artifacts:
-            path = cls._validated_owned_path(artifact.relative_path)
-            for root in scan_roots:
+            path = artifact.relative_path
+            if path.is_absolute() or not path.parts or ".." in path.parts:
+                msg = f"collection manifest has unsafe owned path: {path}"
+                raise ValueError(msg)
+            for root in roots:
                 candidate = root / path
                 state = cls.collection_capture(candidate, states)
-                if cls._artifact_matches(state, artifact):
+                if (
+                    state.content is not None
+                    and sha256(state.content).hexdigest() == artifact.digest
+                ):
                     excluded.append(candidate)
-                elif root == canonical and candidate not in plans:
+                elif candidate not in plans and root == canonical:
                     continue
-                elif root == projection:
-                    cls._verify_projected_artifact(
-                        candidate,
-                        state,
-                        roots,
-                        plans,
-                        affected,
+                elif root == projection and state.content is not None:
+                    projected_plans = {
+                        root / plan.relative_to(canonical) for plan in plans
+                    }
+                    owners = tuple(
+                        plan
+                        for plan in projected_plans
+                        if candidate.is_relative_to(plan.with_suffix(""))
                     )
-        return excluded
-
-    @classmethod
-    def _verified_projected_manifest(
-        cls,
-        canonical: Path,
-        projection: Path,
-        states: t.MutableMappingKV[Path, m.Cli.AtomicFileState],
-        before: m.Cli.AtomicFileState,
-    ) -> Path | None:
-        """Verify the mirrored manifest matches the canonical bytes.
-
-        Returns:
-            The projected manifest path when present.
-
-        Raises:
-            ValueError: If projected collection manifest was modified.
-
-        """
-        projected_manifest = projection / (canonical / "collection-manifest.json").name
-        projected = cls.collection_capture(projected_manifest, states)
-        if projected.content is None:
-            return None
-        if projected.content != before.content:
-            msg = f"projected collection manifest was modified: {projected_manifest}"
-            raise ValueError(msg)
-        return projected_manifest
+                    if candidate not in projected_plans and not owners:
+                        msg = f"projected collection metadata was modified: {candidate}"
+                        raise ValueError(msg)
+                    for plan in plans:
+                        projected_plan = root / plan.relative_to(canonical)
+                        if candidate.is_relative_to(projected_plan.with_suffix("")):
+                            affected.add(projected_plan)
+                elif root == projection and state.content is None:
+                    msg = f"owned projection artifact disappeared: {candidate}"
+                    raise ValueError(msg)
+        if projection is not None:
+            projected_manifest = projection / manifest_path.name
+            projected = cls.collection_capture(projected_manifest, states)
+            if projected.content is not None:
+                if projected.content != before.content:
+                    msg = (
+                        f"projected collection manifest was modified: "
+                        f"{projected_manifest}"
+                    )
+                    raise ValueError(msg)
+                excluded.append(projected_manifest)
+        return manifest, tuple(path for path in excluded if path not in affected)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesDocsCollectionSources"]

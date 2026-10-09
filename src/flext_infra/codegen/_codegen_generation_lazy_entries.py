@@ -6,6 +6,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections import defaultdict
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra.codegen._codegen_generation_type_checking import (
@@ -21,7 +23,7 @@ type _LazyEntryContext = t.Triple[str, frozenset[str], bool]
 class FlextInfraCodegenGenerationLazyEntriesMixin(
     FlextInfraCodegenGenerationTypeCheckingMixin,
 ):
-    """Lazy-target compaction and publication helper methods."""
+    """Lazy-entry grouping and publication helper methods."""
 
     @staticmethod
     def _build_lazy_entries(
@@ -64,6 +66,34 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
                 continue
             entries.append((exp, compact_mod, attr))
         return entries
+
+    @staticmethod
+    def _group_lazy_entries(
+        lazy_entries: t.SequenceOf[t.Triple[str, str, str]],
+    ) -> t.Pair[t.SequenceOf[t.StrSequencePair], t.SequenceOf[t.StrPairSequencePair]]:
+        """Group lazy entries by module and alias group.
+
+        Returns:
+            The resulting ``t.Pair[t.SequenceOf[t.StrSequencePair],
+                t.SequenceOf[t.StrPairSequencePair]]``.
+
+        """
+        module_groups: MutableMapping[str, list[str]] = defaultdict(list)
+        alias_groups: MutableMapping[str, list[t.StrPair]] = defaultdict(list)
+        for export_name, mod, attr_name in lazy_entries:
+            if not attr_name or attr_name == export_name:
+                module_groups[mod].append(export_name)
+            else:
+                alias_groups[mod].append((export_name, attr_name))
+        module_items = tuple(
+            (mod, tuple(sorted(module_groups[mod])))
+            for mod in sorted(module_groups, key=str.lower)
+        )
+        alias_items = tuple(
+            (mod, tuple(sorted(alias_groups[mod])))
+            for mod in sorted(alias_groups, key=str.lower)
+        )
+        return module_items, alias_items
 
     @staticmethod
     def _build_published_exports(

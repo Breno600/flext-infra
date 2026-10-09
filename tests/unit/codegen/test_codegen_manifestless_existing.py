@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config, infra, t
+from flext_infra import config, infra
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import c, u
@@ -26,13 +26,20 @@ class TestsFlextInfraCodegenManifestlessExisting:
     """Tests for ``FlextInfraCodegenManifestlessExisting``."""
 
     @staticmethod
-    def _seed_manifest_pyproject(root: Path) -> str:
-        """Seed the root manifest with one custom dev-group requirement.
-
-        Returns:
-            The written manifest source text.
-
-        """
+    def test_existing_root_uses_pep621_metadata_for_managed_artifacts(
+        infra_git_repo: Path,
+    ) -> None:
+        """Test existing root uses pep621 metadata for managed artifacts."""
+        root = infra_git_repo
+        repository = u.Tests.repository_ref(config.Infra.name)
+        # Why: LICENSE has no generator and is genuinely exists_or_absent.
+        # README.md is also externally_managed/exists_or_absent for conform's
+        # managed-file surface, but `execute_request` runs the full apply
+        # pipeline including docs generation, which regenerates README.md
+        # from live project metadata regardless of prior content — so only
+        # LICENSE is proven byte-preserved here.
+        preserved = {"LICENSE": "existing license\n"}
+        seeded = {**preserved, "README.md": "# Existing repository\n"}
         pyproject_source = tm.ok(u.Cli.files_read_text(Path.cwd() / "pyproject.toml"))
         custom_dev_requirement = 'flext-custom-tests>=0.1; python_version < "3.0"'
         pyproject_payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
@@ -54,17 +61,10 @@ class TestsFlextInfraCodegenManifestlessExisting:
         package_init = root / c.Infra.DEFAULT_SRC_DIR / package_name / "__init__.py"
         package_init.parent.mkdir(parents=True)
         tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
-        return pyproject_source
-
-    @staticmethod
-    def _seed_declared_entry_targets(root: Path, pyproject_source: str) -> None:
-        """Stub every declared script and entry-point target in the tree.
-
-        The copied manifest declares scripts and entry points; conform's
-        fresh-import gate loads each one, so the seeded tree carries every
-        declared target (module and attribute) inside its own package —
-        never a copy of the whole production package.
-        """
+        # The copied manifest declares scripts and entry points; conform's
+        # fresh-import gate loads each one, so the seeded tree carries every
+        # declared target (module and attribute) inside its own package —
+        # never a copy of the whole production package.
         manifest = tm.not_none(u.Cli.toml_mapping_from_text(pyproject_source))
         project_table = u.Cli.json_as_mapping(
             u.Cli.toml_mapping_child(manifest, "project"),
@@ -109,10 +109,6 @@ class TestsFlextInfraCodegenManifestlessExisting:
                     ),
                 ),
             )
-
-    @staticmethod
-    def _seed_existing_tree(root: Path, seeded: t.StrMapping) -> None:
-        """Copy the externally managed extras and commit the seeded tree."""
         vscode_settings = root / ".vscode" / "settings.json"
         vscode_settings.parent.mkdir()
         tm.ok(
@@ -131,26 +127,6 @@ class TestsFlextInfraCodegenManifestlessExisting:
                 cwd=root,
             ),
         )
-
-    @staticmethod
-    def test_existing_root_uses_pep621_metadata_for_managed_artifacts(
-        infra_git_repo: Path,
-    ) -> None:
-        """Test existing root uses pep621 metadata for managed artifacts."""
-        root = infra_git_repo
-        repository = u.Tests.repository_ref(config.Infra.name)
-        # Why: LICENSE has no generator and is genuinely exists_or_absent.
-        # README.md is also externally_managed/exists_or_absent for conform's
-        # managed-file surface, but `execute_request` runs the full apply
-        # pipeline including docs generation, which regenerates README.md
-        # from live project metadata regardless of prior content — so only
-        # LICENSE is proven byte-preserved here.
-        preserved = {"LICENSE": "existing license\n"}
-        seeded = {**preserved, "README.md": "# Existing repository\n"}
-        manifestless = TestsFlextInfraCodegenManifestlessExisting
-        pyproject_source = manifestless._seed_manifest_pyproject(root)
-        manifestless._seed_declared_entry_targets(root, pyproject_source)
-        manifestless._seed_existing_tree(root, seeded)
 
         derived = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
         tm.that(derived.repository.name, eq=repository.name)
@@ -261,8 +237,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
                 root / "pyproject.toml",
                 f'[project]\nname = "{distribution}"\nversion = "0.12.0.dev0"\n'
                 f'description = "{distribution} root fixture"\n'
-                f"requires-python = "
-                f'"{config.Infra.codegen.toolchain.python_required_version}"\n'
+                f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
                 'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
                 "dependencies = []\n"
                 "\n[dependency-groups]\n"

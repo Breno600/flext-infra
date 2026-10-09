@@ -30,29 +30,6 @@ class FlextInfraConstantsRefactor:
     "Exact structured mod evidence schema version."
     MOD_SCAN_REPORT_MODE: ClassVar[int] = 0o644
     "Canonical permission bits for structured mod evidence."
-    ACCESSOR_MIGRATION_REPORT_RELATIVE_PATH: ClassVar[Path] = (
-        Path(cb.REPORTS_DIR_NAME) / "refactor" / "accessor-migration.json"
-    )
-    "Canonical single-file evidence snapshot for the latest accessor migration."
-    NAMESPACE_ENFORCE_REPORT_RELATIVE_PATH: ClassVar[Path] = (
-        Path(cb.REPORTS_DIR_NAME) / "refactor" / "namespace-enforce.json"
-    )
-    "Canonical single-file evidence snapshot for the latest namespace enforcement."
-    VIOLATIONS_SWEEP_ROUTE_NAME: ClassVar[str] = "violations-sweep"
-    "Canonical refactor CLI verb that repairs and proves the always-reducing law."
-    VIOLATIONS_SWEEP_REPORT_RELATIVE_PATH: ClassVar[Path] = (
-        Path(cb.REPORTS_DIR_NAME) / "refactor" / "violations-sweep.json"
-    )
-    "Canonical single-file receipt for the latest violations sweep."
-    VIOLATIONS_SWEEP_REPORT_SCHEMA_VERSION: ClassVar[Literal[1]] = 1
-    "Exact structured violations-sweep report schema version."
-    VIOLATIONS_SWEEP_REPAIR_VERBS: ClassVar[t.StrSequence] = ("fix", "fmt", "mod")
-    "Canonical repair sequence the sweep runs between its two mod scans."
-    LINT_REPORT_COUNT_LINE: ClassVar[t.RegexPattern] = re.compile(
-        r"^- lint: (?:PASS|FAIL) \((\d+) issues\)$",
-        re.MULTILINE,
-    )
-    """The check report's generated lint line; its count is the repo's lint column."""
     AST_GREP_ERROR_FINDING_RECEIPT: ClassVar[str] = (
         "Error: {count} error(s) found in code."
     )
@@ -61,35 +38,6 @@ class FlextInfraConstantsRefactor:
         "Help: Scan succeeded and found error level diagnostics in the codebase."
     )
     "Exact second stderr line emitted for error-severity JSONL findings."
-    IMPORT_NORMALIZATION_MAX_PASSES: ClassVar[int] = 24
-    "Fixed-point pass ceiling for import normalization."
-    IMPORT_LAW_OTHER_LAYER: ClassVar[str] = "other"
-    "Import-layer slot of a module whose path names no declared layer."
-    IMPORT_LAW_ROOT_SINGLETONS: ClassVar[frozenset[str]] = frozenset({
-        "config",
-        "settings",
-    })
-    "Root singletons and import layers of the config/settings law (ADR-005)."
-    IMPORT_LAW_GUARD_ERRORS: ClassVar[frozenset[str]] = frozenset({
-        "ImportError",
-        "ModuleNotFoundError",
-    })
-    "Exceptions whose handlers make a ``try`` around imports an import guard."
-    IMPORT_LAW_FAMILY_BASE_FILE: ClassVar[str] = "base.py"
-    "File name of a private family's leaf base module."
-
-    @unique
-    class ImportPlacement(StrEnum):
-        """Where the import law places one imported binding."""
-
-        RUNTIME = "runtime"
-        "The module import block."
-        TYPING = "typing"
-        "The module ``if TYPE_CHECKING:`` block (typing-only reverse edge)."
-        BOUND = "bound"
-        "Nowhere new: an equal module-level import already binds it."
-        STAY = "stay"
-        "Its current place: a reverse runtime use or a foreign binding."
 
     @unique
     class ModScanCommand(StrEnum):
@@ -178,9 +126,7 @@ class FlextInfraConstantsRefactor:
           through its bases, every class the facade's family package
           declares in ``__all__``;
         - ``class-stem``: the captured class name starts with the project's
-          class stem as class nesting derives it (``Tests`` + stem under the
-          tests tree; ``Examples``/``Scripts`` + stem or the bare stem under
-          those surfaces);
+          class stem (``Tests`` + stem under the tests tree);
         - ``package-layers``: the finding's package provides every layer the
           rule names in ``arg`` (a declared facade letter, a module, a
           private module or a subpackage of that name);
@@ -208,11 +154,6 @@ class FlextInfraConstantsRefactor:
         PACKAGE_LAYERS = "package-layers"
         PACKAGE_ROOT_INIT = "package-root-init"
         FAMILY_BASE = "family-base"
-        PAYLOAD_DECLARATION = "payload-declaration"
-        RESOLVED_SYMBOL = "resolved-symbol"
-        SAME_BINDING = "same-binding"
-        EXECUTABLE_OCCURRENCE = "executable-occurrence"
-        UNREFERENCED_IMPORT = "unreferenced-import"
 
     CODEMOD_RUNTIME_CLOSURE_PREDICATES: ClassVar[frozenset[CodemodContextPredicate]] = (
         frozenset({
@@ -226,7 +167,6 @@ class FlextInfraConstantsRefactor:
     class SemanticCutoverPhase(StrEnum):
         """Semantic ``make mod`` cutovers planned by ``u.Infra``."""
 
-        DECLARATION_RELOCATION = "declaration-relocation"
         CLASS_NESTING = "class-nesting"
         COMPAT_ALIAS = "compat-alias"
         PRIVATE_IMPORT = "private-import"
@@ -238,9 +178,6 @@ class FlextInfraConstantsRefactor:
         NOTICE_LAST = "notice-last"
 
     SEMANTIC_CUTOVER_RULE_IDS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
-        SemanticCutoverPhase.DECLARATION_RELOCATION: (
-            "ban-nested-payload-outside-models"
-        ),
         SemanticCutoverPhase.COMPAT_ALIAS: "ban-compat-alias",
         SemanticCutoverPhase.PRIVATE_IMPORT: "ban-private-import",
         SemanticCutoverPhase.FACADE_BASE: "facade-base-by-class-name",

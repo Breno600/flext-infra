@@ -13,7 +13,7 @@ from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen._conform.pyproject_policy import (
     FlextInfraCodegenConformPyprojectPolicy,
 )
-from flext_infra.deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
+from flext_infra.deps import FlextInfraEnsurePackagingPhase
 
 
 class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPolicy):
@@ -138,6 +138,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         return r[m.Infra.MakeRenderContext].ok(
             m.Infra.MakeRenderContext(
                 pytest=config.Infra.tooling.tools.pytest,
+                mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 make=codegen.make,
                 mypy_timeout_exit_code=c.Infra.PROCESS_TIMEOUT_EXIT_CODE,
                 timeout_command=c.Infra.TIMEOUT_COMMAND,
@@ -154,7 +155,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 # Pass the neutral value explicitly so Pydantic never deep-copies
                 # the MappingProxyType model default while building the base.
                 ruff_per_file_ignores={},
-                ruff_extend_exclude=(),
                 make_profile=profile,
                 workspace_cli_group=c.Infra.CLI_GROUP_WORKSPACE,
                 repository_root_rel=self._repository_root_rel(workspace),
@@ -240,151 +240,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             ),
         )
 
-    @staticmethod
-    def _workspace_version(repository_root: Path) -> p.Result[str]:
-        """Read the checkout's version SSOT or the typed initial version.
-
-        The repository's own pyproject.toml is the version SSOT; the release
-        protocol is its only writer, so conform reads it and never syncs it.
-        A tree that has no pyproject yet is being created: it starts at the
-        typed initial version and the protocol owns every change after that.
-
-        Returns:
-            The resulting ``p.Result[str]``.
-
-        """
-        if (repository_root / c.PYPROJECT_FILENAME).is_file():
-            return u.Infra.current_workspace_version(repository_root)
-        return r[str].ok(config.Infra.initial_project_version)
-
-    def _resolved_render_project(
-        self,
-        render_inputs: m.Infra.CodegenRenderInputs,
-    ) -> p.Result[m.Infra.ProjectSpec]:
-        """Resolve the render project, inheriting workspace namespace scope.
-
-        Existing checkouts declare no scaffold metadata: derive the render
-        identity from the live project metadata instead of failing, so
-        conforming a governed repository never depends on scaffold-only
-        declarations. The manifest-level namespace declaration is the
-        repository's production scope for the namespace validator, so a
-        checkout that derives its project metadata declares it once at the
-        workspace root instead of freezing a full scaffold spec. An explicit
-        project-level declaration stays the more specific owner.
-
-        Returns:
-            The resulting ``p.Result[m.Infra.ProjectSpec]``.
-
-        """
-        target = render_inputs.target
-        workspace = render_inputs.workspace
-        codegen = render_inputs.codegen
-        if workspace.project is not None:
-            project = workspace.project
-        else:
-            derived = self._project_spec_from_existing(
-                target.repository,
-                target.root,
-                codegen,
-            )
-            if derived.failure:
-                return r[m.Infra.ProjectSpec].from_failure(derived)
-            project = derived.value
-        if workspace.namespace_scan_dirs and not project.namespace_scan_dirs:
-            project = project.model_copy(
-                update={"namespace_scan_dirs": workspace.namespace_scan_dirs},
-            )
-        return r[m.Infra.ProjectSpec].ok(project)
-
-    @staticmethod
-    def _validated_scaffold_project(
-        project: m.Infra.ProjectSpec,
-        render_inputs: m.Infra.CodegenRenderInputs,
-    ) -> p.Result[t.Pair[m.Infra.ProjectSpec, m.Infra.ScaffoldDependencyProfileSpec]]:
-        """Validate the project's upstream and license against the scaffold.
-
-        Returns:
-            The resulting ``p.Result[t.Pair[m.Infra.ProjectSpec,
-            m.Infra.ScaffoldDependencyProfileSpec]]`` with the composed
-            dependency profile.
-
-        """
-        codegen = render_inputs.codegen
-        result_type = r[
-            t.Pair[m.Infra.ProjectSpec, m.Infra.ScaffoldDependencyProfileSpec]
-        ]
-        dependency_profile = u.Infra.composed_dependency_profile(
-            codegen.scaffold.project.dependency_profiles,
-            upstream=project.upstream,
-            distribution=render_inputs.target.repository.distribution,
-        )
-        if dependency_profile is None:
-            return result_type.fail(
-                f"unsupported scaffold upstream: {project.upstream}",
-            )
-        if project.license not in codegen.scaffold.project.supported_licenses:
-            supported = ", ".join(codegen.scaffold.project.supported_licenses)
-            return result_type.fail(
-                f"unsupported scaffold license: {project.license}; "
-                f"supported licenses: {supported}",
-            )
-        return result_type.ok((project, dependency_profile))
-
-    @classmethod
-    def _integration_facts(
-        cls,
-        render_inputs: m.Infra.CodegenRenderInputs,
-    ) -> p.Result[
-        t.Triple[
-            m.Infra.ProviderIdentitySpec,
-            str,
-            t.Pair[str, str],
-        ]
-    ]:
-        """Resolve the provider, integration branch, and FLEXT base URL.
-
-        Internal flext-* floors render from the FLEXT line the checkout
-        consumes (the infrastructure dependency's own source), never from
-        the consumer's organization or branch: a repository in another org
-        otherwise renders a mixed family and uv rejects conflicting URLs.
-
-        Returns:
-            The resulting ``p.Result[t.Triple[m.Infra.ProviderIdentitySpec,
-                str, t.Pair[str, str]]]`` where the pair carries the FLEXT
-                base URL and branch.
-
-        """
-        result_type = r[t.Triple[m.Infra.ProviderIdentitySpec, str, t.Pair[str, str]]]
-        repository_provider = u.Infra.repository_provider(
-            render_inputs.target.repository,
-        )
-        if repository_provider.failure:
-            return result_type.from_failure(repository_provider)
-        integration_branch = cls.render_integration_branch(render_inputs)
-        if integration_branch.failure:
-            return result_type.from_failure(integration_branch)
-        # Internal flext-* floors render from the FLEXT line the checkout
-        # consumes (the infrastructure dependency's own source), never from
-        # the consumer's organization or branch: a repository in another org
-        # otherwise renders a mixed family and uv rejects conflicting URLs.
-        flext_line = u.Infra.flext_integration_line_for_checkout(
-            codegen=render_inputs.codegen,
-            repository_root=render_inputs.target.root,
-            workspace=render_inputs.workspace,
-        )
-        if flext_line.failure:
-            return result_type.from_failure(flext_line)
-        flext_git_base_url = flext_line.value.base_url
-        if flext_git_base_url is None:
-            return result_type.fail(
-                "detected FLEXT line carries no provider base URL",
-            )
-        return result_type.ok((
-            repository_provider.value,
-            integration_branch.value,
-            (flext_git_base_url, flext_line.value.branch),
-        ))
-
     def _project_render_context(
         self,
         render_inputs: m.Infra.CodegenRenderInputs,
@@ -402,20 +257,71 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         codegen = render_inputs.codegen
         repository = target.repository
         repository_root = target.root
-        project = self._resolved_render_project(render_inputs)
-        if project.failure:
-            return r[m.Infra.ProjectRenderContext].from_failure(project)
-        validated = self._validated_scaffold_project(project.value, render_inputs)
-        if validated.failure:
-            return r[m.Infra.ProjectRenderContext].from_failure(validated)
-        project, dependency_profile = validated.value
+        if workspace.project is None:
+            # Existing checkouts declare no scaffold metadata: derive the render
+            # identity from the live project metadata instead of failing, so
+            # conforming a governed repository never depends on scaffold-only
+            # declarations.
+            derived = self._project_spec_from_existing(
+                repository,
+                repository_root,
+                codegen,
+            )
+            if derived.failure:
+                return r[m.Infra.ProjectRenderContext].from_failure(derived)
+            project = derived.value
+        else:
+            project = workspace.project
+        if workspace.namespace_scan_dirs and not project.namespace_scan_dirs:
+            # The manifest-level declaration is the repository's production scope
+            # for the namespace validator, so a
+            # checkout that derives its project metadata declares it once at the
+            # workspace root instead of freezing a full scaffold spec. An
+            # explicit project-level declaration stays the more specific owner.
+            project = project.model_copy(
+                update={"namespace_scan_dirs": workspace.namespace_scan_dirs},
+            )
+        dependency_profile = u.Infra.composed_dependency_profile(
+            codegen.scaffold.project.dependency_profiles,
+            upstream=project.upstream,
+            distribution=repository.distribution,
+        )
+        if dependency_profile is None:
+            return r[m.Infra.ProjectRenderContext].fail(
+                f"unsupported scaffold upstream: {project.upstream}",
+            )
+        if project.license not in codegen.scaffold.project.supported_licenses:
+            supported = ", ".join(codegen.scaffold.project.supported_licenses)
+            return r[m.Infra.ProjectRenderContext].fail(
+                f"unsupported scaffold license: {project.license}; "
+                f"supported licenses: {supported}",
+            )
         profile = target.make_profile
         make_context = self.make_render_context(render_inputs)
         if make_context.failure:
             return r[m.Infra.ProjectRenderContext].from_failure(make_context)
-        integration = self._integration_facts(render_inputs)
-        if integration.failure:
-            return r[m.Infra.ProjectRenderContext].from_failure(integration)
+        repository_provider = u.Infra.repository_provider(repository)
+        if repository_provider.failure:
+            return r[m.Infra.ProjectRenderContext].from_failure(repository_provider)
+        integration_branch = self.render_integration_branch(render_inputs)
+        if integration_branch.failure:
+            return r[m.Infra.ProjectRenderContext].from_failure(integration_branch)
+        # Internal flext-* floors render from the FLEXT line the checkout
+        # consumes (the infrastructure dependency's own source), never from
+        # the consumer's organization or branch: a repository in another org
+        # otherwise renders a mixed family and uv rejects conflicting URLs.
+        flext_line = u.Infra.flext_integration_line_for_checkout(
+            codegen=codegen,
+            repository_root=repository_root,
+            workspace=workspace,
+        )
+        if flext_line.failure:
+            return r[m.Infra.ProjectRenderContext].from_failure(flext_line)
+        flext_git_base_url = flext_line.value.base_url
+        if flext_git_base_url is None:
+            return r[m.Infra.ProjectRenderContext].fail(
+                "detected FLEXT line carries no provider base URL",
+            )
         packaged_data_paths = (
             FlextInfraEnsurePackagingPhase.resolve_data_paths(
                 repository_root,
@@ -426,27 +332,30 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             if profile is not c.Infra.MakeProfile.WORKSPACE
             else m.Infra.PackagedDataSelection()
         )
-        project_patterns: t.StrSequence = (
-            render_inputs.managed_artifacts.resolution.artifacts.Gitignore.patterns
-        )
+        # The planner resolved the catalog once per repository: the committed
+        # HEAD catalog for an existing tree, the empty one for a scaffold.
+        catalog_artifacts = render_inputs.managed_artifacts.resolution
+        project_patterns: t.StrSequence = catalog_artifacts.artifacts.Gitignore.patterns
         # The repository's own pyproject.toml is the version SSOT; the release
         # protocol is its only writer, so conform reads it and never syncs it.
         # A tree that has no pyproject yet is being created: it starts at the
         # typed initial version and the protocol owns every change after that.
-        version = self._workspace_version(repository_root)
-        if version.failure:
-            return r[m.Infra.ProjectRenderContext].from_failure(version)
+        version_result = (
+            u.Infra.current_workspace_version(repository_root)
+            if (repository_root / c.PYPROJECT_FILENAME).is_file()
+            else r[str].ok(config.Infra.initial_project_version)
+        )
+        if version_result.failure:
+            return r[m.Infra.ProjectRenderContext].from_failure(version_result)
         return r[m.Infra.ProjectRenderContext].ok(
             m.Infra.ProjectRenderContext(
                 docs_audit=workspace.docs_audit,
                 **make_context.value.model_dump(
                     by_alias=True,
-                    exclude={
-                        "ruff_per_file_ignores",
-                        "ruff_extend_exclude",
-                    },
+                    exclude={"mise_bootstrap", "ruff_per_file_ignores"},
                     exclude_computed_fields=True,
                 ),
+                mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 scaffold=codegen.scaffold,
                 gitignore_sections=u.Infra.gitignore_sections(
                     codegen,
@@ -464,10 +373,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 # fleet exemption map, unchanged for every project.
                 ruff_per_file_ignores=(
                     config.Infra.tooling.tools.ruff.lint.per_file_ignores
-                ),
-                ruff_extend_exclude=(
-                    *config.Infra.tooling.tools.ruff_extend_exclude,
-                    *codegen.generated_source_globs,
                 ),
                 environment_path_prepends=(codegen.toolchain.environment_path_prepends),
                 beads=workspace.beads,
@@ -509,20 +414,37 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 cli_module=project.cli_module,
                 runtime_dependency_overlay=project.runtime_dependency_overlay,
                 description=project.description,
-                version=version.value,
+                version=version_result.value,
                 license=project.license,
                 python_required_version=codegen.toolchain.python_required_version,
                 dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
+                kubectl_version=codegen.toolchain.kubectl_version,
+                helm_version=codegen.toolchain.helm_version,
+                kind_version=codegen.toolchain.kind_version,
+                direnv_version=codegen.toolchain.direnv_version,
+                uv_version=codegen.toolchain.uv_version,
+                qlty_version=codegen.toolchain.qlty_version,
+                node_version=codegen.toolchain.node_version,
+                jscpd_version=codegen.toolchain.jscpd_version,
+                waza_version=codegen.toolchain.waza_version,
+                taplo_version=codegen.toolchain.taplo_version,
+                ast_grep_selector=codegen.toolchain.ast_grep_selector,
+                ast_grep_version=codegen.toolchain.ast_grep_version,
+                gitleaks_version=codegen.toolchain.gitleaks_version,
+                scc_version=codegen.toolchain.scc_version,
+                kubeconform_version=codegen.toolchain.kubeconform_version,
+                go_version=codegen.toolchain.go_version,
+                make_version=codegen.toolchain.make_version,
                 author_name=project.author_name,
                 author_email=project.author_email,
                 repository=project.homepage,
                 homepage=project.homepage,
                 documentation=project.documentation,
-                flext_git_base_url=integration.value[2][0],
-                flext_git_branch=integration.value[2][1],
+                flext_git_base_url=flext_git_base_url,
+                flext_git_branch=flext_line.value.branch,
                 repository_provider=repository.provider,
                 repository_git_url=repository.url,
-                repository_branch=integration.value[1],
+                repository_branch=integration_branch.value,
                 year=project.year,
             ),
         )
@@ -542,19 +464,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         """
         resolved: list[m.Infra.ManagedGitlinkSpec] = []
         for repository in workspace.subprojects:
-            ci = codegen.make.ci
-            if u.Infra.env_value(ci.variable).strip() == ci.value:
-                if workspace.integration is None:
-                    return r[t.VariadicTuple[m.Infra.ManagedGitlinkSpec]].fail(
-                        "CI member topology requires the root integration declaration",
-                    )
-                resolved.append(
-                    m.Infra.ManagedGitlinkSpec(
-                        repository=repository,
-                        branch=workspace.integration.branch,
-                    ),
-                )
-                continue
             # A governed member follows its workspace's declared line unless
             # its own manifest declares otherwise (the ``.`` gitmodule branch).
             branch = u.Infra.resolve_integration_branch(

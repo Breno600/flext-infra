@@ -61,10 +61,9 @@ class TestsFlextInfraLazyInitFixtureSettingsCollision:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(result, eq=0)
-        entries, _refs = u.Infra.lazy_import_mapping_source(init_content)
-        tm.that(dict(entries).get("._config", ()), has="config")
-        tm.that(dict(entries).get("._settings", ()), has="settings")
-        tm.that(dict(entries), lacks="._fixtures.settings")
+        tm.that(init_content, contains='"._config": (')
+        tm.that(init_content, contains='"._settings": (')
+        tm.that(init_content, lacks='"._fixtures.settings": (')
         tm.that(init_content, lacks='"reset_settings"')
         # Explicit identity aliases declare static reexports without eagerly
         # loading the runtime singleton modules.
@@ -114,10 +113,9 @@ class TestsFlextInfraLazyInitFixtureSettingsCollision:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(result, eq=0)
-        entries, _refs = u.Infra.lazy_import_mapping_source(init_content)
         tm.that(
-            dict(entries).get("._settings", ()),
-            eq=("FlextSampleSettings", "settings"),
+            init_content,
+            contains='"._settings": ("FlextSampleSettings", "settings")',
         )
         tm.that(
             init_content,

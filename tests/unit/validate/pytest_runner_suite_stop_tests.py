@@ -186,7 +186,7 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             ),
             encoding="utf-8",
         )
-        runner = self._spent_runner(cached_runner_project)
+        runner = self._runner_stopping_at(cached_runner_project, time.monotonic())
 
         tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.INTERRUPTED.value)
 

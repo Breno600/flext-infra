@@ -19,11 +19,11 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
-from flext_infra import c, m, r, t, u
+from flext_infra import c, m, r, u
 from flext_infra.base import s
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import p, t
 
 
 class FlextInfraPythonVersionEnforcer(s[int]):
@@ -222,8 +222,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             return 13
         return int(match.group(2))
 
-    @staticmethod
-    def _repository_root_from_file(file: str | Path) -> Path:
+    def _repository_root_from_file(self, file: str | Path) -> Path:
         """Walk up from ``file`` to the first dir with .git+Makefile+pyproject.
 
         Raises RuntimeError when no such repository root exists (fail-loud).

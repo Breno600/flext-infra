@@ -27,27 +27,6 @@ class FlextInfraModelsDepsToolConfigProjectGitignore(
         begin: Annotated[t.NonEmptyStr, m.Field(description="Opening marker line")]
         end: Annotated[t.NonEmptyStr, m.Field(description="Closing marker line")]
 
-        @staticmethod
-        def _is_single_line(marker: str) -> bool:
-            """Whether one marker is a complete line with no embedded newline.
-
-            Returns:
-                The resulting ``bool``.
-
-            """
-            return (
-                marker.strip() == marker and "\n" not in marker and "\r" not in marker
-            )
-
-        def _overlap(self, other: str) -> bool:
-            """Whether one marker collides with or is contained in the other.
-
-            Returns:
-                The resulting ``bool``.
-
-            """
-            return self.begin == other or self.begin in other or other in self.begin
-
         @m.model_validator(mode="after")
         def validate_markers(self) -> Self:
             """Require distinct, complete single-line delimiters.
@@ -60,8 +39,16 @@ class FlextInfraModelsDepsToolConfigProjectGitignore(
                     lines.
 
             """
-            if self._overlap(self.end) or not (
-                self._is_single_line(self.begin) and self._is_single_line(self.end)
+            if (
+                self.begin == self.end
+                or self.begin in self.end
+                or self.end in self.begin
+                or self.begin.strip() != self.begin
+                or self.end.strip() != self.end
+                or "\n" in self.begin
+                or "\r" in self.begin
+                or "\n" in self.end
+                or "\r" in self.end
             ):
                 msg = "gitignore preserved block markers must be distinct single lines"
                 raise ValueError(msg)

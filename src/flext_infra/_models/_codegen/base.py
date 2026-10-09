@@ -19,8 +19,8 @@ from flext_infra._models.codegen_toolchain import FlextInfraModelsCodegenToolcha
 
 
 class FlextInfraCodegen(
-    FlextInfraModelsCodegenToolchain,
     FlextInfraModelsCodegenRender,
+    FlextInfraModelsCodegenToolchain,
     FlextInfraModelsCodegenJournalModels,
     FlextInfraModelsCodegenTransactionModels,
     FlextInfraModelsCodegenScaffoldModels,

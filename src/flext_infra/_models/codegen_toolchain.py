@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
-from flext_cli import m
+from flext_cli import m, u
 
 from flext_infra import t
 
@@ -17,38 +17,24 @@ from flext_infra import t
 class FlextInfraModelsCodegenToolchain:
     """Describe toolchain destinations and their coherent state snapshots."""
 
-    class CodegenParticipantPolicy(m.Value):
-        """Caller-authorized physical roots, independent of recorded capabilities."""
+    class MiseToolchainArtifactPaths(m.ArbitraryTypesModel):
+        """Canonical live toolchain-bundle destinations for one project."""
 
-        scope_root: Path = m.Field(description="Physical coordination root")
-        roots: t.VariadicTuple[m.Cli.AtomicDirectoryChainPlan] = m.Field(
-            min_length=1,
-            description="Existing root identities authorized by the request topology",
-        )
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
-        @m.model_validator(mode="after")
-        def _validate_roots(self) -> Self:
-            """Require unique existing physical anchors including the scope.
-
-            Returns:
-                The resulting ``Self``.
-
-            Raises:
-                ValueError: If generation authorization requires unique existing
-                    physical roots.
-            """
-            paths = tuple(root.target for root in self.roots)
-            if (
-                len(set(paths)) != len(paths)
-                or self.scope_root not in paths
-                or any(
-                    root.directories or root.target != root.anchor_path
-                    for root in self.roots
-                )
-            ):
-                msg = "generation authorization requires unique existing physical roots"
-                raise ValueError(msg)
-            return self
+        config: Annotated[
+            Path,
+            m.Field(description="Generated Mise configuration destination"),
+        ]
+        unix_launcher: Annotated[Path, m.Field(description="Unix launcher destination")]
+        windows_launcher: Annotated[
+            Path,
+            m.Field(description="Windows launcher destination"),
+        ]
+        version_pin: Annotated[
+            Path,
+            m.Field(description="Pinned Mise release destination"),
+        ]
 
     class MiseToolchainProjectLayout(m.ArbitraryTypesModel):
         """Stable paths needed to validate and recover one project."""
@@ -66,9 +52,9 @@ class FlextInfraModelsCodegenToolchain:
                 description="Persistent transaction root on this project filesystem",
             ),
         ] = None
-        config: Annotated[
-            Path,
-            m.Field(description="Generated Mise configuration destination"),
+        artifacts: Annotated[
+            FlextInfraModelsCodegenToolchain.MiseToolchainArtifactPaths,
+            m.Field(description="Canonical artifact destinations"),
         ]
 
     class CodegenFileParticipant(m.ArbitraryTypesModel):
@@ -97,7 +83,7 @@ class FlextInfraModelsCodegenToolchain:
             m.Field(description="Destination-local staging for this transaction"),
         ]
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_capability(self) -> Self:
             if (
                 not self.root.is_absolute()
@@ -146,12 +132,9 @@ class FlextInfraModelsCodegenToolchain:
             m.Field(description="Explicit non-Mise publication capabilities"),
         ] = ()
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_participants(self) -> Self:
-            participants: t.VariadicTuple[
-                FlextInfraModelsCodegenToolchain.MiseToolchainProjectLayout
-                | FlextInfraModelsCodegenToolchain.CodegenFileParticipant
-            ] = (*self.projects, *self.file_participants)
+            participants = (*self.projects, *self.file_participants)
             if not participants:
                 msg = "generation layout requires an explicit participant"
                 raise ValueError(msg)
@@ -206,8 +189,12 @@ class FlextInfraModelsCodegenToolchain:
             FlextInfraModelsCodegenToolchain.MiseToolchainConfigState,
             m.Field(description="Planned generated Mise configuration state"),
         ]
+        artifacts: Annotated[
+            FlextInfraModelsCodegenToolchain.MiseToolchainArtifactSet,
+            m.Field(description="Named launcher states"),
+        ]
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_destination_paths(self) -> Self:
             """Bind every captured state to its declared live destination.
 
@@ -218,10 +205,46 @@ class FlextInfraModelsCodegenToolchain:
                 ValueError: If Mise project states differ from declared destinations.
 
             """
-            if self.config.before.path != self.layout.config:
+            expected = (
+                self.layout.artifacts.config,
+                self.layout.artifacts.unix_launcher,
+                self.layout.artifacts.windows_launcher,
+                self.layout.artifacts.version_pin,
+            )
+            observed = (
+                self.config.before.path,
+                self.artifacts.unix_launcher.path,
+                self.artifacts.windows_launcher.path,
+                self.artifacts.version_pin.path,
+            )
+            if observed != expected:
                 msg = "Mise project states differ from declared destinations"
                 raise ValueError(msg)
             return self
+
+    class MiseToolchainArtifactSet(m.ArbitraryTypesModel):
+        """Named file states that prevent artifact-order ambiguity."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
+
+        unix_launcher: Annotated[
+            m.Cli.AtomicFileState,
+            m.Field(description="Observed Unix launcher state"),
+        ]
+        windows_launcher: Annotated[
+            m.Cli.AtomicFileState,
+            m.Field(description="Observed Windows launcher state"),
+        ]
+        version_pin: Annotated[
+            m.Cli.AtomicFileState,
+            m.Field(description="Observed Mise pin state"),
+        ]
+
+        @m.computed_field
+        @property
+        def states(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
+            """The triple in ``c.Infra.ARTIFACT_SPECS`` order."""
+            return (self.unix_launcher, self.windows_launcher, self.version_pin)
 
     class MiseToolchainWorkspacePlan(m.ArbitraryTypesModel):
         """One stable layout plus a coherent mutable-state snapshot."""
@@ -236,20 +259,30 @@ class FlextInfraModelsCodegenToolchain:
             t.VariadicTuple[FlextInfraModelsCodegenToolchain.MiseToolchainProjectState],
             m.Field(min_length=1, description="Ordered complete workspace topology"),
         ]
+        runtime_artifacts: Annotated[
+            FlextInfraModelsCodegenToolchain.MiseToolchainArtifactSet,
+            m.Field(
+                description=(
+                    "Runtime-root `make upg` triple every project projects, or the "
+                    "packaged cold-start copy when the runtime root has none"
+                ),
+            ),
+        ]
 
         @m.computed_field
         @property
         def sources(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
-            """Every state the publication reads: the planned declarations.
-
-            Returns:
-                The resulting ``t.VariadicTuple[m.Cli.AtomicFileState]``.
-            """
-            return tuple(
-                state for project in self.projects for state in project.config.sources
+            """Every state the publication reads: declarations, then the triple."""
+            return (
+                *(
+                    state
+                    for project in self.projects
+                    for state in project.config.sources
+                ),
+                *self.runtime_artifacts.states,
             )
 
-        @m.model_validator(mode="after")
+        @u.model_validator(mode="after")
         def _validate_project_layouts(self) -> Self:
             """Bind every mutable project snapshot to the exact stable layout.
 

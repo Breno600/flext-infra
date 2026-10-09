@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from flext_infra import c, config
-from flext_infra.validate import FlextInfraCProfileReport
+from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 
 
 class FlextInfraCProfileEntry:

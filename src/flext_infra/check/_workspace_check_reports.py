@@ -59,14 +59,6 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     f"- {gate}: {gate_status} ({len(execution.issues)} issues)",
                 )
                 lines.extend(f"  - {issue.formatted}" for issue in execution.issues)
-                if execution.raw_receipt is not None:
-                    lines.extend([
-                        (
-                            f"  - Native output receipt: "
-                            f"[{execution.raw_receipt.name}]"
-                            f"({execution.raw_receipt.resolve().as_uri()})"
-                        ),
-                    ])
             lines.append("")
         return "\n".join(lines)
 
@@ -95,11 +87,11 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     rule_id = issue.code or gate
                     rules_by_id.setdefault(
                         rule_id,
-                        m.Infra.SarifRule.model_validate({
-                            "id": rule_id,
-                            "short_description": f"{tool_name} ({gate}) issue",
-                            "help_uri": tool_url,
-                        }),
+                        m.Infra.SarifRule(
+                            id=rule_id,
+                            short_description=f"{tool_name} ({gate}) issue",
+                            helpUri=tool_url,
+                        ),
                     )
                     sarif_results.append(cls._sarif_issue(issue, rule_id))
         return m.Infra.SarifReport(
@@ -127,21 +119,18 @@ class FlextInfraWorkspaceCheckReportsMixin:
             if issue.severity.lower() == c.Infra.SeverityLevel.WARNING
             else "error"
         )
-        return m.Infra.SarifResult.model_validate({
-            "rule_id": rule_id,
-            "level": level,
-            "message": issue.message,
-            "locations": list(issue.locations)
-            if issue.locations
-            else [
+        return m.Infra.SarifResult(
+            ruleId=rule_id,
+            level=level,
+            message=issue.message,
+            locations=[
                 m.Infra.SarifLocation(
                     uri=issue.file,
                     start_line=issue.line,
                     start_column=issue.column,
                 ),
             ],
-            "related_locations": issue.related_locations,
-        })
+        )
 
     @classmethod
     def _write_reports_and_summary(

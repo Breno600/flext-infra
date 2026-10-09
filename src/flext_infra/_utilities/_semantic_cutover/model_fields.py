@@ -13,6 +13,7 @@ import libcst as cst
 from libcst.codemod import CodemodContext
 from libcst.codemod.visitors import AddImportsVisitor
 
+from flext_infra import m, t
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
@@ -23,7 +24,7 @@ from flext_infra._utilities._semantic_cutover.model_fields_bindings import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import m, p, t
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesSemanticCutoverModelFields(
@@ -214,18 +215,6 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
             return None
         if not isinstance(value.func, ast.Name) or value.func.id != "getattr":
             return None
-        return FlextInfraUtilitiesSemanticCutoverModelFields._getattr_fields_receiver(
-            value,
-        )
-
-    @staticmethod
-    def _getattr_fields_receiver(value: ast.Call) -> str | None:
-        """Return the receiver of a ``getattr(x, "model_fields", ...)`` call.
-
-        Returns:
-            The resulting ``str | None``.
-
-        """
         match value.args:
             case [ast.Name(id=receiver), ast.Constant(value="model_fields")]:
                 return receiver

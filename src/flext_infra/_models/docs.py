@@ -12,7 +12,7 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import c, t
-from flext_infra._models._config.base import FlextInfraConfigModels
+from flext_infra._models._config import FlextInfraConfigModels
 from flext_infra._models.docs_collection import FlextInfraModelsDocsCollection
 from flext_infra._models.docs_generation import FlextInfraModelsDocsGeneration
 

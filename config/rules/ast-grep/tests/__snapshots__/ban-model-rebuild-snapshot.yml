@@ -1,0 +1,20 @@
+id: ban-model-rebuild
+snapshots:
+  Node.model_rebuild():
+    labels:
+    - source: Node.model_rebuild()
+      style: primary
+      start: 0
+      end: 20
+  Node.model_rebuild(_types_namespace=namespace):
+    labels:
+    - source: Node.model_rebuild(_types_namespace=namespace)
+      style: primary
+      start: 0
+      end: 46
+  self._model.model_rebuild(force=True):
+    labels:
+    - source: self._model.model_rebuild(force=True)
+      style: primary
+      start: 0
+      end: 37

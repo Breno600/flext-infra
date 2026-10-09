@@ -29,9 +29,7 @@ class TestsFlextInfraCodegenCiCustomSteps:
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="main",
             ci_trigger_branches=u.CodegenTestSupport.Ci.ci_trigger_branches("main"),
-            overrides=u.CodegenTestSupport.Ci.WorkflowRenderOverrides(
-                custom_steps=custom_steps,
-            ),
+            custom_steps=custom_steps,
         )
 
     def test_a_project_declaring_nothing_changes_nothing(self) -> None:

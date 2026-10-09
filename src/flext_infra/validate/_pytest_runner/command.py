@@ -45,7 +45,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         """
         provenance: t.MutableSequenceOf[str] = []
         for distribution in u.installed_distributions():
-            receipt = distribution.read_text(c.Infra.DISTRIBUTION_DIRECT_URL_FILE)
+            receipt = distribution.read_text("direct_url.json")
             dir_info = (
                 None
                 if receipt is None
@@ -315,6 +315,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             return (
                 *self.collection_command_prefix,
                 str(manifest_path.with_suffix(".pstats")),
+                str(manifest_path.parent / "run-context.json"),
                 *pytest_arguments,
             )
         return (sys.executable, "-m", "pytest", *pytest_arguments)
@@ -359,6 +360,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             workers = "0"
         return self._suite_argv(
             report_dir,
+            serial=serial,
             execution_mode=execution_mode,
             targets=(
                 self._node_targets()
@@ -418,6 +420,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         workers = "0" if serialize else str(self.parallel_worker_budget(pytest))
         return self._suite_argv(
             report_dir,
+            serial=workers == "0",
             execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
             targets=self._node_targets(),
             workers=workers,
@@ -435,6 +438,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         self,
         report_dir: Path,
         *,
+        serial: bool,
         execution_mode: c.Infra.PytestExecutionMode,
         targets: t.StrSequence,
         workers: str,
@@ -442,28 +446,27 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     ) -> t.VariadicTuple[str]:
         """Assemble one suite invocation; ``trailing`` owns the plugin split.
 
-        A serial dispatch keeps one item in flight, so its drain reserve is
-        the single-item budget instead of the xdist two-deep worst case.
-
         Returns:
             The resulting ``t.VariadicTuple[str]``.
 
         """
         pytest = config.Infra.tooling.tools.pytest
         suite_stop = self.suite_stop_monotonic(
-            serial=workers == "0",
+            serial=serial,
             execution_mode=execution_mode,
         )
         return (
             sys.executable,
+            "-m",
+            "flext_infra._pytest_entry" if self.profile_enabled else "pytest",
             *(
                 (
-                    "-c",
-                    c.Infra.PYTEST_PROFILE_LAUNCHER,
+                    "profile-collection",
                     str(report_dir / pytest.profile_suite_filename),
+                    str(report_dir / "run-context.json"),
                 )
                 if self.profile_enabled
-                else ("-m", "pytest")
+                else ()
             ),
             *targets,
             *pytest.progress_args,
