@@ -321,17 +321,22 @@ Infra:
           # (D203/D211, multi-line-summary-first-line/D213) included, so no run warns about them.
           pydocstyle:
             convention: google
+          # Operator approval 2026-10-09: "Parametrizar Dois Descritores".
+          # Python type.__base__ is the native layout base; type.__bases__ is
+          # the tuple of direct bases. Protocols expose both as read-only
+          # properties without changing their signatures or native identity.
+          # https://docs.python.org/3.13/reference/datamodel.html#type.__base__
+          # https://docs.python.org/3.13/reference/datamodel.html#type.__bases__
+          # https://docs.astral.sh/ruff/rules/bad-dunder-method-name/
+          # PLW3201 remains enabled for every other unrecognized dunder name.
+          pylint:
+            allow-dunder-method-names: [__base__, __bases__]
           # Each exception exists only with the operator ruling that authorized
           # it and its reason; Ruff receives the unscoped entries as `ignore`
           # and the scoped ones as `per-file-ignores`. Repositories declare no
-          # exception of their own. Operator order 2026-10-05 (latest, direct,
-          # merge-admin mandate): TC001-TC004 are ALL BLOCKED — enforced by
-          # rule name on every file (the four names live in the select
-          # surface, never in an ignore table; the same-day
-          # tc001-tc004-off-pydantic disable is superseded), and the scoped
-          # lazy-root dunder-init exception below stays the only relief.
-          # Pydantic runtime-evaluation is protected by the
-          # runtime-evaluated-roots projection, not by disabling the rules.
+          # exception of their own. TC001-TC004 are disabled on every file by
+          # the single unscoped entry below (flext-p7bxt; TC004 additionally
+          # operator-ruling-2026-10-08-tc004-never): Ruff never executes them.
           authorized-exceptions:
             - rules: [missing-trailing-comma]
               authority: operator-file-gate-verdict-mandate-2026-10-08
@@ -468,6 +473,8 @@ Infra:
                 module that exists to bind those libraries directly, so its
                 imports are the licensed surface. Every other module stays
                 blocked by the same rule.
+            # The flake8-type-checking family — typing-only-first-party-import,
+            # typing-only-third-party-import, typing-only-standard-library-import,
             # runtime-import-in-type-checking-block — is DISABLED for every
             # file: Ruff must not execute these rules anywhere. Declared by
             # rule name (the fleet's canonical naming format). This supersedes

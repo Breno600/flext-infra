@@ -192,6 +192,24 @@ and `make gen` renders it into every generated `pyproject.toml`:
 to `cli.display_text(x)` by the codemod rule `rewire-print-to-cli-display-text`. Every
 other form stays a reported T201 finding for its author.
 
+## Native type descriptor policy
+
+Operator approval on 2026-10-09, **"Parametrizar Dois Descritores"**, authorizes only
+`__base__` and `__bases__` through
+`Infra.tooling.tools.ruff.lint.pylint.allow-dunder-method-names` in
+`config/tooling.yaml`. The typed model rejects unrelated names; generation and Ruff
+conformance derive the managed `tool.ruff.lint.pylint` table from that owner.
+
+Python documents [`type.__base__`][python-type-base] as the single base responsible for
+instance memory layout and [`type.__bases__`][python-type-bases] as the tuple of direct
+bases. Protocols retain read-only properties, their signatures, and native identity.
+[Ruff PLW3201][ruff-dunder] supports this exact setting: the rule remains enabled for
+other unrecognized dunders, without `noqa`, per-file ignores, or rule disabling.
+
+[python-type-base]: https://docs.python.org/3.13/reference/datamodel.html#type.__base__
+[python-type-bases]: https://docs.python.org/3.13/reference/datamodel.html#type.__bases__
+[ruff-dunder]: https://docs.astral.sh/ruff/rules/bad-dunder-method-name/
+
 ## Markdown quality pipeline
 
 The markdown standard lives once in `flext-infra/config/tooling.yaml`

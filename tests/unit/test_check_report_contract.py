@@ -129,6 +129,26 @@ class TestsFlextInfraCheckReportContract:
 
         tm.that(self._sources(project), eq=before)
         (report_path,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_SARIF_FILENAME}")
+        report = m.Infra.SarifReport.model_validate_json(
+            report_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
+            strict=True,
+        )
+        assert report.properties is not None
+        summary = report.properties
+        tm.that(summary.selected_files, eq=())
+        tm.that(len(summary.targets), eq=1)
+        tm.that(summary.targets[0].name, eq=project.name)
+        tm.that(summary.targets[0].path, eq=project.resolve())
+        tm.that(len(summary.results), eq=1)
+        tm.that(summary.results[0].project, eq=project.name)
+        tm.that(tuple(summary.results[0].gates), eq=(c.Infra.LINT,))
+        tm.that(
+            m.Infra.SarifReport.model_validate_json(
+                report.model_dump_json(round_trip=True),
+                strict=True,
+            ),
+            eq=report,
+        )
         findings = tm.ok(
             u.Infra.check_report_findings(project, reports_dir=report_path.parent),
         )
