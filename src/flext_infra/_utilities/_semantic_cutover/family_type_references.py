@@ -47,8 +47,6 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         Returns:
             The resulting ``frozenset[t.Pair[int, int]]``.
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
-
         protected: set[t.Pair[int, int]] = set()
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         nodes = tuple(

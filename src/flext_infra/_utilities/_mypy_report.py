@@ -19,7 +19,10 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from flext_cli import u
+
 from flext_infra import c, m
+from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -79,10 +82,6 @@ class FlextInfraMypyReportRunner:
             ValueError: If the invocation carries no report destination.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
-
         if invocation.report_file is None:
             msg = "report runner requires a report destination"
             raise ValueError(msg)

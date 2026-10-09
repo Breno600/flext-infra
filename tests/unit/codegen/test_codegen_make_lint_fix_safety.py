@@ -135,5 +135,7 @@ class TestsFlextInfraCodegenMakeLintFixSafety:
 
         tm.that(checked.outcome.raw_return_code, eq=1)
         tm.that(checked.stdout, has="__basse__")
-        for name in config.Infra.tooling.tools.ruff.lint.pylint.allow_dunder_method_names:
+        for (
+            name
+        ) in config.Infra.tooling.tools.ruff.lint.pylint.allow_dunder_method_names:
             tm.that(checked.stdout, lacks=name)

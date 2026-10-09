@@ -165,8 +165,10 @@ class TestsFlextInfraRealGateRunners:
                 [
                     sys.executable,
                     "-c",
-                    "import sys; sys.path.insert(0, 'src'); "
-                    "from fix_imports.report import render; print(render())",
+                    (
+                        "import sys; sys.path.insert(0, 'src'); "
+                        "from fix_imports.report import render; print(render())"
+                    ),
                 ],
                 cwd=project_dir,
             ),

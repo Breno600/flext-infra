@@ -286,13 +286,15 @@ class FlextInfraModelsWorkspace:
         lint_findings: Annotated[
             t.NonNegativeInt | None,
             m.Field(
-                description="Executed eligible lint findings; null is unknown/not executed",
+                description="Executed eligible lint findings; null is unknown/not "
+                "executed",
             ),
         ]
         pyrefly_findings: Annotated[
             t.NonNegativeInt | None,
             m.Field(
-                description="Executed eligible Pyrefly findings; null is unknown/not executed",
+                description="Executed eligible Pyrefly findings; null is unknown/not "
+                "executed",
             ),
         ]
         codemod_findings: Annotated[

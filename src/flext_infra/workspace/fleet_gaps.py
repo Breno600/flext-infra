@@ -335,7 +335,8 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
                     or (project_root.resolve() not in roots or project.project in seen)
                 ):
                     return r[t.MappingKV[tuple[Path, str], int]].fail(
-                        f"Unbound or duplicate quality project {project.project}: {path}"
+                        f"Unbound or duplicate quality project {project.project}: "
+                        f"{path}"
                     )
                 seen.add(project.project)
                 for gate in (c.Infra.LINT, c.Infra.PYREFLY):
@@ -361,7 +362,8 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
                         )
                     ):
                         return r[t.MappingKV[tuple[Path, str], int]].fail(
-                            f"Invalid quality execution {project.project}/{gate}: {path}"
+                            f"Invalid quality execution {project.project}/{gate}: "
+                            f"{path}"
                         )
                     if summary.selected_files:
                         continue

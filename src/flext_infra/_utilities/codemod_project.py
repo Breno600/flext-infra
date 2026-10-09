@@ -459,6 +459,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
         Raises:
             ValueError: If binding source snapshots disagree.
+            TypeError: If binding package has no source resource contract.
         """
         states: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         for state in source_states:

@@ -17,20 +17,12 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesCodegenNamespace,
     FlextInfraUtilitiesRopeRuntimeModules,
 )
-from flext_infra._utilities._semantic_cutover.class_scope import (
+from flext_infra._utilities._semantic_cutover import (
     FlextInfraUtilitiesSemanticCutoverClassScope,
-)
-from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
-)
-from flext_infra._utilities._semantic_cutover.family_flatten import (
-    FlextInfraUtilitiesSemanticFamilyFlatten,
-)
-from flext_infra._utilities._semantic_cutover.nesting_cst import (
     FlextInfraUtilitiesSemanticCutoverNestingCst,
-)
-from flext_infra._utilities._semantic_cutover.nesting_owner import (
     FlextInfraUtilitiesSemanticCutoverNestingOwner,
+    FlextInfraUtilitiesSemanticFamilyFlatten,
 )
 from flext_infra._utilities._semantic_cutover.test_helpers import (
     FlextInfraUtilitiesSemanticTestHelpers,
@@ -193,8 +185,6 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         Loose top-level helper and sentinel classes can move together with their
         construction sites. A class already inside an owner is not such a helper.
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
-
         resource = project.get_resource(
             file_path.relative_to(Path(project.root.real_path)).as_posix(),
         )

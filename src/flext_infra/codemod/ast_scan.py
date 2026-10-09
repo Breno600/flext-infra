@@ -34,7 +34,6 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-
         # The engines currently own full-corpus inventories and count receipts.
         # Refuse narrower requests before either engine can scan or publish.
         if any(
