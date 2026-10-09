@@ -11,136 +11,152 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import install_lazy_exports
+from flext_infra._utilities import (
+    _git,
+    _promoted,
+    _pyproject,
+    _rope,
+    _rope_analysis,
+    _semantic_cutover,
+)
+from flext_infra._utilities._docs_audit_detectors import (
+    FlextInfraUtilitiesDocsAuditDetectorsMixin,
+)
+from flext_infra._utilities._docs_command_contract import (
+    FlextInfraUtilitiesDocsCommandContractMixin,
+)
+from flext_infra._utilities._docs_generate_plan import (
+    FlextInfraUtilitiesDocsGeneratePlanMixin,
+)
+from flext_infra._utilities._docs_generate_project import (
+    FlextInfraUtilitiesDocsGenerateProjectMixin,
+)
+from flext_infra._utilities._docs_generate_root import (
+    FlextInfraUtilitiesDocsGenerateRootMixin,
+)
+from flext_infra._utilities._docs_generate_sources import (
+    FlextInfraUtilitiesDocsGenerateSourcesMixin,
+)
+from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
+from flext_infra._utilities._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
+from flext_infra._utilities._docs_scope_build import (
+    FlextInfraUtilitiesDocsScopeBuildMixin,
+)
+from flext_infra._utilities._docs_scope_paths import (
+    FlextInfraUtilitiesDocsScopePathsMixin,
+)
+from flext_infra._utilities._docs_scope_policy import (
+    FlextInfraUtilitiesDocsScopePolicyMixin,
+)
+from flext_infra._utilities._docs_scope_projects import (
+    FlextInfraUtilitiesDocsScopeProjectsMixin,
+)
+from flext_infra._utilities._docs_scope_selection import (
+    FlextInfraUtilitiesDocsScopeSelectionMixin,
+)
+from flext_infra._utilities._docs_scope_state import (
+    FlextInfraUtilitiesDocsScopeStateMixin,
+)
+from flext_infra._utilities._git.attestation import (
+    FlextInfraUtilitiesGitAttestationMixin,
+)
+from flext_infra._utilities._git.lane_hygiene import (
+    FlextInfraUtilitiesGitLaneHygieneMixin,
+)
+from flext_infra._utilities._git.mutation_scope import (
+    FlextInfraUtilitiesGitMutationScopeMixin,
+)
+from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
+from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
+from flext_infra._utilities._git.scope import FlextInfraUtilitiesGitScopeMixin
+from flext_infra._utilities._git.semantic_identity import (
+    FlextInfraUtilitiesGitSemanticIdentityMixin,
+)
+from flext_infra._utilities._git.semantic_index import (
+    FlextInfraUtilitiesGitSemanticIndexMixin,
+)
+from flext_infra._utilities._git.semantic_lane import (
+    FlextInfraUtilitiesGitSemanticLaneMixin,
+)
+from flext_infra._utilities._git.semantic_paths import (
+    FlextInfraUtilitiesGitSemanticPathsMixin,
+)
+from flext_infra._utilities._git.semantic_publish import (
+    FlextInfraUtilitiesGitSemanticPublishMixin,
+)
+from flext_infra._utilities._git.semantic_refs import (
+    FlextInfraUtilitiesGitSemanticRefsMixin,
+)
+from flext_infra._utilities._git.semantic_submodule import (
+    FlextInfraUtilitiesGitSemanticSubmoduleMixin,
+)
+from flext_infra._utilities._git.semantic_worktree import (
+    FlextInfraUtilitiesGitSemanticWorktreeMixin,
+)
+from flext_infra._utilities._git.state_capture import (
+    FlextInfraUtilitiesGitStateCaptureMixin,
+)
+from flext_infra._utilities._git.state_checkpoint import (
+    FlextInfraUtilitiesGitStateCheckpointMixin,
+)
+from flext_infra._utilities._git.state_files import (
+    FlextInfraUtilitiesGitStateFilesMixin,
+)
+from flext_infra._utilities._git.state_publication import (
+    FlextInfraUtilitiesGitStatePublicationMixin,
+)
+from flext_infra._utilities._git.state_snapshot import (
+    FlextInfraUtilitiesGitStateSnapshotMixin,
+)
+from flext_infra._utilities._git.state_transition import (
+    FlextInfraUtilitiesGitStateTransitionMixin,
+)
+from flext_infra._utilities._git.state_trees import (
+    FlextInfraUtilitiesGitStateTreesMixin,
+)
+from flext_infra._utilities._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
+from flext_infra._utilities._git.worktree_checkpoint import (
+    FlextInfraUtilitiesGitWorktreeCheckpointMixin,
+)
+from flext_infra._utilities._git.worktree_discovery import (
+    FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
+)
+from flext_infra._utilities._git.worktree_facts import (
+    FlextInfraUtilitiesGitWorktreeFactsMixin,
+)
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
+from flext_infra._utilities._git.worktree_materialization import (
+    FlextInfraUtilitiesGitWorktreeMaterializationMixin,
+)
+from flext_infra._utilities._git.worktree_measure import (
+    FlextInfraUtilitiesGitWorktreeMeasureMixin,
+)
+from flext_infra._utilities._git.worktree_patch import (
+    FlextInfraUtilitiesGitWorktreePatchMixin,
+)
+from flext_infra._utilities._git.worktree_removal import (
+    FlextInfraUtilitiesGitWorktreeRemovalMixin,
+)
+from flext_infra._utilities._semantic_cutover.module_layout import (
+    FlextInfraUtilitiesSemanticCutoverModuleLayout,
+)
+from flext_infra._utilities._semantic_cutover.nesting import (
+    FlextInfraUtilitiesSemanticCutoverNesting,
+)
+from flext_infra._utilities._semantic_cutover.nesting_cst import (
+    FlextInfraUtilitiesSemanticCutoverNestingCst,
+)
+from flext_infra._utilities._semantic_cutover.nesting_module_aliases import (
+    FlextInfraUtilitiesSemanticCutoverNestingModuleAliases,
+)
+from flext_infra._utilities._semantic_cutover.nesting_owner import (
+    FlextInfraUtilitiesSemanticCutoverNestingOwner,
+)
+from flext_infra._utilities._semantic_cutover.nesting_references import (
+    FlextInfraUtilitiesSemanticCutoverNestingReferences,
+)
 
 if TYPE_CHECKING:
-    from flext_infra._utilities import (
-        _git,
-        _promoted,
-        _pyproject,
-        _rope,
-        _rope_analysis,
-        _semantic_cutover,
-    )
-    from flext_infra._utilities._docs_audit_detectors import (
-        FlextInfraUtilitiesDocsAuditDetectorsMixin,
-    )
-    from flext_infra._utilities._docs_command_contract import (
-        FlextInfraUtilitiesDocsCommandContractMixin,
-    )
-    from flext_infra._utilities._docs_generate_plan import (
-        FlextInfraUtilitiesDocsGeneratePlanMixin,
-    )
-    from flext_infra._utilities._docs_generate_project import (
-        FlextInfraUtilitiesDocsGenerateProjectMixin,
-    )
-    from flext_infra._utilities._docs_generate_root import (
-        FlextInfraUtilitiesDocsGenerateRootMixin,
-    )
-    from flext_infra._utilities._docs_generate_sources import (
-        FlextInfraUtilitiesDocsGenerateSourcesMixin,
-    )
-    from flext_infra._utilities._docs_github_links import (
-        FlextInfraUtilitiesDocsGithubLinks,
-    )
-    from flext_infra._utilities._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
-    from flext_infra._utilities._docs_scope_build import (
-        FlextInfraUtilitiesDocsScopeBuildMixin,
-    )
-    from flext_infra._utilities._docs_scope_paths import (
-        FlextInfraUtilitiesDocsScopePathsMixin,
-    )
-    from flext_infra._utilities._docs_scope_policy import (
-        FlextInfraUtilitiesDocsScopePolicyMixin,
-    )
-    from flext_infra._utilities._docs_scope_projects import (
-        FlextInfraUtilitiesDocsScopeProjectsMixin,
-    )
-    from flext_infra._utilities._docs_scope_selection import (
-        FlextInfraUtilitiesDocsScopeSelectionMixin,
-    )
-    from flext_infra._utilities._docs_scope_state import (
-        FlextInfraUtilitiesDocsScopeStateMixin,
-    )
-    from flext_infra._utilities._git.attestation import (
-        FlextInfraUtilitiesGitAttestationMixin,
-    )
-    from flext_infra._utilities._git.lane_hygiene import (
-        FlextInfraUtilitiesGitLaneHygieneMixin,
-    )
-    from flext_infra._utilities._git.mutation_scope import (
-        FlextInfraUtilitiesGitMutationScopeMixin,
-    )
-    from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
-    from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
-    from flext_infra._utilities._git.scope import FlextInfraUtilitiesGitScopeMixin
-    from flext_infra._utilities._git.semantic_identity import (
-        FlextInfraUtilitiesGitSemanticIdentityMixin,
-    )
-    from flext_infra._utilities._git.semantic_index import (
-        FlextInfraUtilitiesGitSemanticIndexMixin,
-    )
-    from flext_infra._utilities._git.semantic_lane import (
-        FlextInfraUtilitiesGitSemanticLaneMixin,
-    )
-    from flext_infra._utilities._git.semantic_paths import (
-        FlextInfraUtilitiesGitSemanticPathsMixin,
-    )
-    from flext_infra._utilities._git.semantic_publish import (
-        FlextInfraUtilitiesGitSemanticPublishMixin,
-    )
-    from flext_infra._utilities._git.semantic_refs import (
-        FlextInfraUtilitiesGitSemanticRefsMixin,
-    )
-    from flext_infra._utilities._git.semantic_submodule import (
-        FlextInfraUtilitiesGitSemanticSubmoduleMixin,
-    )
-    from flext_infra._utilities._git.semantic_worktree import (
-        FlextInfraUtilitiesGitSemanticWorktreeMixin,
-    )
-    from flext_infra._utilities._git.state_capture import (
-        FlextInfraUtilitiesGitStateCaptureMixin,
-    )
-    from flext_infra._utilities._git.state_checkpoint import (
-        FlextInfraUtilitiesGitStateCheckpointMixin,
-    )
-    from flext_infra._utilities._git.state_files import (
-        FlextInfraUtilitiesGitStateFilesMixin,
-    )
-    from flext_infra._utilities._git.state_publication import (
-        FlextInfraUtilitiesGitStatePublicationMixin,
-    )
-    from flext_infra._utilities._git.state_snapshot import (
-        FlextInfraUtilitiesGitStateSnapshotMixin,
-    )
-    from flext_infra._utilities._git.state_transition import (
-        FlextInfraUtilitiesGitStateTransitionMixin,
-    )
-    from flext_infra._utilities._git.state_trees import (
-        FlextInfraUtilitiesGitStateTreesMixin,
-    )
-    from flext_infra._utilities._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
-    from flext_infra._utilities._git.worktree_checkpoint import (
-        FlextInfraUtilitiesGitWorktreeCheckpointMixin,
-    )
-    from flext_infra._utilities._git.worktree_discovery import (
-        FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
-    )
-    from flext_infra._utilities._git.worktree_facts import (
-        FlextInfraUtilitiesGitWorktreeFactsMixin,
-    )
-    from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
-    from flext_infra._utilities._git.worktree_materialization import (
-        FlextInfraUtilitiesGitWorktreeMaterializationMixin,
-    )
-    from flext_infra._utilities._git.worktree_measure import (
-        FlextInfraUtilitiesGitWorktreeMeasureMixin,
-    )
-    from flext_infra._utilities._git.worktree_patch import (
-        FlextInfraUtilitiesGitWorktreePatchMixin,
-    )
-    from flext_infra._utilities._git.worktree_removal import (
-        FlextInfraUtilitiesGitWorktreeRemovalMixin,
-    )
     from flext_infra._utilities._git.worktree_roots import (
         FlextInfraUtilitiesGitWorktreeRootsMixin,
     )
@@ -275,24 +291,6 @@ if TYPE_CHECKING:
     )
     from flext_infra._utilities._semantic_cutover.model_fields_bindings import (
         FlextInfraUtilitiesSemanticCutoverModelFieldsBindings,
-    )
-    from flext_infra._utilities._semantic_cutover.module_layout import (
-        FlextInfraUtilitiesSemanticCutoverModuleLayout,
-    )
-    from flext_infra._utilities._semantic_cutover.nesting import (
-        FlextInfraUtilitiesSemanticCutoverNesting,
-    )
-    from flext_infra._utilities._semantic_cutover.nesting_cst import (
-        FlextInfraUtilitiesSemanticCutoverNestingCst,
-    )
-    from flext_infra._utilities._semantic_cutover.nesting_module_aliases import (
-        FlextInfraUtilitiesSemanticCutoverNestingModuleAliases,
-    )
-    from flext_infra._utilities._semantic_cutover.nesting_owner import (
-        FlextInfraUtilitiesSemanticCutoverNestingOwner,
-    )
-    from flext_infra._utilities._semantic_cutover.nesting_references import (
-        FlextInfraUtilitiesSemanticCutoverNestingReferences,
     )
     from flext_infra._utilities._semantic_cutover.nesting_types import (
         FlextInfraUtilitiesSemanticNestingTypes,

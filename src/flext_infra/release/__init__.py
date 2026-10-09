@@ -11,18 +11,15 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra.release._release_artifact import FlextInfraReleaseArtifactMixin
-    from flext_infra.release._release_boundary import FlextInfraReleaseBoundaryMixin
-    from flext_infra.release._release_build import FlextInfraReleaseBuildMixin
-    from flext_infra.release._release_metadata import FlextInfraReleaseMetadataMixin
-    from flext_infra.release._release_plan import FlextInfraReleasePlanMixin
-    from flext_infra.release._release_project import FlextInfraReleaseProjectMixin
-    from flext_infra.release._release_publish import FlextInfraReleasePublishMixin
-    from flext_infra.release._release_source import FlextInfraReleaseSourceMixin
-    from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
-
+from flext_infra.release._release_artifact import FlextInfraReleaseArtifactMixin
+from flext_infra.release._release_boundary import FlextInfraReleaseBoundaryMixin
+from flext_infra.release._release_build import FlextInfraReleaseBuildMixin
+from flext_infra.release._release_metadata import FlextInfraReleaseMetadataMixin
+from flext_infra.release._release_plan import FlextInfraReleasePlanMixin
+from flext_infra.release._release_project import FlextInfraReleaseProjectMixin
+from flext_infra.release._release_publish import FlextInfraReleasePublishMixin
+from flext_infra.release._release_source import FlextInfraReleaseSourceMixin
+from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
 
 __all__: tuple[str, ...] = (
     "FlextInfraReleaseArtifactMixin",

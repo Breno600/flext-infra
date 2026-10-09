@@ -11,22 +11,17 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra.codemod._rename_sources import FlextInfraRenameSources
-    from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
-    from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
-    from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
-    from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
-    from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
-    from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
-    from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
-    from flext_infra.codemod.snapshot_reconciler import (
-        FlextInfraCodemodSnapshotReconciler,
-    )
-    from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
-    from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
-
+from flext_infra.codemod._rename_sources import FlextInfraRenameSources
+from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
+from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
+from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
+from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
+from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
+from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
+from flext_infra.codemod.snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
+from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
+from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
 
 __all__: tuple[str, ...] = (
     "FlextInfraApplyRenames",

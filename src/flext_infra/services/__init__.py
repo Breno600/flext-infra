@@ -11,25 +11,20 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra.services import _codegen
-    from flext_infra.services._codegen.vscode import FlextInfraCodegenVscodeMixin
-    from flext_infra.services.candidate_bootstrap import (
-        FlextInfraCandidateBootstrapService,
-    )
-    from flext_infra.services.cli_dispatch import FlextInfraCliDispatchService
-    from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
-    from flext_infra.services.cli_routes import FlextInfraCliRouteService
-    from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
-    from flext_infra.services.cli_routes_refactor import FlextInfraRefactorRoutes
-    from flext_infra.services.cli_routes_validate import FlextInfraValidationRoutes
-    from flext_infra.services.cli_routes_validate_commands import (
-        FlextInfraValidationCommandRoutes,
-    )
-    from flext_infra.services.cli_routes_workspace import FlextInfraWorkspaceRoutes
-    from flext_infra.services.codegen import FlextInfraCodegen
-
+from flext_infra.services import _codegen
+from flext_infra.services._codegen.vscode import FlextInfraCodegenVscodeMixin
+from flext_infra.services.candidate_bootstrap import FlextInfraCandidateBootstrapService
+from flext_infra.services.cli_dispatch import FlextInfraCliDispatchService
+from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
+from flext_infra.services.cli_routes import FlextInfraCliRouteService
+from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
+from flext_infra.services.cli_routes_refactor import FlextInfraRefactorRoutes
+from flext_infra.services.cli_routes_validate import FlextInfraValidationRoutes
+from flext_infra.services.cli_routes_validate_commands import (
+    FlextInfraValidationCommandRoutes,
+)
+from flext_infra.services.cli_routes_workspace import FlextInfraWorkspaceRoutes
+from flext_infra.services.codegen import FlextInfraCodegen
 
 __all__: tuple[str, ...] = (
     "FlextInfraCandidateBootstrapService",

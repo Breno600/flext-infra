@@ -11,50 +11,35 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra.deps import _modernizer, phases
-    from flext_infra.deps._detection_runners import (
-        FlextInfraDependencyDetectionRunnersMixin,
-    )
-    from flext_infra.deps._detector_runtime_steps import (
-        FlextInfraDependencyDetectorRuntimeSteps,
-    )
-    from flext_infra.deps._extra_paths_sync import FlextInfraExtraPathsSyncMixin
-    from flext_infra.deps._floor_profile_writer import FlextInfraDepsFloorProfileWriter
-    from flext_infra.deps._modernizer.base import FlextInfraPyprojectModernizerBase
-    from flext_infra.deps._modernizer.document import (
-        FlextInfraPyprojectModernizerDocument,
-    )
-    from flext_infra.deps._modernizer.run import FlextInfraPyprojectModernizerRun
-    from flext_infra.deps._modernizer.tooling import (
-        FlextInfraPyprojectModernizerTooling,
-    )
-    from flext_infra.deps._pyrefly_fix_steps import FlextInfraConfigFixerSteps
-    from flext_infra.deps.detection import FlextInfraDependencyDetectionService
-    from flext_infra.deps.detection_analysis import (
-        FlextInfraDependencyDetectionAnalysis,
-    )
-    from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
-    from flext_infra.deps.detector_runtime import FlextInfraDependencyDetectorRuntime
-    from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-    from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
-    from flext_infra.deps.lock_integrity import FlextInfraLockIntegrityVerifier
-    from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
-    from flext_infra.deps.phases.consolidate_groups import (
-        FlextInfraConsolidateGroupsPhase,
-    )
-    from flext_infra.deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
-    from flext_infra.deps.phases.ensure_pyrefly import (
-        FlextInfraEnsurePyreflyConfigPhase,
-    )
-    from flext_infra.deps.phases.ensure_pyright import (
-        FlextInfraEnsurePyrightConfigPhase,
-    )
-    from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
-    from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
-    from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
-
+from flext_infra.deps import _modernizer, phases
+from flext_infra.deps._detection_runners import (
+    FlextInfraDependencyDetectionRunnersMixin,
+)
+from flext_infra.deps._detector_runtime_steps import (
+    FlextInfraDependencyDetectorRuntimeSteps,
+)
+from flext_infra.deps._extra_paths_sync import FlextInfraExtraPathsSyncMixin
+from flext_infra.deps._floor_profile_writer import FlextInfraDepsFloorProfileWriter
+from flext_infra.deps._modernizer.base import FlextInfraPyprojectModernizerBase
+from flext_infra.deps._modernizer.document import FlextInfraPyprojectModernizerDocument
+from flext_infra.deps._modernizer.run import FlextInfraPyprojectModernizerRun
+from flext_infra.deps._modernizer.tooling import FlextInfraPyprojectModernizerTooling
+from flext_infra.deps._pyrefly_fix_steps import FlextInfraConfigFixerSteps
+from flext_infra.deps.detection import FlextInfraDependencyDetectionService
+from flext_infra.deps.detection_analysis import FlextInfraDependencyDetectionAnalysis
+from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
+from flext_infra.deps.detector_runtime import FlextInfraDependencyDetectorRuntime
+from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
+from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
+from flext_infra.deps.lock_integrity import FlextInfraLockIntegrityVerifier
+from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+from flext_infra.deps.phases.consolidate_groups import FlextInfraConsolidateGroupsPhase
+from flext_infra.deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
+from flext_infra.deps.phases.ensure_pyrefly import FlextInfraEnsurePyreflyConfigPhase
+from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
+from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
+from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
+from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 
 __all__: tuple[str, ...] = (
     "FlextInfraConfigFixer",

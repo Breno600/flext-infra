@@ -11,14 +11,11 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra.maintenance.clean import FlextInfraCleanService
-    from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
-    from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
-    from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
-    from flext_infra.maintenance.sonarcloud_issues import FlextInfraSonarcloudIssues
-
+from flext_infra.maintenance.clean import FlextInfraCleanService
+from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
+from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
+from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
+from flext_infra.maintenance.sonarcloud_issues import FlextInfraSonarcloudIssues
 
 __all__: tuple[str, ...] = (
     "FlextInfraCleanService",

@@ -11,12 +11,9 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra._typings.adapters import FlextInfraTypesAdapters
-    from flext_infra._typings.base import FlextInfraTypesBase
-    from flext_infra._typings.rope import FlextInfraTypesRope
-
+from flext_infra._typings.adapters import FlextInfraTypesAdapters
+from flext_infra._typings.base import FlextInfraTypesBase
+from flext_infra._typings.rope import FlextInfraTypesRope
 
 __all__: tuple[str, ...] = (
     "FlextInfraTypesAdapters",

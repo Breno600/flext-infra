@@ -11,13 +11,10 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra._promoted.base import FlextInfraPromotedBase
-    from flext_infra._promoted.discovery import FlextInfraPromotedDiscovery
-    from flext_infra._promoted.dispatch import FlextInfraPromotedDispatch
-    from flext_infra._promoted.registry import FlextInfraPromotedRegistry
-
+from flext_infra._promoted.base import FlextInfraPromotedBase
+from flext_infra._promoted.discovery import FlextInfraPromotedDiscovery
+from flext_infra._promoted.dispatch import FlextInfraPromotedDispatch
+from flext_infra._promoted.registry import FlextInfraPromotedRegistry
 
 __all__: tuple[str, ...] = (
     "FlextInfraPromotedBase",

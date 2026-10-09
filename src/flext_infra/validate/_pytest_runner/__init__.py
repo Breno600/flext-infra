@@ -11,19 +11,12 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
-    from flext_infra.validate._pytest_runner.command import (
-        FlextInfraPytestRunnerCommand,
-    )
-    from flext_infra.validate._pytest_runner.execution import (
-        FlextInfraPytestRunnerExecution,
-    )
-    from flext_infra.validate._pytest_runner.reports import (
-        FlextInfraPytestRunnerReports,
-    )
-
+from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
+from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
+from flext_infra.validate._pytest_runner.execution import (
+    FlextInfraPytestRunnerExecution,
+)
+from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
 
 __all__: tuple[str, ...] = (
     "FlextInfraPytestRunnerBase",

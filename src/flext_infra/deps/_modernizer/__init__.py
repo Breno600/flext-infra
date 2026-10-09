@@ -11,17 +11,10 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra.deps._modernizer.base import FlextInfraPyprojectModernizerBase
-    from flext_infra.deps._modernizer.document import (
-        FlextInfraPyprojectModernizerDocument,
-    )
-    from flext_infra.deps._modernizer.run import FlextInfraPyprojectModernizerRun
-    from flext_infra.deps._modernizer.tooling import (
-        FlextInfraPyprojectModernizerTooling,
-    )
-
+from flext_infra.deps._modernizer.base import FlextInfraPyprojectModernizerBase
+from flext_infra.deps._modernizer.document import FlextInfraPyprojectModernizerDocument
+from flext_infra.deps._modernizer.run import FlextInfraPyprojectModernizerRun
+from flext_infra.deps._modernizer.tooling import FlextInfraPyprojectModernizerTooling
 
 __all__: tuple[str, ...] = (
     "FlextInfraPyprojectModernizerBase",

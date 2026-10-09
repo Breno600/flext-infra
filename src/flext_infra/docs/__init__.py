@@ -11,22 +11,19 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra.docs._auditor_checks import FlextInfraDocAuditorChecksMixin
-    from flext_infra.docs._auditor_report import FlextInfraDocAuditorReportMixin
-    from flext_infra.docs._generator_bundle import FlextInfraDocGeneratorBundleMixin
-    from flext_infra.docs.auditor import FlextInfraDocAuditor
-    from flext_infra.docs.auditor_mixin import FlextInfraDocAuditorMixin
-    from flext_infra.docs.base import FlextInfraDocServiceBase
-    from flext_infra.docs.builder import FlextInfraDocBuilder
-    from flext_infra.docs.collector import FlextInfraDocCollector
-    from flext_infra.docs.fixer import FlextInfraDocFixer
-    from flext_infra.docs.formatter import FlextInfraDocFormatter
-    from flext_infra.docs.generator import FlextInfraDocGenerator
-    from flext_infra.docs.server import FlextInfraDocServer
-    from flext_infra.docs.validator import FlextInfraDocValidator
-
+from flext_infra.docs._auditor_checks import FlextInfraDocAuditorChecksMixin
+from flext_infra.docs._auditor_report import FlextInfraDocAuditorReportMixin
+from flext_infra.docs._generator_bundle import FlextInfraDocGeneratorBundleMixin
+from flext_infra.docs.auditor import FlextInfraDocAuditor
+from flext_infra.docs.auditor_mixin import FlextInfraDocAuditorMixin
+from flext_infra.docs.base import FlextInfraDocServiceBase
+from flext_infra.docs.builder import FlextInfraDocBuilder
+from flext_infra.docs.collector import FlextInfraDocCollector
+from flext_infra.docs.fixer import FlextInfraDocFixer
+from flext_infra.docs.formatter import FlextInfraDocFormatter
+from flext_infra.docs.generator import FlextInfraDocGenerator
+from flext_infra.docs.server import FlextInfraDocServer
+from flext_infra.docs.validator import FlextInfraDocValidator
 
 __all__: tuple[str, ...] = (
     "FlextInfraDocAuditor",

@@ -11,10 +11,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-if TYPE_CHECKING:
-    from flext_infra.services._codegen.vscode import FlextInfraCodegenVscodeMixin
-
+from flext_infra.services._codegen.vscode import FlextInfraCodegenVscodeMixin
 
 __all__: tuple[str, ...] = ("FlextInfraCodegenVscodeMixin",)
 
