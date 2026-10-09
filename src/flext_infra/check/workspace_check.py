@@ -284,7 +284,7 @@ class FlextInfraWorkspaceChecker(
                     for target in targets
                 ),
                 results=tuple(outcome.results),
-                selected_files=effective_ctx.selected_files,
+                selected_files=(),
             ),
         )
 

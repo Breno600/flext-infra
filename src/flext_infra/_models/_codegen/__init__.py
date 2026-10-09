@@ -18,7 +18,7 @@ from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyIn
 from flext_infra._models._codegen.pipeline import FlextInfraModelsCodegenPipelineModels
 from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
 from flext_infra._models._codegen.transaction import (
-    FlextInfraModelsCodegenTransactionModels,
+        FlextInfraModelsCodegenTransactionModels,
 )
 
 __all__: tuple[str, ...] = (

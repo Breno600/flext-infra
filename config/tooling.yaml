@@ -235,7 +235,6 @@ Infra:
           flake8-type-checking:
             runtime-evaluated-roots:
               - pydantic.BaseModel
-              - pydantic.BaseModel
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -256,6 +255,16 @@ Infra:
           # (D203/D211, multi-line-summary-first-line/D213) included, so no run warns about them.
           pydocstyle:
             convention: google
+          # Operator approval 2026-10-09: "Parametrizar Dois Descritores".
+          # Python type.__base__ is the native layout base; type.__bases__ is
+          # the tuple of direct bases. Protocols expose both as read-only
+          # properties without changing their signatures or native identity.
+          # https://docs.python.org/3.13/reference/datamodel.html#type.__base__
+          # https://docs.python.org/3.13/reference/datamodel.html#type.__bases__
+          # https://docs.astral.sh/ruff/rules/bad-dunder-method-name/
+          # PLW3201 remains enabled for every other unrecognized dunder name.
+          pylint:
+            allow-dunder-method-names: [__base__, __bases__]
           # Each exception exists only with the operator ruling that authorized
           # it and its reason; Ruff receives the unscoped entries as `ignore`
           # and the scoped ones as `per-file-ignores`. Repositories declare no

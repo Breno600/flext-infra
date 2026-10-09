@@ -10,6 +10,8 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Annotated, ClassVar, Literal
 
+from flext_cli import m as cli_m
+
 from flext_core import m
 from flext_infra import t
 
@@ -36,7 +38,7 @@ class FlextInfraModelsCodemod:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         states: Annotated[
-            tuple[m.Cli.AtomicFileState, ...],
+            tuple[cli_m.Cli.AtomicFileState, ...],
             m.Field(description="Consumer and resolved Python import-owner inputs"),
         ]
 

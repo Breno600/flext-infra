@@ -223,6 +223,19 @@ class FlextInfraEnsureRuffConfigPhase:
                 toml.PhaseConfig(
                     name="ruff",
                     root_path=(),
+                    table_path=(c.Infra.LINT_SECTION, "pylint"),
+                    operations=(
+                        toml.SetOp(
+                            key="allow-dunder-method-names",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.pylint.allow_dunder_method_names),
+                            ),
+                        ),
+                    ),
+                ),
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
                     table_path=(c.Infra.LINT_SECTION, "flake8-tidy-imports"),
                     operations=(
                         toml.SetOp(

@@ -21,67 +21,6 @@ from flext_infra.__version__ import (
     __version__,
     __version_info__,
 )
-from flext_infra.codegen.conform import FlextInfraCodegenConform
-from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
-from flext_infra.codegen.constants_quality_gate import FlextInfraCodegenQualityGate
-from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
-from flext_infra.codegen.fixer import FlextInfraCodegenFixer
-from flext_infra.codegen.layout import FlextInfraCodegenLayout
-from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
-from flext_infra.codegen.make_bootstrap import FlextInfraCodegenMakeBootstrap
-from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
-from flext_infra.codegen.pipeline import (
-    FlextInfraCodegenLazyInitGenerationMixin,
-    FlextInfraCodegenPipeline,
-    FlextInfraCodegenPipelineStagesMixin,
-    FlextInfraMiseArtifactsFiles,
-    FlextInfraMisePublication,
-)
-from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
-from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
-from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
-from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
-from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
-from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
-from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
-from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
-from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
-from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
-from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
-from flext_infra.codemod.snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
-from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
-from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
-from flext_infra.constants import FlextInfraConstants, c
-from flext_infra.deps.detection import FlextInfraDependencyDetectionService
-from flext_infra.deps.detection_analysis import FlextInfraDependencyDetectionAnalysis
-from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
-from flext_infra.deps.detector_runtime import FlextInfraDependencyDetectorRuntime
-from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
-from flext_infra.deps.lock_integrity import FlextInfraLockIntegrityVerifier
-from flext_infra.deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
-from flext_infra.deps.phases.ensure_pyrefly import FlextInfraEnsurePyreflyConfigPhase
-from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
-from flext_infra.docs.base import FlextInfraDocServiceBase
-from flext_infra.docs.builder import FlextInfraDocBuilder
-from flext_infra.docs.collector import FlextInfraDocCollector
-from flext_infra.docs.fixer import FlextInfraDocFixer
-from flext_infra.validate.stub_chain import FlextInfraStubSupplyChain
-from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
-from flext_infra.workspace.environment_contracts import (
-    FlextInfraWorkspaceEnvironmentContracts,
-)
-from flext_infra.workspace.environment_provenance import (
-    FlextInfraWorkspaceEnvironmentProvenance,
-)
-from flext_infra.workspace.flext_binding import FlextInfraBindingService
-from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
-from flext_infra.workspace.rope import FlextInfraRopeWorkspace
-from flext_infra.worktree import FlextInfraWorktreeService
 
 if TYPE_CHECKING:
     from flext_cli import d, e, h, r, x
@@ -115,15 +54,72 @@ if TYPE_CHECKING:
     from flext_infra.codegen.census import FlextInfraCodegenCensus
     from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
     from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
+    from flext_infra.codegen.conform import FlextInfraCodegenConform
+    from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
+    from flext_infra.codegen.constants_quality_gate import FlextInfraCodegenQualityGate
+    from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
+    from flext_infra.codegen.fixer import FlextInfraCodegenFixer
+    from flext_infra.codegen.layout import FlextInfraCodegenLayout
+    from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
+    from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
+    from flext_infra.codegen.make_bootstrap import FlextInfraCodegenMakeBootstrap
+    from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+    from flext_infra.codegen.mise_artifacts_workspace import (
+        FlextInfraMiseWorkspacePlanner,
+    )
+    from flext_infra.codegen.pipeline import (
+        FlextInfraCodegenLazyInitGenerationMixin,
+        FlextInfraCodegenPipeline,
+        FlextInfraCodegenPipelineStagesMixin,
+        FlextInfraMiseArtifactsFiles,
+        FlextInfraMisePublication,
+    )
+    from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
+    from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
+    from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
+    from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
+    from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
+    from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
+    from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
+    from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
+    from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+    from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
+    from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
+    from flext_infra.codemod.snapshot_reconciler import (
+        FlextInfraCodemodSnapshotReconciler,
+    )
+    from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
+    from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
+    from flext_infra.constants import FlextInfraConstants, c
+    from flext_infra.deps.detection import FlextInfraDependencyDetectionService
+    from flext_infra.deps.detection_analysis import (
+        FlextInfraDependencyDetectionAnalysis,
+    )
+    from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
+    from flext_infra.deps.detector_runtime import FlextInfraDependencyDetectorRuntime
+    from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
+    from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
+    from flext_infra.deps.lock_integrity import FlextInfraLockIntegrityVerifier
     from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
     from flext_infra.deps.phases.consolidate_groups import (
         FlextInfraConsolidateGroupsPhase,
+    )
+    from flext_infra.deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
+    from flext_infra.deps.phases.ensure_pyrefly import (
+        FlextInfraEnsurePyreflyConfigPhase,
+    )
+    from flext_infra.deps.phases.ensure_pyright import (
+        FlextInfraEnsurePyrightConfigPhase,
     )
     from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
     from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
     from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
     from flext_infra.docs.auditor import FlextInfraDocAuditor
     from flext_infra.docs.auditor_mixin import FlextInfraDocAuditorMixin
+    from flext_infra.docs.base import FlextInfraDocServiceBase
+    from flext_infra.docs.builder import FlextInfraDocBuilder
+    from flext_infra.docs.collector import FlextInfraDocCollector
+    from flext_infra.docs.fixer import FlextInfraDocFixer
     from flext_infra.docs.formatter import FlextInfraDocFormatter
     from flext_infra.docs.generator import FlextInfraDocGenerator
     from flext_infra.docs.server import FlextInfraDocServer
@@ -199,6 +195,20 @@ if TYPE_CHECKING:
     from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
     from flext_infra.validate.scanner import FlextInfraTextPatternScanner
     from flext_infra.validate.skill_validator import FlextInfraSkillValidator
+    from flext_infra.validate.stub_chain import FlextInfraStubSupplyChain
+    from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+    from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+    from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
+    from flext_infra.workspace.environment_contracts import (
+        FlextInfraWorkspaceEnvironmentContracts,
+    )
+    from flext_infra.workspace.environment_provenance import (
+        FlextInfraWorkspaceEnvironmentProvenance,
+    )
+    from flext_infra.workspace.flext_binding import FlextInfraBindingService
+    from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
+    from flext_infra.workspace.rope import FlextInfraRopeWorkspace
+    from flext_infra.worktree import FlextInfraWorktreeService
 
 
 __all__: tuple[str, ...] = (

@@ -115,6 +115,20 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ]
 
+    class RuffPylintConfig(m.ArbitraryTypesModel):
+        """Ruff Pylint policy for operator-approved native type descriptors."""
+
+        allow_dunder_method_names: Annotated[
+            t.SequenceOf[Literal["__base__", "__bases__"]],
+            m.Field(
+                alias="allow-dunder-method-names",
+                description=(
+                    "Only Python type.__base__ and type.__bases__ read-only "
+                    "protocol properties are authorized by the operator."
+                ),
+            ),
+        ]
+
     class RuffAuthorizedException(m.ArbitraryTypesModel):
         """One operator-authorized Ruff exception, recorded with its authority.
 
@@ -140,6 +154,22 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         reason: Annotated[
             t.NonEmptyStr,
             m.Field(description="Why the rules cannot hold for this scope."),
+        ]
+
+    class RuffTypeCheckingConfig(m.ArbitraryTypesModel):
+        """Ruff flake8-type-checking settings loaded from YAML."""
+
+        runtime_evaluated_roots: Annotated[
+            t.SequenceOf[t.NonEmptyStr],
+            m.Field(
+                alias="runtime-evaluated-roots",
+                min_length=1,
+                description=(
+                    "Qualified base classes whose subclasses evaluate their "
+                    "annotations at runtime, so TYPE_CHECKING-only names are "
+                    "forbidden there."
+                ),
+            ),
         ]
 
     class RuffLintConfig(m.ArbitraryTypesModel):
@@ -227,6 +257,16 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         pydocstyle: FlextInfraModelsDepsToolConfigLinters.RuffPydocstyleConfig = (
             m.Field(description="Ruff pydocstyle configuration")
         )
+        pylint: FlextInfraModelsDepsToolConfigLinters.RuffPylintConfig = m.Field(
+            description="Ruff Pylint native type descriptor policy",
+        )
+        flake8_type_checking: Annotated[
+            FlextInfraModelsDepsToolConfigLinters.RuffTypeCheckingConfig,
+            m.Field(
+                alias="flake8-type-checking",
+                description="Ruff flake8-type-checking configuration",
+            ),
+        ]
         authorized_exceptions: Annotated[
             tuple[FlextInfraModelsDepsToolConfigLinters.RuffAuthorizedException, ...],
             m.Field(
