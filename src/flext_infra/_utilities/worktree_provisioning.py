@@ -106,8 +106,8 @@ class FlextInfraWorktreeProvisioning:
     @classmethod
     def _prepare_governed_gitlinks(cls, lane: Path) -> p.Result[bool]:
 
-        discovery = FlextInfraUtilitiesGitWorktreeDiscoveryMixin
-        declared = discovery.git_declared_submodule_paths(lane)
+        submodule = FlextInfraUtilitiesGitSemanticSubmoduleMixin
+        declared = submodule.git_submodule_declarations(lane)
         if declared.failure:
             return r[bool].from_failure(declared)
         for declaration in declared.value:
