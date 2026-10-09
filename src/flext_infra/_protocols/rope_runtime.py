@@ -96,6 +96,7 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
 
         __module__: str
         __qualname__: str
+        __base__: FlextInfraProtocolsRopeRuntime.NativeClassMetadata | None
         __bases__: tuple[FlextInfraProtocolsRopeRuntime.NativeClassMetadata, ...]
 
     @runtime_checkable
@@ -114,6 +115,16 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         """
 
         _fields: ClassVar[t.VariadicTuple[str]]
+
+    @runtime_checkable
+    class RopeSourceLines(Protocol):
+        """Native source line text and character offsets used by refactors."""
+
+        def get_line(self, lineno: int) -> str: ...
+
+        def get_line_start(self, lineno: int) -> int: ...
+
+        def get_line_end(self, lineno: int) -> int: ...
 
     @runtime_checkable
     class RopeAssignment(Protocol):
@@ -213,6 +224,9 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
     @runtime_checkable
     class RopeProject(Protocol):
         """Rope project shape used by flext-infra."""
+
+        @property
+        def address(self) -> str: ...
 
         @property
         def root(self) -> FlextInfraProtocolsRopeRuntime.RopeRoot: ...

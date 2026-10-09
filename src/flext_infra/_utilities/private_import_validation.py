@@ -10,6 +10,7 @@ import ast
 from pathlib import Path
 
 from flext_infra import m, t
+from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
 
 class FlextInfraUtilitiesPrivateImportValidation:
@@ -33,8 +34,6 @@ class FlextInfraUtilitiesPrivateImportValidation:
                 or if public facade import.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
-
         tree = ast.parse(source, filename=str(file_path))
         for module, symbols in removals.items():
             if any(

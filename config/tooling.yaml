@@ -4,9 +4,24 @@ Infra:
     raw-check-receipt-suffix: .raw.log
     tools:
       bandit:
-        # Populated only by an operator ruling that names a real owner scope;
-        # every other module spawns processes through the u.Cli process family.
-        authorized-exceptions: []
+        # Each exception exists only with the operator ruling that authorized
+        # it and its reason. Bandit reads no per-path exception, so the
+        # security gate audits the files an entry matches in their own
+        # invocation that skips only the entry's tests; every other file keeps
+        # every test. Repositories declare no exception of their own.
+        authorized-exceptions:
+          - tests: [B404, B603]
+            files:
+              - src/flext_cli/_utilities/processes.py
+              - src/flext_cli/_utilities/runtime.py
+              - src/flext_core/**/*.py
+            authority: operator-ruling-2026-10-08-subprocess-test-imports
+            reason: >-
+              Only the u.Cli.run process owner in flext-cli and the flext-core
+              source may import and spawn subprocess; every other module runs
+              processes through u.Cli.run. The codemod rule
+              ban-subprocess-outside-run-owner bans subprocess everywhere
+              else, with the same owner scope.
       codespell:
         check-filenames: true
         ignore-words-list: crate,nd
@@ -186,16 +201,6 @@ Infra:
           - complex-structure
           - suspicious-subprocess-import
           - subprocess-without-shell-equals-true
-          - too-many-arguments
-          - too-many-positional-arguments
-          - too-many-locals
-          - too-many-return-statements
-          - too-many-branches
-          - too-many-public-methods
-          - too-many-statements
-          - complex-structure
-          - suspicious-subprocess-import
-          - subprocess-without-shell-equals-true
         line-length: 88
         preview: true
         respect-gitignore: true
@@ -211,7 +216,6 @@ Infra:
         lint:
           select:
             - ALL
-            - ALL
           # make fix never deletes information. The lint
           # repair applies safe fixes only (make.ruff.lint_fix rejects
           # --unsafe-fixes), and these rules are never auto-fixed at all,
@@ -221,15 +225,6 @@ Infra:
           # script and turned its failures silent). Ruff keeps reporting them;
           # the author decides. Also guards direct and IDE Ruff runs.
           unfixable:
-            - duplicate-value
-            - multi-value-repeated-key-literal
-            - multi-value-repeated-key-variable
-            - outdated-version-block
-            - p-print
-            - print
-            - pytest-duplicate-parametrize-test-cases
-            - redefined-while-unused
-            - unused-variable
             - duplicate-value
             - multi-value-repeated-key-literal
             - multi-value-repeated-key-variable
@@ -253,9 +248,6 @@ Infra:
             - relative-imports
             - typing-only-first-party-import
             - camelcase-imported-as-lowercase
-            - relative-imports
-            - typing-only-first-party-import
-            - camelcase-imported-as-lowercase
           # Every import is absolute: make mod rewrites relative imports and
           # the lazy-init generator renders absolute import statements.
           ban-relative-imports: all
@@ -272,7 +264,9 @@ Infra:
           # name; the notice from the project's declared author and copyright
           # year; a method that never reads its instance becomes a static
           # method, its signature and decorators edited and its body kept
-          # byte for byte).
+          # byte for byte; an inline import runs through the import-law engine,
+          # operator-ruling-2026-10-08-import-law; a long string literal or
+          # comment Ruff format cannot wrap is split without changing the AST).
           fix-recipes:
             missing-copyright-notice: copyright-notice
             undocumented-public-class: summary-docstring
@@ -282,6 +276,23 @@ Infra:
             docstring-missing-yields: yields-section
             docstring-missing-exception: raises-section
             no-self-use: static-method
+            import-outside-top-level: normalize-imports
+            line-too-long: wrap-long-line
+          # Phases run in order and Ruff re-reads the tree after each: imports
+          # settle first (their rewrite can shorten or lengthen lines), a new
+          # summary exposes the sections its function needs, and line wrapping
+          # runs last over the final text.
+          fix-recipe-phases:
+            - [normalize-imports]
+            - [summary-docstring, copyright-notice, static-method]
+            - [returns-section, yields-section, raises-section]
+            - [wrap-long-line]
+          # The import law keeps a reverse import read at runtime in place for
+          # manual repair, and a line holding no splittable literal or comment
+          # keeps its length; those findings stay visible in make check instead
+          # of failing make fix (operator ruling 2026-10-01: fix never fails on
+          # a residual violation).
+          fix-recipe-residual: [normalize-imports, wrap-long-line]
           # Pydantic evaluates model field annotations at runtime, so an
           # import used only in a model annotation is runtime, not typing-only.
           # Ruff follows imported bases only by qualified name: codegen derives
@@ -289,7 +300,6 @@ Infra:
           # runtime-evaluated-base-classes (tooling_runtime), never a list here.
           flake8-type-checking:
             runtime-evaluated-roots:
-              - pydantic.BaseModel
               - pydantic.BaseModel
           # Banned API messages are policy data, never template literals.
           banned-api:
@@ -662,25 +672,6 @@ Infra:
             - "**/site-packages/**"
             - "**/dist-packages"
             - "**/dist-packages/**"
-            - "**/node_modules"
-            - "**/__pycache__"
-            - "**/__pyrefly_virtual__/**"
-            - "**/.mypy_cache"
-            - "**/.ruff_cache"
-            - "**/.pytest_cache"
-            - "**/.*"
-            - .git
-            - .reports
-            - vendor
-            - .venv
-            - "**/.venv"
-            - "**/.venv/**"
-            - "**/venv"
-            - "**/venv/**"
-            - "**/site-packages"
-            - "**/site-packages/**"
-            - "**/dist-packages"
-            - "**/dist-packages/**"
           root-typings-paths: []
           project-typings-paths: []
           ignored-diagnostic-globs: []
@@ -697,14 +688,7 @@ Infra:
           - "if _t.TYPE_CHECKING:"
           - "if TYPE_CHECKING:"
           - "if typing.TYPE_CHECKING:"
-          - "if _t.TYPE_CHECKING:"
-          - "if TYPE_CHECKING:"
-          - "if typing.TYPE_CHECKING:"
         omit:
-          - "*/dependency_injector/providers.pyx"
-          # Declaration-layer Protocol facades have no runtime behavior to cover.
-          - "*/protocols.py"
-          - "*/_protocols/*"
           - "*/dependency_injector/providers.pyx"
           # Declaration-layer Protocol facades have no runtime behavior to cover.
           - "*/protocols.py"
@@ -969,22 +953,6 @@ Infra:
           - "discovery: catalog and stream discovery tests"
           - "singer: Singer protocol contract tests"
           - "requires_engine: native check engine required by this test"
-          - "smoke: public-interface smoke tests"
-          - "unit: unit tests"
-          - "integration: integration tests"
-          - "functional: functional behavior tests"
-          - "performance: performance and benchmark tests"
-          - "slow: slow-running tests"
-          - "docker: tests requiring Docker"
-          - "oracle: tests requiring the shared Oracle database"
-          - "remote: tests requiring remote/external network services"
-          - "e2e: end-to-end integration tests"
-          - "edge_cases: edge case tests"
-          - "stress: stress tests"
-          - "resilience: resilience tests"
-          - "discovery: catalog and stream discovery tests"
-          - "singer: Singer protocol contract tests"
-          - "requires_engine: native check engine required by this test"
         # External-token gates never run inside
         # offline verification (`make test`); the runner records their exclusion.
         # `make test-full` first completes that incremental phase, then executes
@@ -999,12 +967,6 @@ Infra:
         ci-excluded-fixtures:
           [resolved_make_templates, detector_project, mod_workspace, smells_project, _clear_make_ci_token]
         standard-addopts:
-          - --benchmark-disable
-          - --strict-markers
-          - --markdown-docs
-          - --durations=10
-          # --timeout/--session-timeout are runner-owned and derived
-          # from case-timeout-seconds/run-timeout-seconds; never restate them here.
           - --benchmark-disable
           - --strict-markers
           - --markdown-docs
@@ -1033,11 +995,12 @@ Infra:
         explicit_start: false
 
     lazy-init:
-      # Canonical import layer order for the lazy-init engine. Lower
-      # index = lower layer.
-      # Runtime imports target equal-or-lower layers (relative-dot
-      # within package); reverse (higher) imports are emitted under
-      # ``if TYPE_CHECKING:`` per ``reverse_import_mode``.
+      # Canonical import layer order of the FLEXT import law
+      # (operator-ruling-2026-10-08-import-law). Lower index = lower layer;
+      # ``other`` holds every module whose path names no declared layer.
+      # Runtime imports target equal-or-lower layers; a reverse (higher)
+      # import is emitted under ``if TYPE_CHECKING:`` per
+      # ``reverse_import_mode``, and a reverse runtime use stays a finding.
       import-layer-order:
         - settings
         - config
@@ -1046,17 +1009,7 @@ Infra:
         - p
         - m
         - u
-        - base
-        - services
-        - api
-        - cli
-        - settings
-        - config
-        - c
-        - t
-        - p
-        - m
-        - u
+        - other
         - base
         - services
         - api

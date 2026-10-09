@@ -65,7 +65,11 @@ class TestsFlextInfraRopeAnalysis:
             encoding="utf-8",
         )
         source = package / "consumer.py"
-        content = "from external_provider.first import Base\nclass Consumer(Base):\n    pass\n"
+        content = (
+            "from external_provider.first import Base\n"
+            "class Consumer(Base):\n"
+            "    pass\n"
+        )
         source.write_text(content, encoding="utf-8")
 
         with pytest.raises(ValueError, match="Cyclic provider reexport"):
@@ -90,10 +94,14 @@ class TestsFlextInfraRopeAnalysis:
             )
             (provider / f"layer_{index}.py").write_text(content, encoding="utf-8")
         source = package / "consumer.py"
-        content = "from external_provider.layer_0 import Base\nclass Consumer(Base):\n    pass\n"
+        content = (
+            "from external_provider.layer_0 import Base\n"
+            "class Consumer(Base):\n"
+            "    pass\n"
+        )
         source.write_text(content, encoding="utf-8")
 
-        with pytest.raises(ValueError, match="Unresolved external base.*at depth"):
+        with pytest.raises(ValueError, match=r"Unresolved external base.*at depth"):
             u.Infra.runtime_evaluated_base_classes(project, {source: content}, ())
 
     @staticmethod
@@ -131,6 +139,26 @@ class TestsFlextInfraRopeAnalysis:
         tm.that(imports["Local"], eq=package.name + suffix)
         tm.that(imports["path_alias"], eq="os.path")
         tm.that(imports["Path"], eq="pathlib.Path")
+
+    @staticmethod
+    def test_facade_namespaces_skip_builtin_bases(tmp_path: Path) -> None:
+        """A builtin base has no source scope and contributes no namespace."""
+        project, package = u.Tests.demo_project(tmp_path)
+        source = package / "errors.py"
+        source.write_text(
+            "class Parent:\n"
+            "    class Shared:\n        pass\n"
+            "class Errors(Parent, Exception):\n    pass\n",
+            encoding="utf-8",
+        )
+        with u.Infra.open_project(project) as rope_project:
+            resource = tm.not_none(u.Infra.fetch_python_resource(rope_project, source))
+            names = u.Infra.inherited_facade_namespaces(
+                rope_project,
+                resource,
+                class_name="Errors",
+            )
+        tm.that(tuple(names), eq=("Shared",))
 
     @staticmethod
     def test_declared_imports_reject_relative_level_beyond_package(

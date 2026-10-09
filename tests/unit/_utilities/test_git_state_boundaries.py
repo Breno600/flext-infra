@@ -6,9 +6,11 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import errno
 import os
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import m
@@ -17,6 +19,138 @@ from tests import u
 
 class TestsFlextInfraGitStateBoundaries:
     """Keep unsupported flags explicit and retain independently owned gitlinks."""
+
+    @staticmethod
+    @pytest.mark.parametrize("broken_scratch", [False, True])
+    def test_symlink_checkpoint_preserves_unowned_pid_scratch(
+        tmp_path: Path,
+        *,
+        broken_scratch: bool,
+    ) -> None:
+        source = u.Tests.git_repository(tmp_path)
+        (source / "README.md").write_bytes(b"unrelated tracked bytes")
+        destination = source / "shape"
+        destination.symlink_to("README.md")
+        u.Tests.git_run(source, "add", "shape", "README.md")
+        u.Tests.git_run(source, "commit", "-m", "baseline symlink")
+        lane = tmp_path / "lane"
+        u.Tests.git_run(source, "worktree", "add", "--detach", str(lane))
+        destination.unlink()
+        target = "missing target with spaces"
+        destination.symlink_to(target)
+        snapshot = tm.ok(
+            u.Infra.git_snapshot_worktree_state(
+                m.Infra.GitWorktreeStateRequest(
+                    repo_root=source,
+                    paths=(Path("shape"),),
+                ),
+            ),
+        )
+        checkpoint = tm.ok(
+            u.Infra.git_checkpoint_worktree_state(snapshot, "refs/captures/symlink"),
+        )
+        destination = lane / "shape"
+        scratch = lane / f".shape.symlink-{os.getpid()}"
+        if broken_scratch:
+            scratch.symlink_to("unrelated missing target")
+        else:
+            scratch.write_bytes(b"unrelated untracked bytes\x00\xff")
+        identity = (scratch.lstat().st_dev, scratch.lstat().st_ino)
+        unrelated = (lane / "README.md").read_bytes()
+        index = u.Tests.git_capture(lane, "ls-files", "--stage")
+        refs = u.Tests.git_capture(lane, "show-ref")
+        entries = set(lane.iterdir())
+
+        tm.ok(u.Infra.git_apply_worktree_checkpoint(checkpoint, lane))
+
+        tm.that(os.fsencode(destination.readlink()), eq=os.fsencode(target))
+        tm.that((scratch.lstat().st_dev, scratch.lstat().st_ino), eq=identity)
+        if broken_scratch:
+            tm.that(str(scratch.readlink()), eq="unrelated missing target")
+        else:
+            tm.that(scratch.read_bytes(), eq=b"unrelated untracked bytes\x00\xff")
+        tm.that((lane / "README.md").read_bytes(), eq=unrelated)
+        tm.that(u.Tests.git_capture(lane, "ls-files", "--stage"), eq=index)
+        tm.that(u.Tests.git_capture(lane, "show-ref"), eq=refs)
+        tm.that(set(lane.iterdir()), eq=entries)
+
+        destination.unlink()
+        destination.write_bytes(b"uncaptured third-party entry")
+        tm.that(
+            u.Infra.git_apply_worktree_checkpoint(checkpoint, lane).failure,
+            eq=True,
+        )
+        tm.that(destination.read_bytes(), eq=b"uncaptured third-party entry")
+        tm.that((scratch.lstat().st_dev, scratch.lstat().st_ino), eq=identity)
+        tm.that(set(lane.iterdir()), eq=entries)
+        tm.that(u.Tests.git_capture(lane, "ls-files", "--stage"), eq=index)
+        tm.that(u.Tests.git_capture(lane, "show-ref"), eq=refs)
+
+    @staticmethod
+    def test_symlink_staging_failure_cleans_only_owned_directory(
+        tmp_path: Path,
+    ) -> None:
+        source = u.Tests.git_repository(tmp_path)
+        oversized = source / "oversized-target"
+        oversized.write_bytes(b"x" * 65536)
+        oid = u.Tests.git_capture(source, "hash-object", "-w", str(oversized)).strip()
+        oversized.unlink()
+        u.Tests.git_run(
+            source,
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            f"120000,{oid},shape",
+        )
+        u.Tests.git_run(source, "commit", "-m", "unmaterializable symlink baseline")
+        destination = source / "shape"
+        destination.symlink_to("captured missing target")
+        snapshot = tm.ok(
+            u.Infra.git_snapshot_worktree_state(
+                m.Infra.GitWorktreeStateRequest(
+                    repo_root=source,
+                    paths=(Path("shape"),),
+                ),
+            ),
+        )
+        checkpoint = tm.ok(
+            u.Infra.git_checkpoint_worktree_state(snapshot, "refs/captures/oversized"),
+        )
+        lane = tmp_path / "lane"
+        u.Tests.git_run(
+            source,
+            "worktree",
+            "add",
+            "--detach",
+            str(lane),
+            checkpoint.worktree_commit,
+        )
+        remote = tmp_path / "retained.git"
+        u.Tests.git_run(source, "init", "--bare", str(remote))
+        u.Tests.git_run(source, "remote", "add", "retained", str(remote))
+        publication = tm.ok(
+            u.Infra.git_publish_worktree_checkpoint(checkpoint, "retained"),
+        )
+        scratch = source / f".shape.symlink-{os.getpid()}"
+        scratch.write_bytes(b"unrelated scratch")
+        entries = set(source.iterdir())
+        index = u.Tests.git_capture(source, "ls-files", "--stage")
+        refs = u.Tests.git_capture(source, "show-ref")
+
+        result = u.Infra.git_cleanup_worktree_state(
+            checkpoint,
+            lane,
+            checkpoint.worktree_commit,
+            publication=publication,
+        )
+
+        tm.that(result.failure, eq=True)
+        tm.that(result.error, has=f"[Errno {errno.ENAMETOOLONG}]")
+        tm.that(str(destination.readlink()), eq="captured missing target")
+        tm.that(scratch.read_bytes(), eq=b"unrelated scratch")
+        tm.that(set(source.iterdir()), eq=entries)
+        tm.that(u.Tests.git_capture(source, "ls-files", "--stage"), eq=index)
+        tm.that(u.Tests.git_capture(source, "show-ref"), eq=refs)
 
     @staticmethod
     def test_cleanup_rejects_unsupported_baseline_symlink_before_effects(

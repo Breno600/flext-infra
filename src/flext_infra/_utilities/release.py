@@ -12,9 +12,10 @@ from collections.abc import Mapping, MutableMapping, Sequence
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 
-from flext_cli import r
+from flext_cli import r, u
 
 from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesDependencies
 
 
 class FlextInfraUtilitiesRelease:
@@ -236,8 +237,6 @@ class FlextInfraUtilitiesRelease:
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
-
         lines: t.MutableSequenceOf[str] = [
             f"# Release {tag}",
             "",
@@ -345,8 +344,6 @@ class FlextInfraUtilitiesRelease:
         notes_path: Path,
     ) -> None:
         """Write the docs changelog plus the latest and tagged release notes."""
-        from flext_cli import u
-
         docs = repository_root / c.Infra.DIR_DOCS
         changelog_path = docs / "CHANGELOG.md"
         latest_path = docs / "releases" / "latest.md"
@@ -384,8 +381,6 @@ class FlextInfraUtilitiesRelease:
             Changelog text with a release section for the version.
 
         """
-        from flext_cli import u
-
         date = u.now().date().isoformat()
         heading = f"## {version} - "
         section = (
@@ -422,8 +417,6 @@ class FlextInfraUtilitiesRelease:
             The resulting ``p.Result[t.SequenceOf[t.StrSequence]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         selected = {name for name, _ in targets}
         edges: MutableMapping[str, t.StrSequence] = {}
         for name, path in targets:
@@ -455,10 +448,6 @@ class FlextInfraUtilitiesRelease:
             The runtime dependency names declared by one project.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         pyproject = path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.StrSequence].fail(

@@ -261,6 +261,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         """
         if FlextInfraUtilitiesRopeSourceBindingCollector._provider_metadata_rebind(
             spec,
+            node,
             targets,
             bindings,
         ):
@@ -301,15 +302,29 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
     @staticmethod
     def _provider_metadata_rebind(
         spec: m.Infra.SourceBindingCollectorSpec,
+        node: ast.Assign | ast.AnnAssign,
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
     ) -> bool:
-        """Return whether every target only annotates provider metadata."""
+        """Return whether every target only annotates provider metadata.
+
+        A literal written to a dunder of a bound class (the stdlib
+        ``ABCMeta.__module__ = 'abc'``) relabels metadata: it binds no class
+        and changes no base.
+        """
+        literal = isinstance(node.value, ast.Constant)
         return spec.allow_conditional and all(
             isinstance(target, ast.Attribute)
             and isinstance(target.value, ast.Name)
             and target.value.id in bindings
-            and bindings[target.value.id] is None
+            and (
+                bindings[target.value.id] is None
+                or (
+                    literal
+                    and target.attr.startswith("__")
+                    and target.attr.endswith("__")
+                )
+            )
             for target in targets
         )
 

@@ -17,6 +17,7 @@ from flext_infra import c, m, p, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesCodegenFilePlan,
     FlextInfraUtilitiesGitStateTreesMixin,
+    FlextInfraUtilitiesGitWorktreeIO,
 )
 
 
@@ -64,8 +65,6 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
         snapshot: m.Infra.GitWorktreeStateSnapshot,
         checkpoint_ref: str,
     ) -> m.Infra.GitWorktreeStateCheckpoint:
-
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
 
         cls._state_require_original(snapshot)
         repo = cls._repo(snapshot.repo_root)

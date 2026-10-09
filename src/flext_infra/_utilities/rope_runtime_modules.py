@@ -11,8 +11,8 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from flext_infra import c, config, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesRopeRuntimeBase,
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities.rope_runtime_types import (
     FlextInfraUtilitiesRopeRuntimeTypes,
 )
 
@@ -51,6 +51,26 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             msg = "Rope native class factory did not preserve native identity"
             raise TypeError(msg)
         return wrapped
+
+    @classmethod
+    def native_class_primary_base(
+        cls,
+        native: p.Infra.NativeClassMetadata,
+    ) -> t.Infra.RopePyObject:
+        """Resolve the native type descriptor, not an inherited class member.
+
+        Returns:
+            Rope's wrapper retaining the observed primary base identity.
+
+        Raises:
+            TypeError: If the primary base is None rather than a class.
+
+        """
+        base = native.__base__
+        if base is None:
+            msg = "Rope native primary base is not a class"
+            raise TypeError(msg)
+        return cls.native_class(base)
 
     @classmethod
     def parse_rope_module(cls, source: str, *, filename: str) -> t.Infra.RopeAstNode:
@@ -97,6 +117,8 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             ValueError: If Rope proposed source is outside its input inventory.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeTypes
+
         inventory = (
             {
                 Path(resource.real_path).resolve(): resource.read()
