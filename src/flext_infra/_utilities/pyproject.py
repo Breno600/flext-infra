@@ -513,7 +513,7 @@ class FlextInfraUtilitiesPyproject:
             The resulting ``p.Result[t.SequenceOf[t.JsonValue]]``.
 
         """
-        payload = u.Cli.toml_mapping_from_text(
+        document = u.Cli.toml_parse_text(
             lock_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
         if payload is None:

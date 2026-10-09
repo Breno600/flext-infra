@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, p, r
+from flext_infra import c, e, m, p, r
 from flext_infra.codegen import (
     FlextInfraMiseArtifactsJournal,
     FlextInfraMiseArtifactsProcess,
@@ -138,7 +138,7 @@ class TestsFlextInfraTransactionStaging:
         corrupted = tm.ok(
             u.Cli.atomic_read_binary_file_state(absent.journal_path, required=True),
         )
-        with pytest.raises(ValueError):
+        with pytest.raises(e.PydanticValidationError):
             owner.inspect_journal()
         tm.that(
             tm.ok(
