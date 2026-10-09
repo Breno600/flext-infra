@@ -181,7 +181,7 @@ class FlextInfraModelsRefactor(
         package_roots: Annotated[
             MutableSet[str],
             m.Field(description="Top-level Python package roots in src/"),
-        ] = m.Field(default_factory=set)
+        ] = m.Field(default_factory=set[str])
 
     class FileImportData(m.ArbitraryTypesModel):
         """File-level import data with mutable set accumulators.
@@ -193,11 +193,11 @@ class FlextInfraModelsRefactor(
         imported_modules: Annotated[
             MutableSet[str],
             m.Field(description="Imported module roots"),
-        ] = m.Field(default_factory=set)
+        ] = m.Field(default_factory=set[str])
         imported_symbols: Annotated[
             MutableSet[str],
             m.Field(description="Imported symbol names"),
-        ] = m.Field(default_factory=set)
+        ] = m.Field(default_factory=set[str])
 
     class MethodInfo(m.ArbitraryTypesModel):
         """Metadata about a method used for ordering inside classes."""
@@ -244,15 +244,15 @@ class FlextInfraModelsRefactor(
         updates: Annotated[
             MutableMapping[Path, str],
             m.Field(description="Pending file content updates keyed by path"),
-        ] = m.Field(default_factory=dict)
+        ] = m.Field(default_factory=dict[Path, str])
         expected_sources: Annotated[
             MutableMapping[Path, str],
             m.Field(description="Original content keyed by every pending update path"),
-        ] = m.Field(default_factory=dict)
+        ] = m.Field(default_factory=dict[Path, str])
         changed_files: Annotated[
             MutableSequence[str],
             m.Field(description="String paths of files changed by the run"),
-        ] = m.Field(default_factory=list)
+        ] = m.Field(default_factory=list[str])
         total_replacements: Annotated[
             int,
             m.Field(description="Total replacements applied across the run"),
@@ -268,11 +268,11 @@ class FlextInfraModelsRefactor(
         per_project_changes: Annotated[
             defaultdict[str, int],
             m.Field(description="Changed file count keyed by project name"),
-        ] = m.Field(default_factory=lambda: defaultdict(int))
+        ] = m.Field(default_factory=lambda: defaultdict[str, int](int))
         per_project_replacements: Annotated[
             defaultdict[str, int],
             m.Field(description="Replacement count keyed by project name"),
-        ] = m.Field(default_factory=lambda: defaultdict(int))
+        ] = m.Field(default_factory=lambda: defaultdict[str, int](int))
 
     # -- CSV-driven Rename Models ---------------------------------------------
 

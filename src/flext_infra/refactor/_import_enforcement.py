@@ -88,7 +88,10 @@ class FlextInfraImportNormalization(
         if located is None:
             return None
         namespace_dir, module = located
-        root_exports = u.Infra.import_lazy_exports(namespace_dir, namespace_dir.name)
+        root_exports = u.Infra.import_lazy_exports(project_root, namespace_dir.name)
+        if root_exports is None:
+            msg = f"{namespace_dir} is a namespace without an owned package init"
+            raise ValueError(msg)
         current = source
         for _ in range(c.Infra.IMPORT_NORMALIZATION_MAX_PASSES):
             tree = ast.parse(current, filename=str(file_path))

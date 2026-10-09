@@ -149,13 +149,13 @@ class FlextInfraImportNormalizationRoutesMixin(
             binds through a package or no parent publishes the name.
 
         """
-        package, _, leaf = module.rpartition(".")
+        package = module.rpartition(".")[0]
         if not package or module == scope.module:
             return None
-        package_dir = u.Infra.import_package_dir(scope.project_root, package)
-        if package_dir is None or (package_dir / leaf).is_dir():
+        if u.Infra.import_lazy_exports(scope.project_root, module) is not None:
             return None
-        if u.Infra.import_lazy_exports(package_dir, package).get(name) != module:
+        exports = u.Infra.import_lazy_exports(scope.project_root, package)
+        if exports is None or exports.get(name) != module:
             return None
         return package
 

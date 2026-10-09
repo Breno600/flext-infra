@@ -10,7 +10,6 @@ import ast
 import operator
 from collections.abc import MutableMapping
 from functools import cache
-from importlib import import_module
 from inspect import getfile
 from os.path import commonpath
 from pathlib import Path
@@ -19,7 +18,9 @@ from typing import ClassVar
 
 from flext_cli import r
 
+import flext_core
 from flext_infra import c, config, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
 
 
 class FlextInfraUtilitiesCodegenNamespace:
@@ -49,11 +50,10 @@ class FlextInfraUtilitiesCodegenNamespace:
             ValueError: If ``not bound``.
 
         """
-        core = import_module(c.Infra.PKG_CORE_UNDERSCORE)
-        core_dir = Path(getfile(core)).parent
+        core_dir = Path(getfile(flext_core)).parent
         bound: MutableMapping[str, t.StrPair] = {}
         for layer in config.Infra.tooling.lazy_init.import_layer_order:
-            facade = getattr(core, layer, None)
+            facade = getattr(flext_core, layer, None)
             if not isinstance(facade, type):
                 continue
             module = facade.__module__.rpartition(".")[2]
@@ -149,19 +149,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             ),
             None,
         )
-
-    @classmethod
-    def surface_name(cls, package_name: str) -> str:
-        """Return the configured surface name for one import package.
-
-        Returns:
-            The configured surface name for one import package.
-
-        """
-        parts = tuple(part for part in package_name.split(".") if part)
-        if not parts:
-            return ""
-        return parts[0] if parts[0] in c.Infra.NON_PUBLIC_LAZY_ROOTS else "src"
 
     @classmethod
     def matches_project_namespace_package(cls, package_name: str) -> bool:
@@ -306,12 +293,14 @@ class FlextInfraUtilitiesCodegenNamespace:
         except (ValueError, SyntaxError) as exc:
             msg = f"{file_path}: invalid __all__: {exc}"
             raise ValueError(msg) from exc
-        if not isinstance(literal, (list, tuple)) or not all(
-            isinstance(item, str) for item in literal
-        ):
+        if not isinstance(literal, (list, tuple)):
             msg = f"{file_path}: __all__ must contain only strings"
             raise ValueError(msg)
-        return tuple(literal)
+        names = tuple(item for item in literal if isinstance(item, str))
+        if len(names) != len(literal):
+            msg = f"{file_path}: __all__ must contain only strings"
+            raise ValueError(msg)
+        return names
 
     @classmethod
     def _declared_exports(cls, file_path: Path) -> t.StrSequence:
@@ -1161,16 +1150,6 @@ class FlextInfraUtilitiesCodegenNamespace:
         return namespace_dir, ".".join(parts)
 
     @classmethod
-    def import_layer_order(cls) -> t.StrSequence:
-        """Return the declared import-layer order.
-
-        Returns:
-            The layer names, lowest layer first.
-
-        """
-        return tuple(config.Infra.tooling.lazy_init.import_layer_order)
-
-    @classmethod
     def module_import_layer(cls, module: str) -> int:
         """Return the layer rank of one dotted module of a namespace.
 
@@ -1184,7 +1163,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             The index of the module's layer in the declared order.
 
         """
-        order = cls.import_layer_order()
+        order = tuple(config.Infra.tooling.lazy_init.import_layer_order)
         families = {
             family.module: letter for letter, family in cls.facade_families().items()
         }
@@ -1223,39 +1202,33 @@ class FlextInfraUtilitiesCodegenNamespace:
         )
 
     @staticmethod
-    def import_package_dir(project_root: Path, package: str) -> Path | None:
-        """Return the directory of one dotted package the project owns.
+    def import_lazy_exports(project_root: Path, package: str) -> t.StrMapping | None:
+        """Map each name one owned package ``__init__`` publishes to its module.
+
+        The package resolves under ``src/`` or the project root (internal
+        tiers). Relative targets resolve against the package; a target naming
+        another distribution (``flext_cli``) stays absolute.
 
         Returns:
-            The package directory, or ``None`` for a module, a missing path or
-            a package of another project.
-
-        """
-        top, *rest = package.split(".")
-        for base in (project_root / c.Infra.DEFAULT_SRC_DIR, project_root):
-            if not (base / top / c.Infra.INIT_PY).is_file():
-                continue
-            candidate = base.joinpath(top, *rest)
-            return candidate if (candidate / c.Infra.INIT_PY).is_file() else None
-        return None
-
-    @staticmethod
-    def import_lazy_exports(package_dir: Path, package: str) -> t.StrMapping:
-        """Map each name one package ``__init__`` publishes to its module.
-
-        Relative targets resolve against the package; a target naming another
-        distribution (``flext_cli``) stays absolute.
-
-        Returns:
-            The published name to absolute defining module mapping.
+            The published name to absolute defining module mapping, or
+            ``None`` when the dotted name is a module, a missing path or a
+            package of another project.
 
         Raises:
             ValueError: If the package init declares its lazy map indirectly.
 
         """
-        init = package_dir / c.Infra.INIT_PY
+        top, *rest = package.split(".")
+        bases = (project_root / c.Infra.DEFAULT_SRC_DIR, project_root)
+        owner = next(
+            (base for base in bases if (base / top / c.Infra.INIT_PY).is_file()),
+            None,
+        )
+        if owner is None:
+            return None
+        init = owner.joinpath(top, *rest, c.Infra.INIT_PY)
         if not init.is_file():
-            return {}
+            return None
         targets, references = (
             FlextInfraUtilitiesRopeAnalysis.lazy_import_mapping_source(
                 init.read_text(encoding=c.Cli.ENCODING_DEFAULT),

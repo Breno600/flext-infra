@@ -10,7 +10,7 @@ from enum import StrEnum, unique
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Literal
 
-from flext_infra._constants.base import FlextInfraConstantsBase as cb
+from flext_infra._constants import FlextInfraConstantsBase
 from flext_infra._constants.codegen_project import FlextInfraConstantsCodegenProject
 from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
 
@@ -156,11 +156,11 @@ print(json.dumps({
     )
     "Fixed serial lifecycle, including the post-upgrade generation fixed point."
     LIFECYCLE_REPORT_RELATIVE_PATH: ClassVar[Path] = (
-        Path(cb.REPORTS_DIR_NAME) / "validate-lifecycle.json"
+        Path(FlextInfraConstantsBase.REPORTS_DIR_NAME) / "validate-lifecycle.json"
     )
     "Typed receipts for the invoking workspace root and governed members."
     FLEET_GAPS_REPORT_RELATIVE_PATH: ClassVar[Path] = (
-        Path(cb.REPORTS_DIR_NAME) / "fleet-gaps.json"
+        Path(FlextInfraConstantsBase.REPORTS_DIR_NAME) / "fleet-gaps.json"
     )
     "Canonical single-file receipt for the latest fleet-gaps report."
     FLEET_GAPS_REPORT_SCHEMA_VERSION: ClassVar[Literal[1]] = 1

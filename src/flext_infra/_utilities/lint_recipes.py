@@ -223,6 +223,15 @@ class FlextInfraUtilitiesLintRecipes:
                 case c.Infra.LintFixRecipe.STATIC_METHOD:
                     # Planned per method below, after duplicates collapse.
                     continue
+                case (
+                    c.Infra.LintFixRecipe.NORMALIZE_IMPORTS
+                    | c.Infra.LintFixRecipe.WRAP_LONG_LINE
+                ):
+                    msg = (
+                        f"{path}:{issue.line}: whole-module recipe "
+                        f"{issue.code} reached the edit planner"
+                    )
+                    raise ValueError(msg)
         return sections, summaries, wants_notice
 
     @classmethod

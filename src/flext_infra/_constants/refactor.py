@@ -13,7 +13,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 from flext_core import c
-from flext_infra._constants.base import FlextInfraConstantsBase as cb
+from flext_infra._constants import FlextInfraConstantsBase
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -23,7 +23,7 @@ class FlextInfraConstantsRefactor:
     """Shared constants for refactor modules."""
 
     MOD_SCAN_REPORT_RELATIVE_PATH: ClassVar[Path] = (
-        Path(cb.REPORTS_DIR_NAME) / "refactor" / "mod-findings.json"
+        Path(FlextInfraConstantsBase.REPORTS_DIR_NAME) / "refactor" / "mod-findings.json"
     )
     "Canonical single-file evidence snapshot for the latest mod scan."
     MOD_SCAN_REPORT_SCHEMA_VERSION: ClassVar[Literal[1]] = 1
@@ -31,17 +31,17 @@ class FlextInfraConstantsRefactor:
     MOD_SCAN_REPORT_MODE: ClassVar[int] = 0o644
     "Canonical permission bits for structured mod evidence."
     ACCESSOR_MIGRATION_REPORT_RELATIVE_PATH: ClassVar[Path] = (
-        Path(cb.REPORTS_DIR_NAME) / "refactor" / "accessor-migration.json"
+        Path(FlextInfraConstantsBase.REPORTS_DIR_NAME) / "refactor" / "accessor-migration.json"
     )
     "Canonical single-file evidence snapshot for the latest accessor migration."
     NAMESPACE_ENFORCE_REPORT_RELATIVE_PATH: ClassVar[Path] = (
-        Path(cb.REPORTS_DIR_NAME) / "refactor" / "namespace-enforce.json"
+        Path(FlextInfraConstantsBase.REPORTS_DIR_NAME) / "refactor" / "namespace-enforce.json"
     )
     "Canonical single-file evidence snapshot for the latest namespace enforcement."
     VIOLATIONS_SWEEP_ROUTE_NAME: ClassVar[str] = "violations-sweep"
     "Canonical refactor CLI verb that repairs and proves the always-reducing law."
     VIOLATIONS_SWEEP_REPORT_RELATIVE_PATH: ClassVar[Path] = (
-        Path(cb.REPORTS_DIR_NAME) / "refactor" / "violations-sweep.json"
+        Path(FlextInfraConstantsBase.REPORTS_DIR_NAME) / "refactor" / "violations-sweep.json"
     )
     "Canonical single-file receipt for the latest violations sweep."
     VIOLATIONS_SWEEP_REPORT_SCHEMA_VERSION: ClassVar[Literal[1]] = 1
@@ -373,11 +373,11 @@ class FlextInfraConstantsRefactor:
     )
 
     RULE_TABLE_HEADERS: ClassVar[t.StrSequence] = (
-        cb.RK_ID,
-        cb.NAME,
-        cb.RK_DESCRIPTION,
-        cb.RK_ENABLED,
-        cb.RK_SEVERITY,
+        FlextInfraConstantsBase.RK_ID,
+        FlextInfraConstantsBase.NAME,
+        FlextInfraConstantsBase.RK_DESCRIPTION,
+        FlextInfraConstantsBase.RK_ENABLED,
+        FlextInfraConstantsBase.RK_SEVERITY,
     )
     DOMAIN_PACKAGES: ClassVar[frozenset[str]] = frozenset({
         "flext-ldap",
